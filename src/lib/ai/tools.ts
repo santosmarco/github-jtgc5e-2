@@ -122,7 +122,7 @@ export const displayMomentTool = tool({
   },
 });
 
-export const listMeetingsTool = (profileId: string) =>
+export const listMeetingsTool = (profileId: string, apiVideoIds?: string[]) =>
   tool({
     description:
       "Useful when you need to get data about one or more meetings from the database.",
@@ -203,6 +203,10 @@ export const listMeetingsTool = (profileId: string) =>
         .order("date", { ascending: false })
         .range(start, end);
 
+      if (apiVideoIds?.length) {
+        query.in("video_api_id", apiVideoIds);
+      }
+
       if (meetingId) {
         query.eq("video_api_id", meetingId);
       }
@@ -242,7 +246,7 @@ export type ListMeetingsToolOutput = ToolOutput<
   ReturnType<typeof listMeetingsTool>
 >;
 
-export const searchMomentsTool = (profileId: string) =>
+export const searchMomentsTool = (profileId: string, apiVideoIds?: string[]) =>
   tool({
     description: "Useful for searching for moments in the database.",
     parameters: z
@@ -272,6 +276,9 @@ export const searchMomentsTool = (profileId: string) =>
           $and: [
             { profile_id: { $eq: profileId } },
             { type: { $eq: "moments" } },
+            ...(apiVideoIds?.length
+              ? [{ api_video_id: { $in: apiVideoIds } }]
+              : []),
           ],
         },
       });

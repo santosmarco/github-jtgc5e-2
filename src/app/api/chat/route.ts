@@ -6,11 +6,11 @@ import dedent from "ts-dedent";
 import { z } from "zod";
 
 import {
-  listMeetingsTool as createListMeetingsTool,
-  searchMomentsTool as createSearchMomentsTool,
   displayMomentTool,
   explainTool,
   explainTools,
+  listMeetingsTool as createListMeetingsTool,
+  searchMomentsTool as createSearchMomentsTool,
 } from "~/lib/ai/tools";
 import { SlashCommand } from "~/lib/commands/schemas";
 import { searchSimilar } from "~/lib/pinecone/search";
@@ -99,8 +99,16 @@ export async function POST(request: NextRequest) {
       supabase.from("coaching_frameworks").select("*"),
     ]);
 
-    const listMeetingsTool = createListMeetingsTool(userId);
-    const searchMomentsTool = createSearchMomentsTool(userId);
+    const selectedVideoIds = selectedVideos?.map((v) => v.videoId);
+
+    const listMeetingsTool = createListMeetingsTool(
+      userId,
+      selectedVideoIds?.length ? selectedVideoIds : undefined,
+    );
+    const searchMomentsTool = createSearchMomentsTool(
+      userId,
+      selectedVideoIds?.length ? selectedVideoIds : undefined,
+    );
 
     const observationPrompt = observationPrompts?.[0];
 
