@@ -3,6 +3,7 @@
 import dayjs from "dayjs";
 import { motion } from "framer-motion";
 import {
+  Gauge,
   Maximize,
   Minimize,
   Pause,
@@ -15,6 +16,12 @@ import {
 import { useEffect, useState } from "react";
 
 import { Button } from "~/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
 import { Slider } from "~/components/ui/slider";
 import {
   Tooltip,
@@ -33,6 +40,8 @@ export type VideoPlayerProps = {
   momentsShown?: VideoMoment[];
   startAt?: number;
 };
+
+const PLAYBACK_SPEEDS = [0.8, 1, 1.2, 1.5, 1.7, 2, 2.5];
 
 export function VideoPlayer({
   video,
@@ -62,6 +71,7 @@ export function VideoPlayer({
   );
   const [hoveredMoment, setHoveredMoment] = useState<VideoMoment | null>(null);
   const [isVideoLoading, setIsVideoLoading] = useState(true);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
 
   useEffect(() => {
     if (startAt !== undefined && videoRef.current) {
@@ -85,6 +95,12 @@ export function VideoPlayer({
       setCurrentMoment(newCurrentMoment);
     }
   }, [currentTime, momentsShown]);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.playbackRate = playbackSpeed;
+    }
+  }, [playbackSpeed]);
 
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60);
@@ -227,7 +243,7 @@ export function VideoPlayer({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-5 w-5 hover:bg-primary/10 hover:text-primary"
+                    className="h-5 w-5 hover:bg-transparent hover:text-primary"
                     onClick={togglePlay}
                     aria-label={isPlaying ? "Pause" : "Play"}
                   >
@@ -247,7 +263,7 @@ export function VideoPlayer({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-5 w-5 hover:bg-primary/10 hover:text-primary"
+                    className="h-5 w-5 hover:bg-transparent hover:text-primary"
                     onClick={() => skip(-10)}
                     aria-label="Rewind 10 seconds"
                   >
@@ -263,7 +279,7 @@ export function VideoPlayer({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-5 w-5 hover:bg-primary/10 hover:text-primary"
+                    className="h-5 w-5 hover:bg-transparent hover:text-primary"
                     onClick={() => skip(10)}
                     aria-label="Forward 10 seconds"
                   >
@@ -280,7 +296,7 @@ export function VideoPlayer({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-5 w-5 hover:bg-primary/10 hover:text-primary"
+                      className="h-5 w-5 hover:bg-transparent hover:text-primary"
                       onClick={() => changeVolume(isMuted ? 1 : 0)}
                       aria-label={isMuted ? "Unmute" : "Mute"}
                     >
@@ -310,12 +326,44 @@ export function VideoPlayer({
               </span>
             </div>
             <div className="flex items-center space-x-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="flex h-5 w-auto max-w-14 justify-end gap-x-1 hover:bg-transparent hover:text-primary focus-visible:ring-0"
+                  >
+                    {playbackSpeed}x
+                    <Gauge className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  side="top"
+                  align="end"
+                  alignOffset={-25}
+                  className="flex gap-x-1"
+                >
+                  {PLAYBACK_SPEEDS.map((speed) => (
+                    <DropdownMenuItem
+                      key={speed}
+                      onClick={() => setPlaybackSpeed(speed)}
+                      className={cn(
+                        "px-2 text-xs",
+                        speed === playbackSpeed &&
+                          "bg-primary/80 transition-colors hover:!bg-primary",
+                      )}
+                    >
+                      {speed}x
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-5 w-5 hover:bg-primary/10 hover:text-primary"
+                    className="h-5 w-5 hover:bg-transparent hover:text-primary"
                     onClick={toggleFullscreen}
                     aria-label={
                       isFullscreen ? "Exit fullscreen" : "Enter fullscreen"
