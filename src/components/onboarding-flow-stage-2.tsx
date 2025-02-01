@@ -1,11 +1,11 @@
 "use client";
 
-import confetti from "canvas-confetti";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import * as React from "react";
 
 import { Button } from "~/components/ui/button";
+import { createConfettiEmitter } from "~/lib/confetti";
 import type { RouterOutputs } from "~/trpc/react";
 import { api } from "~/trpc/react";
 
@@ -87,28 +87,7 @@ export function OnboardingFlowStage2({ user }: OnboardingFlowStage2Props) {
     if (currentStepIdx < steps.length - 1) {
       setCurrentStepIdx(currentStepIdx + 1);
     } else if (currentStepIdx === steps.length - 1) {
-      void fireConfetti(0.25, {
-        spread: 26,
-        startVelocity: 55,
-      });
-      void fireConfetti(0.2, {
-        spread: 60,
-      });
-      void fireConfetti(0.35, {
-        spread: 100,
-        decay: 0.91,
-        scalar: 0.8,
-      });
-      void fireConfetti(0.1, {
-        spread: 120,
-        startVelocity: 25,
-        decay: 0.92,
-        scalar: 1.2,
-      });
-      void fireConfetti(0.1, {
-        spread: 120,
-        startVelocity: 45,
-      });
+      void createConfettiEmitter({ y: 0.3 }).fireDefault();
       setIsComplete(true);
       completePostTenMeetingOnboarding({ userId: user.id });
     }
@@ -274,12 +253,4 @@ export function OnboardingFlowStage2({ user }: OnboardingFlowStage2Props) {
       ) : null}
     </AnimatePresence>
   );
-}
-
-async function fireConfetti(particleRatio: number, opts?: confetti.Options) {
-  await confetti({
-    ...opts,
-    origin: { y: 0.3 },
-    particleCount: Math.floor(200 * particleRatio),
-  });
 }
