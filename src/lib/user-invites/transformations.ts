@@ -26,5 +26,6 @@ export function transformUserInviteIntoProfile(
     did_complete_onboarding: false,
     did_complete_post_ten_meeting_onboarding: false,
     force_post_ten_meeting_onboarding: false,
+    explore_email_sent: false,
   };
 }
