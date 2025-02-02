@@ -242,29 +242,29 @@ export type Database = {
       }
       chunks: {
         Row: {
-          end_segment: string | null
+          end_segment: number | null
           focus_person_analysis: string | null
           id: string
           reasoning: string | null
-          start_segment: string | null
+          start_segment: number | null
           summary: string | null
           video_api_id: string | null
         }
         Insert: {
-          end_segment?: string | null
+          end_segment?: number | null
           focus_person_analysis?: string | null
           id: string
           reasoning?: string | null
-          start_segment?: string | null
+          start_segment?: number | null
           summary?: string | null
           video_api_id?: string | null
         }
         Update: {
-          end_segment?: string | null
+          end_segment?: number | null
           focus_person_analysis?: string | null
           id?: string
           reasoning?: string | null
-          start_segment?: string | null
+          start_segment?: number | null
           summary?: string | null
           video_api_id?: string | null
         }
@@ -416,6 +416,118 @@ export type Database = {
           video_id?: string | null
         }
         Relationships: []
+      }
+      goal_signals: {
+        Row: {
+          created_at: string
+          direction: Database["public"]["Enums"]["goal_signal_direction_type"]
+          goal_id: string
+          hidden_text: string | null
+          id: string
+          is_current: boolean
+          previous_goal_signal_id: string | null
+          text: string
+        }
+        Insert: {
+          created_at?: string
+          direction: Database["public"]["Enums"]["goal_signal_direction_type"]
+          goal_id: string
+          hidden_text?: string | null
+          id?: string
+          is_current?: boolean
+          previous_goal_signal_id?: string | null
+          text: string
+        }
+        Update: {
+          created_at?: string
+          direction?: Database["public"]["Enums"]["goal_signal_direction_type"]
+          goal_id?: string
+          hidden_text?: string | null
+          id?: string
+          is_current?: boolean
+          previous_goal_signal_id?: string | null
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_signals_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goal_signals_previous_goal_signal_id_fkey"
+            columns: ["previous_goal_signal_id"]
+            isOneToOne: false
+            referencedRelation: "goal_signals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      goals: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          deleted_at: string | null
+          hidden_text: string | null
+          id: string
+          is_current: boolean
+          previous_goal_id: string | null
+          profile_id: string
+          progress: number
+          text: string
+          user_provided_context: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          hidden_text?: string | null
+          id?: string
+          is_current: boolean
+          previous_goal_id?: string | null
+          profile_id: string
+          progress?: number
+          text: string
+          user_provided_context?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          hidden_text?: string | null
+          id?: string
+          is_current?: boolean
+          previous_goal_id?: string | null
+          profile_id?: string
+          progress?: number
+          text?: string
+          user_provided_context?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goals_previous_goal_id_fkey"
+            columns: ["previous_goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goals_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "goals_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       integration_credentials: {
         Row: {
@@ -1257,6 +1369,7 @@ export type Database = {
           did_complete_onboarding: boolean
           did_complete_post_ten_meeting_onboarding: boolean
           email: string
+          explore_email_sent: boolean | null
           force_post_ten_meeting_onboarding: boolean
           id: string
           is_admin: boolean
@@ -1271,6 +1384,7 @@ export type Database = {
           did_complete_onboarding?: boolean
           did_complete_post_ten_meeting_onboarding?: boolean
           email: string
+          explore_email_sent?: boolean | null
           force_post_ten_meeting_onboarding?: boolean
           id: string
           is_admin?: boolean
@@ -1285,6 +1399,7 @@ export type Database = {
           did_complete_onboarding?: boolean
           did_complete_post_ten_meeting_onboarding?: boolean
           email?: string
+          explore_email_sent?: boolean | null
           force_post_ten_meeting_onboarding?: boolean
           id?: string
           is_admin?: boolean
@@ -1419,6 +1534,206 @@ export type Database = {
           },
           {
             foreignKeyName: "recall_calendars_v2_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_goal_signals: {
+        Row: {
+          created_at: string
+          direction:
+            | Database["public"]["Enums"]["goal_signal_direction_type"]
+            | null
+          goal_signal_id: string | null
+          hidden_text: string | null
+          id: string
+          report_id: string | null
+          text: string | null
+        }
+        Insert: {
+          created_at?: string
+          direction?:
+            | Database["public"]["Enums"]["goal_signal_direction_type"]
+            | null
+          goal_signal_id?: string | null
+          hidden_text?: string | null
+          id?: string
+          report_id?: string | null
+          text?: string | null
+        }
+        Update: {
+          created_at?: string
+          direction?:
+            | Database["public"]["Enums"]["goal_signal_direction_type"]
+            | null
+          goal_signal_id?: string | null
+          hidden_text?: string | null
+          id?: string
+          report_id?: string | null
+          text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_goal_signals_goal_signal_id_fkey"
+            columns: ["goal_signal_id"]
+            isOneToOne: false
+            referencedRelation: "goal_signals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_goal_signals_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_goals: {
+        Row: {
+          created_at: string | null
+          goal_id: string | null
+          hidden_text: string | null
+          id: string
+          report_id: string | null
+          text: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          goal_id?: string | null
+          hidden_text?: string | null
+          id?: string
+          report_id?: string | null
+          text?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          goal_id?: string | null
+          hidden_text?: string | null
+          id?: string
+          report_id?: string | null
+          text?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_goals_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_goals_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_moments: {
+        Row: {
+          created_at: string
+          id: string
+          is_visible: boolean | null
+          moment_id: string | null
+          omission_reason: string | null
+          report_goal_signal_id: string | null
+          report_id: string | null
+          score: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_visible?: boolean | null
+          moment_id?: string | null
+          omission_reason?: string | null
+          report_goal_signal_id?: string | null
+          report_id?: string | null
+          score?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_visible?: boolean | null
+          moment_id?: string | null
+          omission_reason?: string | null
+          report_goal_signal_id?: string | null
+          report_id?: string | null
+          score?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_moments_moment_id_fkey"
+            columns: ["moment_id"]
+            isOneToOne: false
+            referencedRelation: "moments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_moments_moment_id_fkey"
+            columns: ["moment_id"]
+            isOneToOne: false
+            referencedRelation: "moments_with_score"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_moments_report_goal_signal_id_fkey"
+            columns: ["report_goal_signal_id"]
+            isOneToOne: false
+            referencedRelation: "report_goal_signals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_moments_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reports: {
+        Row: {
+          created_at: string
+          id: string
+          profile_id: string | null
+          summary: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          profile_id?: string | null
+          summary?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          profile_id?: string | null
+          summary?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "reports_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -2081,6 +2396,7 @@ export type Database = {
       }
     }
     Enums: {
+      goal_signal_direction_type: "positive" | "negative"
       icon_enum:
         | "Brain"
         | "GitCommitHorizontal"
