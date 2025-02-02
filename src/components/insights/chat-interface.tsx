@@ -11,7 +11,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import type { ChatRequestBody } from "~/app/api/chat/route";
+import { ChatInput } from "~/components/chat/chat-input";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Badge } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
 import { ChatContainer, ChatMessages } from "~/components/ui/chat";
 import { LoadingSpinner } from "~/components/ui/loading-spinner";
 import { MessageList } from "~/components/ui/message-list";
@@ -22,10 +25,7 @@ import { getMomentIcon } from "~/lib/moments";
 import { createClient } from "~/lib/supabase/client";
 import type { Tables } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
-import type { RouterOutputs } from "~/trpc/react";
-
-import { ChatInput } from "../chat/chat-input";
-import { Badge } from "../ui/badge";
+import { api, type RouterOutputs } from "~/trpc/react";
 
 type ChatInterfaceProps = {
   frameworks: Tables<"coaching_frameworks">[];
@@ -93,6 +93,34 @@ const headerVariants = {
   },
 };
 
+const followUpButtonVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      delay: i * 0.15,
+      duration: 0.4,
+      ease: [0.19, 1.0, 0.22, 1.0],
+    },
+  }),
+  hover: {
+    scale: 1.02,
+    y: -2,
+    transition: {
+      duration: 0.2,
+      ease: "easeInOut",
+    },
+  },
+  tap: {
+    scale: 0.98,
+    transition: {
+      duration: 0.1,
+    },
+  },
+};
+
 export type TopicConfiguration = {
   conversationStarter: string;
 };
@@ -146,6 +174,17 @@ export function ChatInterface({
 
   const { completeTask } = useOnboardingTasks();
 
+  const [followUpQuestions, setFollowUpQuestions] = useState<string[] | null>(
+    null,
+  );
+
+  const generateFollowUpQuestions =
+    api.chats.generateFollowUpQuestions.useMutation({
+      onSuccess: (data) => {
+        setFollowUpQuestions(data.object.questions.map((q) => q.text));
+      },
+    });
+
   const {
     messages,
     append,
@@ -164,6 +203,9 @@ export function ChatInterface({
     } satisfies ChatRequestBody,
     initialMessages: convertToUIMessages(initialMessages),
     maxSteps: 5,
+    onFinish: (message) => {
+      generateFollowUpQuestions.mutate({ messages: [...messages, message] });
+    },
     onError: (error) => {
       toast.error("Failed to send message", {
         description: error.message,
@@ -197,6 +239,7 @@ export function ChatInterface({
     });
 
     editorRef.current?.commands.clearContent();
+    setFollowUpQuestions(null);
   }, [append, chatLoading, isTyping, isEmpty, completeTask]);
 
   const handleTopicClick = useCallback(
@@ -231,6 +274,7 @@ export function ChatInterface({
 
     stop();
     setMessages([]);
+    setFollowUpQuestions(null);
     void reload();
     router.push("/insights");
   }, [supabase, userId, selectedTopic, setMessages, reload, router, stop]);
@@ -471,6 +515,45 @@ export function ChatInterface({
             )}
             <MessageList messages={messages} isTyping={isTyping && !error} />
           </ChatMessages>
+
+          <AnimatePresence>
+            {followUpQuestions && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                className="grid w-full grid-cols-1 gap-2 p-2 sm:grid-cols-2 lg:grid-cols-3"
+              >
+                {followUpQuestions.map((question, i) => (
+                  <motion.div
+                    key={question}
+                    custom={i}
+                    variants={followUpButtonVariants}
+                    initial="hidden"
+                    animate="visible"
+                    whileHover="hover"
+                    whileTap="tap"
+                    className="h-full w-full"
+                  >
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      className="h-full w-full whitespace-normal text-pretty p-2 text-xs font-medium leading-snug shadow-md transition-all hover:bg-primary hover:shadow-lg"
+                      onClick={() => {
+                        void append({
+                          content: question,
+                          role: "user",
+                        });
+                        setFollowUpQuestions(null);
+                      }}
+                    >
+                      {question}
+                    </Button>
+                  </motion.div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </>
       )}
 

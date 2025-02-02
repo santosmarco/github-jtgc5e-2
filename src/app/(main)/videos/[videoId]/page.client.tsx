@@ -58,7 +58,6 @@ export function VideoPageClient({ videoId }: VideoPageClientProps) {
         0,
       ),
   );
-  console.log(sortedMoments);
 
   const handleCategoryChange = (category: string) => {
     void setCategory(category);

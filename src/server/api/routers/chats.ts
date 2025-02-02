@@ -37,24 +37,79 @@ export const chatsRouter = createTRPCRouter({
     )
     .mutation(async ({ input }) => {
       try {
+        const prompt = dedent`
+          You are an AI coach tasked with analyzing coaching conversations and generating follow-up questions.
+          You and the coach are helping the client with their goals, emotions, decisions, delegations, feedback, team conflicts, goal setting, and more.
+
+          Here is the conversation history:
+
+          <conversation_history>
+            ${input.messages
+              .map((m) => {
+                const content = m.toolInvocations?.length
+                  ? `${m.content}\n\nTool Invocations:\n${m.toolInvocations
+                      .filter((t) => t.state === "result")
+                      .map(
+                        (t) =>
+                          `- ${t.toolName}: ${JSON.stringify(t.args)}\n  Result: ${JSON.stringify(t.result)}`,
+                      )
+                      .join("\n")}`
+                  : m.content;
+                return `${m.role === "user" ? "Client" : "Coach"}: ${content}`;
+              })
+              .join("\n")}
+          </conversation_history>
+
+          Generate three follow-up questions that:
+          1. Explore specific moments or examples mentioned in the conversation
+          2. Challenge assumptions about particular situations discussed
+          3. Move toward concrete next steps
+
+          Guidelines for questions:
+          - Keep them short and clear
+          - Make them open-ended
+          - Reference specific details from the conversation
+          - Use "I" instead of "you" framing
+          - Focus on actionable insights
+
+          Analyze the conversation first:
+          1. List key moments and examples discussed
+          2. Note specific challenges mentioned
+          3. Identify potential growth areas
+
+          Return your questions in this JSON format:
+          [
+            {
+              "text": "Short question for the button",
+              "description": "Why this question is valuable"
+            }
+          ]
+
+          Example input:
+          """
+          ...
+          Coach: [...] Proactive Problem-Solving: You tend to identify problems and actively discuss potential solutions. For example, in the meeting about meeting bot management, you recognized an issue and suggested scheduling a new meeting to test solutions. [...]
+          ...
+          """
+
+          Example output:
+          \`\`\`
+          [
+            {
+              "text": "How could have I suggested better solutions for the meeting bot?",
+              "description": "This question explores the conversation and challenges the user to think about how they could have suggested better solutions."
+            }
+          ]
+          \`\`\`
+
+          Now analyze the conversation and generate three targeted follow-up questions.
+        `;
+
+        console.log(prompt);
+
         const result = await generateObject({
-          model: openai("gpt-4o-mini-2024-07-18"),
-          prompt: dedent`
-            You are the best coach in the world.
-            You are observing a coaching conversation between a client and their coach.
-            Your role is to analyze the conversation and recommend insightful follow-up questions for the USER to ask the COACH that would help deepen the discussion and lead to valuable insights.
-
-            <conversation-history>
-              ${input.messages.map((m) => `${m.role}: ${m.content}`).join("\n")}
-            </conversation-history>
-
-            Based on this coaching conversation, generate three strategic follow-up questions that would:
-            - Help explore underlying themes and patterns
-            - Challenge assumptions and expand perspectives  
-            - Move the conversation toward actionable insights
-
-            The questions should be concise and impactful, as they will be displayed as clickable buttons for the user.
-          `,
+          model: openai("gpt-4o-2024-08-06"),
+          prompt,
           schema: z.object({
             questions: z
               .array(
