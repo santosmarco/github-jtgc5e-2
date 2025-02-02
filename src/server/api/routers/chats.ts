@@ -32,7 +32,7 @@ export const chatsRouter = createTRPCRouter({
   generateFollowUpQuestions: publicProcedure
     .input(
       z.object({
-        messages: UIMessage.array(),
+        messages: z.any().array(),
       }),
     )
     .mutation(async ({ input }) => {
@@ -48,9 +48,9 @@ export const chatsRouter = createTRPCRouter({
               .map((m) => {
                 const content = m.toolInvocations?.length
                   ? `${m.content}\n\nTool Invocations:\n${m.toolInvocations
-                      .filter((t) => t.state === "result")
+                      .filter((t: any) => t.state === "result")
                       .map(
-                        (t) =>
+                        (t: any) =>
                           `- ${t.toolName}: ${JSON.stringify(t.args)}\n  Result: ${JSON.stringify(t.result)}`,
                       )
                       .join("\n")}`
