@@ -204,7 +204,9 @@ export function ChatInterface({
     initialMessages: convertToUIMessages(initialMessages),
     maxSteps: 5,
     onFinish: (message) => {
-      generateFollowUpQuestions.mutate({ messages: [...messages, message] });
+      generateFollowUpQuestions.mutate({
+        messages: JSON.parse(JSON.stringify([...messages, message])),
+      });
     },
     onError: (error) => {
       toast.error("Failed to send message", {

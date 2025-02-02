@@ -32,7 +32,7 @@ export const chatsRouter = createTRPCRouter({
   generateFollowUpQuestions: publicProcedure
     .input(
       z.object({
-        messages: UIMessage.array(),
+        messages: z.any().array(),
       }),
     )
     .mutation(async ({ input }) => {
