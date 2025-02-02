@@ -56,6 +56,8 @@ export type MomentCardProps = {
   className?: string;
   videoTitle?: string;
   videoDate?: string | null;
+  hideRelevance?: boolean;
+  hideTimestamp?: boolean;
 };
 
 export function MomentCard({
@@ -67,6 +69,8 @@ export function MomentCard({
   className,
   videoTitle,
   videoDate,
+  hideRelevance,
+  hideTimestamp,
 }: MomentCardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -288,15 +292,17 @@ export function MomentCard({
               </Tooltip>
             </TooltipProvider>
             <div className="flex items-center gap-x-2 text-muted-foreground">
-              {!moment.relevant && (
+              {!hideRelevance && !moment.relevant && (
                 <Badge variant="destructive" className="mr-1.5">
                   Not Relevant
                 </Badge>
               )}
-              <span className="flex items-center gap-x-1.5 text-sm">
-                <ClockIcon className="h-3.5 w-3.5" />
-                {moment.segment_start_timestamp.replace(/\.\d+/, "")}
-              </span>
+              {!hideTimestamp && (
+                <span className="flex items-center gap-x-1.5 text-sm">
+                  <ClockIcon className="h-3.5 w-3.5" />
+                  {moment.segment_start_timestamp.replace(/\.\d+/, "")}
+                </span>
+              )}
               {!noShare && (
                 <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
                   <DropdownMenuTrigger asChild>
