@@ -257,9 +257,6 @@ async function uploadToApiVideo(
       description: eventParsed?.raw?.description ?? undefined,
       source: videoUrl,
       mp4Support: true,
-      transcript: true,
-      transcriptSummary: true,
-      language: "en",
       tags,
       metadata,
     });
