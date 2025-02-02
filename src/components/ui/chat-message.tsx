@@ -1,6 +1,6 @@
 "use client";
 
-import type { ToolInvocation } from "ai";
+import type { Message } from "ai";
 import type { VariantProps } from "class-variance-authority";
 import { cva } from "class-variance-authority";
 import { Tag, TagIcon, VideoIcon } from "lucide-react";
@@ -64,21 +64,12 @@ const chatBubbleVariants = cva(
 
 type Animation = VariantProps<typeof chatBubbleVariants>["animation"];
 
-export interface Message {
-  id: string;
-  role: "user" | "assistant" | (string & {});
-  content: string;
-  createdAt?: Date;
-  attachments?: File[];
-  toolInvocations?: ToolInvocation[];
-  next?: Message[];
-  isNext?: boolean;
-}
-
 export interface ChatMessageProps extends Message {
   showTimeStamp?: boolean;
   animation?: Animation;
   actions?: React.ReactNode;
+  next?: Message[];
+  isNext?: boolean;
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({

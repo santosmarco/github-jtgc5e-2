@@ -12,7 +12,6 @@ export default function ReportsPage() {
   const { profile } = useProfile();
   const { data: user } = api.auth.getUser.useQuery();
   const { data, isLoading } = api.notion.listAll.useQuery();
-  console.log(user, profile, data, isLoading);
   const reports =
     user?.is_admin && (!profile || user.id === profile.id)
       ? data
