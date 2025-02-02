@@ -1,9 +1,9 @@
+import type { Message } from "ai";
 import { useMemo } from "react";
 
 import {
   ChatMessage,
   type ChatMessageProps,
-  type Message,
 } from "~/components/ui/chat-message";
 import { TypingIndicator } from "~/components/ui/typing-indicator";
 
