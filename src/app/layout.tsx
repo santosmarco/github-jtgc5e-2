@@ -8,7 +8,6 @@ import { ProfileProvider } from "~/components/profile-provider";
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import { TRPCReactProvider } from "~/trpc/react";
-import { HydrateClient } from "~/trpc/server";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -31,12 +30,12 @@ export default function RootLayout({
       <body>
         <NuqsAdapter>
           <TRPCReactProvider>
-            <HydrateClient>
-              <ProfileProvider>
-                <TooltipProvider delayDuration={0}>{children}</TooltipProvider>
+            <ProfileProvider>
+              <TooltipProvider delayDuration={0}>
+                {children}
                 <Toaster />
-              </ProfileProvider>
-            </HydrateClient>
+              </TooltipProvider>
+            </ProfileProvider>
           </TRPCReactProvider>
         </NuqsAdapter>
       </body>
