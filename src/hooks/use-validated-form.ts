@@ -18,3 +18,7 @@ export function useValidatedForm<T extends z.ZodTypeAny>(
     resolver: zodResolver(schema),
   });
 }
+
+export type UseValidatedFormReturn<T extends z.ZodTypeAny> = ReturnType<
+  typeof useValidatedForm<T>
+>;
