@@ -60,7 +60,8 @@ export const env = createEnv({
     NEXT_PUBLIC_SITE_URL: z
       .string()
       .url()
-      .refine((url) => !url.endsWith("/"), "Must not end with a slash"),
+      .optional()
+      .refine((url) => !url?.endsWith("/"), "Must not end with a slash"),
     // Supabase
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
     NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string(),
