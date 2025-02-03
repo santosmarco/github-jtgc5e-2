@@ -10,6 +10,7 @@ import { Video, VideoWithDetails } from "~/lib/schemas/video";
 
 const apiVideo = new ApiVideoClient({
   apiKey: env.API_VIDEO_API_KEY,
+  baseUri: env.API_VIDEO_BASE_URI,
 });
 
 async function _listVideos(...args: Parameters<typeof apiVideo.videos.list>) {
