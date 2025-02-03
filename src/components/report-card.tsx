@@ -7,9 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { cn } from "~/lib/utils";
 import type { RouterOutputs } from "~/trpc/react";
 
+/*
 export type ReportCardProps = React.ComponentProps<typeof Card> & {
   report: RouterOutputs["notion"]["listByClient"][number];
 };
+
 
 export const ReportCard = React.forwardRef<
   React.ElementRef<typeof Card>,
@@ -62,3 +64,6 @@ export const ReportCard = React.forwardRef<
   );
 });
 ReportCard.displayName = "ReportCard";
+*/
+
+export const ReportCard = () => <div>ReportCard</div>;

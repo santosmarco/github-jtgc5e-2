@@ -8,7 +8,7 @@ export default async function ReportPage({
   params: Promise<{ reportId: string }>;
 }) {
   const { reportId } = await params;
-  const report = await api.notion.getOne({ reportId });
+  const report = await api.reports.getOne({ reportId });
 
   return <ReportPageClient report={report} />;
 }

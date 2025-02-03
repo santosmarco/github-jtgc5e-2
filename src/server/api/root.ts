@@ -5,9 +5,11 @@ import { authRouter } from "./routers/auth";
 import { chatsRouter } from "./routers/chats";
 import { clientsRouter } from "./routers/clients";
 import { coachingFrameworksRouter } from "./routers/coaching-frameworks";
+import { goalsRouter } from "./routers/goals";
 import { meetingsRouter } from "./routers/meetings";
 import { momentsRouter } from "./routers/moments";
 import { onboardingRouter } from "./routers/onboarding";
+import { reportsRouter } from "./routers/reports";
 import { settingsRouter } from "./routers/settings";
 import { userInvitesRouter } from "./routers/user-invites";
 import { videosRouter } from "./routers/videos";
@@ -23,7 +25,9 @@ export const appRouter = createTRPCRouter({
   settings: settingsRouter,
   onboarding: onboardingRouter,
   meetings: meetingsRouter,
+  goals: goalsRouter,
   calendar: calendarRouter,
+  reports: reportsRouter,
 });
 
 export type AppRouter = typeof appRouter;

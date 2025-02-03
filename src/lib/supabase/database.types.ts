@@ -529,6 +529,24 @@ export type Database = {
           },
         ]
       }
+      group_report_processing_status: {
+        Row: {
+          goal_ids: string | null
+          id: string
+          status: string | null
+        }
+        Insert: {
+          goal_ids?: string | null
+          id: string
+          status?: string | null
+        }
+        Update: {
+          goal_ids?: string | null
+          id?: string
+          status?: string | null
+        }
+        Relationships: []
+      }
       integration_credentials: {
         Row: {
           access_token: string | null
@@ -1695,6 +1713,38 @@ export type Database = {
           },
           {
             foreignKeyName: "report_moments_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_processing_status: {
+        Row: {
+          created_at: string
+          group_processing_status_id: string | null
+          id: string
+          report_id: string
+          status: string | null
+        }
+        Insert: {
+          created_at?: string
+          group_processing_status_id?: string | null
+          id: string
+          report_id: string
+          status?: string | null
+        }
+        Update: {
+          created_at?: string
+          group_processing_status_id?: string | null
+          id?: string
+          report_id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_processing_status_report_id_fkey"
             columns: ["report_id"]
             isOneToOne: false
             referencedRelation: "reports"

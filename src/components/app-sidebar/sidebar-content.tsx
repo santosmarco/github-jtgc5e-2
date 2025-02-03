@@ -4,10 +4,13 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Brain,
   CogIcon,
+  GoalIcon,
   LogOut,
   Puzzle,
+  Target,
   TrendingUpIcon,
   User,
+  User2Icon,
   UsersIcon,
   Video,
 } from "lucide-react";
@@ -104,6 +107,13 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
 
   const menuItems = [
     {
+      href: "/goals",
+      icon: <GoalIcon className="h-5 w-5" />,
+      label: "My Journey",
+      isActive:
+        pathname.startsWith("/goals") || pathname.startsWith("/reports"),
+    },
+    {
       href: "/insights",
       icon: <Brain className="h-5 w-5" />,
       label: "Explore",
@@ -120,31 +130,6 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
       icon: <TrendingUpIcon />,
       label: "Moments",
       isActive: pathname.startsWith("/moments"),
-    },
-    // {
-    //   href: "/reports",
-    //   icon: <BarChart3 className="h-5 w-5" />,
-    //   label: "Reports",
-    //   isActive: pathname.startsWith("/reports"),
-    // },
-    {
-      href: "/integrations",
-      icon: <Puzzle className="h-5 w-5" />,
-      label: "Integrations",
-      isActive: pathname.startsWith("/integrations"),
-    },
-    (selectedProfile?.role === "coach" || selectedProfile?.is_admin) && {
-      href: "/clients",
-      icon: <UsersIcon className="h-5 w-5" />,
-      label: "Clients",
-      isActive: pathname.startsWith("/clients"),
-    },
-    (user.role === "user" ||
-      (user.is_admin && selectedProfile?.role !== "coach")) && {
-      href: "/settings",
-      icon: <CogIcon className="h-5 w-5" />,
-      label: "Settings",
-      isActive: pathname === "/settings",
     },
   ].filter((x): x is Exclude<typeof x, false | undefined> => !!x);
 
@@ -291,39 +276,70 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
                 {profiles.length > 1 && (
                   <>
                     <DropdownMenuLabel className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
-                      <User className="h-3 w-3" />
+                      <div className="flex h-4 w-4 items-center justify-center">
+                        <User className="h-3 w-3" />
+                      </div>
                       {user.is_admin ? "Admin" : "Coach"} • Switch Profile
                     </DropdownMenuLabel>
-                    {profiles.map((profile) => (
-                      <DropdownMenuItem
-                        key={profile.id}
-                        onClick={() => handleProfileChange(profile)}
-                        className="flex cursor-pointer items-center gap-2"
-                      >
-                        <span
-                          className={cn(
-                            "h-2 w-2 rounded-full",
-                            selectedProfile?.id === profile.id
-                              ? "bg-primary"
-                              : "bg-muted",
-                          )}
-                        />
-                        <span className="flex items-baseline gap-x-2">
-                          {profile.nickname}
-                          {profile.id === user.id && (
-                            <span className="text-xs text-muted-foreground">
-                              (You)
-                            </span>
-                          )}
-                        </span>
-                      </DropdownMenuItem>
-                    ))}
+                    <div className="max-h-[400px] overflow-y-auto">
+                      {profiles.map((profile) => (
+                        <DropdownMenuItem
+                          key={profile.id}
+                          onClick={() => handleProfileChange(profile)}
+                          className="flex cursor-pointer items-center gap-2"
+                        >
+                          <div className="flex h-4 w-4 items-center justify-center">
+                            <span
+                              className={cn(
+                                "h-2 w-2 rounded-full",
+                                selectedProfile?.id === profile.id
+                                  ? "bg-primary"
+                                  : "bg-muted",
+                              )}
+                            />
+                          </div>
+                          <span className="flex items-baseline gap-x-2">
+                            {profile.nickname}
+                            {profile.id === user.id && (
+                              <span className="text-xs text-muted-foreground">
+                                (You)
+                              </span>
+                            )}
+                          </span>
+                        </DropdownMenuItem>
+                      ))}
+                    </div>
                     <DropdownMenuSeparator />
                   </>
                 )}
+                <Link href="/integrations" onClick={onNavClick}>
+                  <DropdownMenuItem className="cursor-pointer gap-2">
+                    <Puzzle className="h-4 w-4" />
+                    Integrations
+                  </DropdownMenuItem>
+                </Link>
+                {(selectedProfile?.role === "coach" ||
+                  selectedProfile?.is_admin) && (
+                  <Link href="/clients" onClick={onNavClick}>
+                    <DropdownMenuItem className="cursor-pointer gap-2">
+                      <UsersIcon className="h-4 w-4" />
+                      Clients
+                    </DropdownMenuItem>
+                  </Link>
+                )}
+                {(user.role === "user" ||
+                  (user.is_admin && selectedProfile?.role !== "coach")) && (
+                  <Link href="/settings" onClick={onNavClick}>
+                    <DropdownMenuItem className="cursor-pointer gap-2">
+                      <CogIcon className="h-4 w-4" />
+                      Settings
+                    </DropdownMenuItem>
+                  </Link>
+                )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={handleSignOut}
-                  className="cursor-pointer gap-2 text-destructive-foreground"
+                  className="cursor-pointer gap-2 text-destructive"
                 >
                   <LogOut className="h-4 w-4" />
                   Sign out

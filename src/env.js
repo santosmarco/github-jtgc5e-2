@@ -25,6 +25,7 @@ export const env = createEnv({
     // OpenAI
     OPENAI_API_KEY: z.string(),
     // API Video
+    API_VIDEO_BASE_URI: z.string(),
     API_VIDEO_API_KEY: z.string(),
     // Meeting Baas
     MEETING_BAAS_API_KEY: z.string(),
@@ -76,6 +77,7 @@ export const env = createEnv({
     GOOGLE_OAUTH_CLIENT_ID: process.env.GOOGLE_OAUTH_CLIENT_ID,
     GOOGLE_OAUTH_CLIENT_SECRET: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    API_VIDEO_BASE_URI: process.env.API_VIDEO_BASE_URI,
     API_VIDEO_API_KEY: process.env.API_VIDEO_API_KEY,
     MEETING_BAAS_API_KEY: process.env.MEETING_BAAS_API_KEY,
     SLACK_BOT_TOKEN: process.env.SLACK_BOT_TOKEN,

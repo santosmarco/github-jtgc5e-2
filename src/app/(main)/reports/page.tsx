@@ -9,6 +9,7 @@ import { useProfile } from "~/hooks/use-profile";
 import { api } from "~/trpc/react";
 
 export default function ReportsPage() {
+  /*
   const { profile } = useProfile();
   const { data: user } = api.auth.getUser.useQuery();
   const { data, isLoading } = api.notion.listAll.useQuery();
@@ -77,4 +78,7 @@ export default function ReportsPage() {
       </motion.div>
     </div>
   );
+  */
+
+  return <div>Reports</div>;
 }
