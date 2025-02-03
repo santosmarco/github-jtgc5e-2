@@ -3,7 +3,7 @@ import axios, { type AxiosError } from "axios";
 import { env } from "~/env";
 
 export const client = axios.create({
-  baseURL: "https://titan-backend-x.replit.app",
+  baseURL: env.INTERNAL_API_URL,
   headers: {
     "Content-Type": "application/json",
     "X-API-Key": env.INTERNAL_API_KEY,
