@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       code,
       provider,
     });
-    return NextResponse.redirect(`${env.NEXT_PUBLIC_SITE_URL}/auth/error`);
+    return NextResponse.redirect(`${getBaseUrl()}auth/error`);
   }
 
   const supabase = await createClient();
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
         logger.warn("Invalid invite", { invite });
         await supabase.auth.signOut();
         return NextResponse.redirect(
-          `${env.NEXT_PUBLIC_SITE_URL}/login?reason=invitation-expired`,
+          `${getBaseUrl()}login?reason=invitation-expired`,
         );
       }
     }
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
         user,
         session,
       });
-      return NextResponse.redirect(`${env.NEXT_PUBLIC_SITE_URL}/auth/error`);
+      return NextResponse.redirect(`${getBaseUrl()}auth/error`);
     }
 
     // Step 4: Check user profile status
@@ -63,9 +63,7 @@ export async function GET(request: NextRequest) {
         status: userProfile.status,
       });
       await supabase.auth.signOut();
-      return NextResponse.redirect(
-        `${env.NEXT_PUBLIC_SITE_URL}/login?reason=inactive`,
-      );
+      return NextResponse.redirect(`${getBaseUrl()}login?reason=inactive`);
     }
 
     // Step 5: Handle user profile creation/update
@@ -77,7 +75,7 @@ export async function GET(request: NextRequest) {
         logger.warn("Invalid invite during profile creation", { invite });
         await supabase.auth.signOut();
         return NextResponse.redirect(
-          `${env.NEXT_PUBLIC_SITE_URL}/login?reason=invitation-expired&email=${encodeURIComponent(
+          `${getBaseUrl()}login?reason=invitation-expired&email=${encodeURIComponent(
             user.email ?? "",
           )}&role=user`,
         );
@@ -92,9 +90,7 @@ export async function GET(request: NextRequest) {
         if (isNewSignup) {
           logger.warn("Handling unauthorized new signup", { userId: user.id });
           await handleNewSignup(supabase, user.id);
-          return NextResponse.redirect(
-            `${env.NEXT_PUBLIC_SITE_URL}/login?reason=forbidden`,
-          );
+          return NextResponse.redirect(`${getBaseUrl()}login?reason=forbidden`);
         }
       } catch (error) {
         logger.error("Error handling regular user profile:", {
@@ -126,7 +122,7 @@ export async function GET(request: NextRequest) {
       error,
       stack: (error as Error).stack,
     });
-    return NextResponse.redirect(`${env.NEXT_PUBLIC_SITE_URL}/auth/error`);
+    return NextResponse.redirect(`${getBaseUrl()}auth/error`);
   }
 }
 
@@ -412,7 +408,7 @@ function handleRedirect(request: NextRequest, next: string): NextResponse {
   const forwardedHost = request.headers.get("x-forwarded-host");
   logger.info("Forwarded host", { forwardedHost });
   if (!forwardedHost) {
-    const url = `${env.NEXT_PUBLIC_SITE_URL}${next}`;
+    const url = `${getBaseUrl()}${next}`;
     logger.info("Redirecting without forwarded host", { url });
     return NextResponse.redirect(url);
   }
@@ -421,4 +417,14 @@ function handleRedirect(request: NextRequest, next: string): NextResponse {
   const url = `${protocol}://${forwardedHost}${next}`;
   logger.info("Redirecting with forwarded host", { url, protocol });
   return NextResponse.redirect(url);
+}
+
+function getBaseUrl() {
+  let url =
+    env.NEXT_PUBLIC_SITE_URL ??
+    env.NEXT_PUBLIC_VERCEL_URL ??
+    window.location.origin;
+  url = url.startsWith("http") ? url : `https://${url}`;
+  url = url.endsWith("/") ? url : `${url}/`;
+  return url;
 }
