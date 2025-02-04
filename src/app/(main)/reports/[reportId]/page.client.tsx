@@ -193,8 +193,11 @@ export function ReportPageClient({ group, reports }: ReportPageClientProps) {
                 <h2>Progress Report {report.id}</h2>
                 {report.summary && (
                   <div className="border-l-2 border-border/80 pl-4 text-muted-foreground">
-                    <MarkdownRenderer className="min-w-full">
-                      {report.summary}
+                    <MarkdownRenderer className="min-w-full text-muted-foreground">
+                      {report.summary.replace(
+                        /```(?:\w+)?\s*([\s\S]*?)\s*```/g,
+                        "$1",
+                      )}
                     </MarkdownRenderer>
                   </div>
                 )}
