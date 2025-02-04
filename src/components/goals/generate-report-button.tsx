@@ -43,7 +43,7 @@ export function GenerateReportButton({ goals }: GenerateReportButtonProps) {
                   clearInterval(interval);
                   setIsGeneratingReport(false);
                   setReportSuccess(true);
-                  router.push(`/reports/${data.job_id}`);
+                  router.push(`/goals/reports/${data.job_id}`);
                 } else if (status.status === "failed") {
                   clearInterval(interval);
                   setIsGeneratingReport(false);

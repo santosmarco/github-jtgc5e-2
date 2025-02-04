@@ -110,8 +110,7 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
       href: "/goals",
       icon: <GoalIcon className="h-5 w-5" />,
       label: "My Journey",
-      isActive:
-        pathname.startsWith("/goals") || pathname.startsWith("/reports"),
+      isActive: pathname.startsWith("/goals"),
     },
     {
       href: "/insights",

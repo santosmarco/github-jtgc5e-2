@@ -1,4 +1,5 @@
 import { api, HydrateClient } from "~/trpc/server";
+import { NavigationBar } from "./navigation-bar";
 
 export default async function GoalsLayout({
   children,
@@ -10,5 +11,10 @@ export default async function GoalsLayout({
     api.goals.getGoals.prefetch(),
   ]);
 
-  return <HydrateClient>{children}</HydrateClient>;
+  return (
+    <HydrateClient>
+      <NavigationBar />
+      {children}
+    </HydrateClient>
+  );
 }

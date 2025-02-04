@@ -92,7 +92,7 @@ export function ReportCard({
               key={goal.id}
               className="flex items-center gap-1.5 text-xs text-muted-foreground"
             >
-              <Goal className="h-3.5 w-3.5" />
+              <Goal className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate leading-none">{goal.text}</span>
             </div>
           ))}

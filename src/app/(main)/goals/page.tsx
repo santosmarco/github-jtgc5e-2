@@ -1,30 +1,16 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  BarChart3Icon,
-  CalendarDaysIcon,
-  GoalIcon,
-  Loader2Icon,
-} from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { GoalIcon, Loader2Icon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { GenerateReportButton } from "~/components/goals/generate-report-button";
 import { GoalCard } from "~/components/goals/goal-card";
 import {
   GoalCreationDrawer,
   type GoalFormValues,
 } from "~/components/goals/goal-creation-drawer";
 import { NewGoalForm } from "~/components/goals/new-goal-form";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "~/components/ui/tooltip";
 import { useProfile } from "~/hooks/use-profile";
 import { createClient } from "~/lib/supabase/client";
 import type { Tables } from "~/lib/supabase/database.types";
@@ -42,8 +28,6 @@ const staggerAnimation = {
 } as const;
 
 export default function GoalsPage() {
-  const router = useRouter();
-  const pathname = usePathname();
   const supabase = createClient();
   const { profile } = useProfile();
   const apiUtils = api.useUtils();
@@ -238,108 +222,42 @@ export default function GoalsPage() {
   }
 
   return (
-    <>
-      <Tabs
-        value={pathname.startsWith("/reports") ? "reports" : "goals"}
-        className="-mt-12 w-full"
-      >
-        <div className="sticky top-0 z-10 -mx-12 border-b bg-background/80 backdrop-blur-lg">
-          <div className="container mx-auto flex items-center justify-between px-6 py-2 md:px-8">
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <TabsList className="inline-flex gap-1 rounded-lg bg-muted/50 p-1">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="inline-flex cursor-not-allowed items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground opacity-50">
-                        <CalendarDaysIcon className="h-4 w-4 stroke-[2.5px]" />
-                        Summary
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>Coming soon</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <TabsTrigger
-                  value="goals"
-                  className="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all hover:text-primary data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
-                  onClick={() => router.push("/goals")}
-                >
-                  <GoalIcon className="h-4 w-4 stroke-[2.5px]" />
-                  Goals
-                </TabsTrigger>
-                <TabsTrigger
-                  value="reports"
-                  className="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all hover:text-primary data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
-                  onClick={() => router.push("/reports")}
-                >
-                  <BarChart3Icon className="h-4 w-4 stroke-[2.5px]" />
-                  Reports
-                </TabsTrigger>
-              </TabsList>
-            </motion.div>
+    <motion.div
+      initial="initial"
+      animate="animate"
+      variants={staggerAnimation}
+      className="container mx-auto space-y-6 px-6 py-6 md:px-8"
+    >
+      <div className="pb-2">
+        <NewGoalForm onSubmit={handleAddGoal} />
+      </div>
 
-            <GenerateReportButton goals={goals} />
-          </div>
-        </div>
+      <AnimatePresence mode="popLayout">
+        {goals.map((goal) => (
+          <GoalCard
+            key={goal.id}
+            goal={goal}
+            mode="view"
+            onGoalComplete={handleGoalComplete}
+            onGoalDelete={handleGoalDelete}
+            onGoalEdit={handleGoalEdit}
+          />
+        ))}
+      </AnimatePresence>
 
-        <motion.div
-          initial="initial"
-          animate="animate"
-          variants={staggerAnimation}
-          className="container mx-auto space-y-6 px-6 py-6 md:px-8"
-        >
-          <TabsContent
-            value="summary"
-            className="space-y-6 focus-visible:outline-none"
-          >
-            {/* Summary content will go here */}
-          </TabsContent>
-          <TabsContent
-            value="goals"
-            className="space-y-6 focus-visible:outline-none"
-          >
-            <div className="pb-2">
-              <NewGoalForm onSubmit={handleAddGoal} />
-            </div>
-
-            <AnimatePresence mode="popLayout">
-              {goals.map((goal) => (
-                <GoalCard
-                  key={goal.id}
-                  goal={goal}
-                  mode="view"
-                  onGoalComplete={handleGoalComplete}
-                  onGoalDelete={handleGoalDelete}
-                  onGoalEdit={handleGoalEdit}
-                />
-              ))}
-            </AnimatePresence>
-          </TabsContent>
-          <TabsContent
-            value="reports"
-            className="space-y-6 focus-visible:outline-none"
-          >
-            {/* Reports content will go here */}
-          </TabsContent>
-        </motion.div>
-
-        <GoalCreationDrawer
-          mode={isEditingGoalId ? "edit" : "create"}
-          goal={pendingGoal}
-          setGoal={(goal) => {
-            setPendingGoal(goal);
-            if (!goal) {
-              setIsEditingGoalId(null);
-            }
-          }}
-          onSubmit={(values) =>
-            handleGoalSubmit(values, isEditingGoalId ? "edit" : "create")
+      <GoalCreationDrawer
+        mode={isEditingGoalId ? "edit" : "create"}
+        goal={pendingGoal}
+        setGoal={(goal) => {
+          setPendingGoal(goal);
+          if (!goal) {
+            setIsEditingGoalId(null);
           }
-        />
-      </Tabs>
-    </>
+        }}
+        onSubmit={(values) =>
+          handleGoalSubmit(values, isEditingGoalId ? "edit" : "create")
+        }
+      />
+    </motion.div>
   );
 }

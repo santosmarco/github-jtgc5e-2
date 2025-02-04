@@ -54,14 +54,6 @@ export default function ReportsPage() {
 
   return (
     <div className="container mx-auto space-y-8 py-6">
-      <motion.h1
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-3xl font-bold"
-      >
-        Reports
-      </motion.h1>
-
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -70,7 +62,7 @@ export default function ReportsPage() {
         {sortedReports.map((report, index) => (
           <Link
             key={report.id}
-            href={`/reports/${report.id}`}
+            href={`/goals/reports/${report.id}`}
             className="block h-full"
             tabIndex={0}
           >
@@ -78,7 +70,7 @@ export default function ReportsPage() {
               report={report}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: index * 0.05 }}
             />
           </Link>
         ))}
