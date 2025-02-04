@@ -23,7 +23,6 @@ type ReportMomentListProps = {
   signalDirection: "positive" | "negative";
   reportGoalSignals: Tables<"report_goal_signals">[];
   onHideMoment: (momentId: string) => void;
-  hiddenMoments: Record<string, string | null>;
 };
 
 export function ReportMomentList({
@@ -31,7 +30,6 @@ export function ReportMomentList({
   signalDirection,
   reportGoalSignals,
   onHideMoment,
-  hiddenMoments,
 }: ReportMomentListProps) {
   const [showAll, setShowAll] = useState(false);
   const [expandedHiddenMoments, setExpandedHiddenMoments] = useState<
@@ -108,7 +106,7 @@ export function ReportMomentList({
                   collapsed: { height: 0, opacity: 0 },
                 }}
                 transition={{ duration: 0.2 }}
-                className="overflow-hidden px-3 pb-3"
+                className="overflow-hidden px-3"
               >
                 <div className="space-y-2 pt-2">
                   <div className="rounded-md bg-muted px-3 py-2">
@@ -172,13 +170,8 @@ export function ReportMomentList({
                   noShare
                   hideRelevance
                   hideTimestamp
-                  className={
-                    hiddenMoments[reportMoment.moment_id]
-                      ? "h-20 overflow-hidden"
-                      : ""
-                  }
                 />
-                {!hiddenMoments[reportMoment.moment_id] && (
+                {reportMoment.is_visible && (
                   <div className="absolute right-2 top-2 overflow-hidden">
                     <Button
                       variant="ghost"
@@ -195,7 +188,7 @@ export function ReportMomentList({
                     </Button>
                   </div>
                 )}
-                {hiddenMoments[reportMoment.moment_id] && (
+                {!reportMoment.is_visible && (
                   <div className="absolute right-2 top-2 overflow-hidden">
                     <Badge variant="secondary">Hidden</Badge>
                   </div>
@@ -205,6 +198,7 @@ export function ReportMomentList({
           </motion.div>
         );
       })}
+
       {visibleMoments.length > 3 && (
         <Button
           variant="outline"

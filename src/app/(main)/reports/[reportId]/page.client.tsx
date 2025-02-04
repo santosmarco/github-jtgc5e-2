@@ -22,6 +22,7 @@ import MarkdownRenderer from "~/components/ui/markdown-renderer";
 import type { VideoMoment } from "~/lib/schemas/video-moment";
 import type { RouterOutputs } from "~/trpc/shared";
 import { api } from "~/trpc/react";
+import _ from "lodash";
 
 type GroupReports = RouterOutputs["reports"]["getGroupReports"];
 
@@ -30,17 +31,6 @@ type Report = GroupReports["reports"][number];
 export type ReportPageClientProps = GroupReports;
 
 export function ReportPageClient({ group, reports }: ReportPageClientProps) {
-  const [hiddenMoments, setHiddenMoments] = useState<
-    Record<string, string | null>
-  >(() => {
-    const hiddenMoments: Record<string, string | null> = {};
-    for (const reportMoment of reports.flatMap((r) => r.report_moments)) {
-      if (!reportMoment.is_visible) {
-        hiddenMoments[reportMoment.moment_id] = reportMoment.omission_reason;
-      }
-    }
-    return hiddenMoments;
-  });
   const [showHideReasonDialog, setShowHideReasonDialog] = useState(false);
   const [selectedMoment, setSelectedMoment] = useState<{
     id: string;
@@ -68,11 +58,6 @@ export function ReportPageClient({ group, reports }: ReportPageClientProps) {
 
   const handleConfirmHide = () => {
     if (selectedMoment) {
-      setHiddenMoments((prev) => ({
-        ...prev,
-        [selectedMoment.id]: hideReason,
-      }));
-
       hideMomentMutation.mutate({
         momentId: selectedMoment.id,
         reportId: selectedMoment.reportId,
@@ -135,47 +120,45 @@ export function ReportPageClient({ group, reports }: ReportPageClientProps) {
 
           if (!goal) return null;
 
-          const positiveMoments = report.report_moments
-            .map((m) => ({
-              ...m,
-              goal_signal: report.report_goal_signals.find(
-                (s) => s.id === m.report_goal_signal_id,
-              ),
-            }))
-            .filter((m) => m.goal_signal?.direction === "positive")
-            .map((m, i) => ({
-              ...m,
-              moment: transformMoment(m, i),
-            }))
-            .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
-            .sort((a, b) =>
-              a.omission_reason === "user"
-                ? -1
-                : b.omission_reason === "user"
-                  ? 1
-                  : 0,
-            );
+          const positiveMoments = _.uniqBy(
+            _.orderBy(
+              report.report_moments
+                .map((m) => ({
+                  ...m,
+                  goal_signal: report.report_goal_signals.find(
+                    (s) => s.id === m.report_goal_signal_id,
+                  ),
+                }))
+                .filter((m) => m.goal_signal?.direction === "positive")
+                .map((m, i) => ({
+                  ...m,
+                  moment: transformMoment(m, i),
+                })),
+              [(m) => m.is_visible, (m) => m.score ?? 0],
+              ["desc", "desc"],
+            ),
+            (m) => m.id,
+          );
 
-          const negativeMoments = report.report_moments
-            .map((m) => ({
-              ...m,
-              goal_signal: report.report_goal_signals.find(
-                (s) => s.id === m.report_goal_signal_id,
-              ),
-            }))
-            .filter((m) => m.goal_signal?.direction === "negative")
-            .map((m, i) => ({
-              ...m,
-              moment: transformMoment(m, i),
-            }))
-            .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
-            .sort((a, b) =>
-              a.omission_reason === "user"
-                ? -1
-                : b.omission_reason === "user"
-                  ? 1
-                  : 0,
-            );
+          const negativeMoments = _.uniqBy(
+            _.orderBy(
+              report.report_moments
+                .map((m) => ({
+                  ...m,
+                  goal_signal: report.report_goal_signals.find(
+                    (s) => s.id === m.report_goal_signal_id,
+                  ),
+                }))
+                .filter((m) => m.goal_signal?.direction === "negative")
+                .map((m, i) => ({
+                  ...m,
+                  moment: transformMoment(m, i),
+                })),
+              [(m) => m.is_visible, (m) => m.score ?? 0],
+              ["desc", "desc"],
+            ),
+            (m) => m.id,
+          );
 
           return (
             <motion.div
@@ -189,7 +172,7 @@ export function ReportPageClient({ group, reports }: ReportPageClientProps) {
               <div className="prose prose-sm min-w-full">
                 <h2>Progress Report {report.id}</h2>
                 {report.summary && (
-                  <div className="border-l-2 border-border/80 pl-4 text-muted-foreground">
+                  <div className="border-l-2 border-border/80 py-2 pl-4 text-muted-foreground">
                     <MarkdownRenderer className="min-w-full text-muted-foreground">
                       {report.summary.replace(
                         /```(?:\w+)?\s*([\s\S]*?)\s*```/g,
@@ -231,7 +214,6 @@ export function ReportPageClient({ group, reports }: ReportPageClientProps) {
                     onHideMoment={(momentId) =>
                       handleHideMoment(momentId, report.id)
                     }
-                    hiddenMoments={hiddenMoments}
                   />
                 </div>
 
@@ -251,7 +233,6 @@ export function ReportPageClient({ group, reports }: ReportPageClientProps) {
                     onHideMoment={(momentId) =>
                       handleHideMoment(momentId, report.id)
                     }
-                    hiddenMoments={hiddenMoments}
                   />
                 </div>
               </div>
