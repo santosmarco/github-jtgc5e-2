@@ -1,12 +1,17 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CircleCheck, CircleFadingArrowUpIcon } from "lucide-react";
+import {
+  ArrowDownRightIcon,
+  ArrowUpIcon,
+  ArrowUpRightIcon,
+  CircleFadingArrowUpIcon,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { GoalCard } from "~/components/goals/goal-card";
-import { ReportMomentList } from "~/components/reports/report-moment-list";
+import { ReportSignalGroup } from "~/components/reports/report-signal-group";
 import { Button } from "~/components/ui/button";
 import {
   Dialog,
@@ -20,16 +25,31 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import MarkdownRenderer from "~/components/ui/markdown-renderer";
 import type { VideoMoment } from "~/lib/schemas/video-moment";
-import type { RouterOutputs } from "~/trpc/shared";
+import type { Tables } from "~/lib/supabase/database.types";
 import { api } from "~/trpc/react";
-import _ from "lodash";
+import type { RouterOutputs } from "~/trpc/shared";
 import { ReportNavigation } from "./report-navigation";
+import type { Merge } from "type-fest";
+import { Separator } from "~/components/ui/separator";
 
-type GroupReports = RouterOutputs["reports"]["getGroupReports"];
+type GroupReport = RouterOutputs["reports"]["getGroupReports"]["group"];
+type Report = RouterOutputs["reports"]["getGroupReports"]["reports"][number];
+type ReportSignal = Report["report_goal_signals"][number];
+type ReportMoment = Report["report_moments"][number];
 
-type Report = GroupReports["reports"][number];
+type SignalGroup = {
+  signal: ReportSignal;
+  moments: Array<
+    Merge<ReportMoment, { moment: Merge<ReportMoment["moment"], VideoMoment> }>
+  >;
+};
 
-export type ReportPageClientProps = GroupReports;
+type GroupedMoments = {
+  positive: Record<string, SignalGroup>;
+  negative: Record<string, SignalGroup>;
+};
+
+export type ReportPageClientProps = RouterOutputs["reports"]["getGroupReports"];
 
 export function ReportPageClient({ group, reports }: ReportPageClientProps) {
   const [showHideReasonDialog, setShowHideReasonDialog] = useState(false);
@@ -38,6 +58,7 @@ export function ReportPageClient({ group, reports }: ReportPageClientProps) {
     reportId: string;
   } | null>(null);
   const [hideReason, setHideReason] = useState("");
+  const [hiddenMoments, setHiddenMoments] = useState<string[]>([]);
   const apiUtils = api.useUtils();
 
   const hideMomentMutation = api.reports.hideMoment.useMutation({
@@ -52,9 +73,8 @@ export function ReportPageClient({ group, reports }: ReportPageClientProps) {
     },
   });
 
-  const handleHideMoment = (momentId: string, reportId: string) => {
-    setSelectedMoment({ id: momentId, reportId });
-    setShowHideReasonDialog(true);
+  const handleHideMoment = (momentId: string) => {
+    setHiddenMoments((prev) => [...prev, momentId]);
   };
 
   const handleConfirmHide = () => {
@@ -102,6 +122,41 @@ export function ReportPageClient({ group, reports }: ReportPageClientProps) {
     reactions: [],
   });
 
+  // Group moments by signal
+  const groupedMoments = reports.reduce<GroupedMoments>(
+    (acc, report) => {
+      for (const signal of report.report_goal_signals) {
+        const direction = signal.direction as "positive" | "negative";
+        const signalId = signal.id;
+
+        // Initialize the signal group if it doesn't exist
+        if (!acc[direction][signalId]) {
+          acc[direction][signalId] = { signal, moments: [] };
+        }
+
+        const reportMoments = report.report_moments.filter(
+          (m: ReportMoment) => m.report_goal_signal_id === signalId,
+        );
+
+        for (const reportMoment of reportMoments) {
+          acc[direction][signalId].moments.push({
+            ...reportMoment,
+            moment: {
+              ...reportMoment.moment,
+              ...transformMoment(
+                reportMoment,
+                acc[direction][signalId].moments.length,
+              ),
+            },
+          });
+        }
+      }
+
+      return acc;
+    },
+    { positive: {}, negative: {} },
+  );
+
   return (
     <div className="grid grid-cols-[auto_1fr]">
       <ReportNavigation reports={reports} />
@@ -122,172 +177,131 @@ export function ReportPageClient({ group, reports }: ReportPageClientProps) {
           <div className="mt-12 space-y-16">
             {reports.map((report, reportIndex) => {
               const goal = report.report_goals[0]?.goal;
-
               if (!goal) return null;
 
-              const positiveMoments = _.uniqBy(
-                _.orderBy(
-                  report.report_moments
-                    .map((m) => ({
-                      ...m,
-                      goal_signal: report.report_goal_signals.find(
-                        (s) => s.id === m.report_goal_signal_id,
-                      ),
-                    }))
-                    .filter((m) => m.goal_signal?.direction === "positive")
-                    .map((m, i) => ({
-                      ...m,
-                      moment: transformMoment(m, i),
-                    })),
-                  [(m) => m.is_visible, (m) => m.score ?? 0],
-                  ["desc", "desc"],
-                ),
-                (m) => m.id,
-              );
-
-              const negativeMoments = _.uniqBy(
-                _.orderBy(
-                  report.report_moments
-                    .map((m) => ({
-                      ...m,
-                      goal_signal: report.report_goal_signals.find(
-                        (s) => s.id === m.report_goal_signal_id,
-                      ),
-                    }))
-                    .filter((m) => m.goal_signal?.direction === "negative")
-                    .map((m, i) => ({
-                      ...m,
-                      moment: transformMoment(m, i),
-                    })),
-                  [(m) => m.is_visible, (m) => m.score ?? 0],
-                  ["desc", "desc"],
-                ),
-                (m) => m.id,
-              );
-
               return (
-                <>
-                  <motion.div
-                    id={`report-${report.id}`}
-                    key={report.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: reportIndex * 0.1 }}
-                    className="space-y-8"
-                  >
-                    <div className="space-y-4">
-                      <GoalCard
-                        goal={goal}
-                        mode="view"
-                        onGoalComplete={() => void 0}
-                      />
-                    </div>
+                <motion.div
+                  id={`report-${report.id}`}
+                  key={report.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: reportIndex * 0.1 }}
+                  className="space-y-8"
+                >
+                  <div className="space-y-4">
+                    <GoalCard
+                      goal={goal}
+                      mode="view"
+                      onGoalComplete={() => void 0}
+                    />
+                  </div>
 
-                    {/* Report Header */}
-                    <div className="prose prose-sm min-w-full">
-                      {report.summary && (
-                        <div className="border-l-2 border-border/80 py-2 pl-4 text-muted-foreground">
-                          <MarkdownRenderer className="min-w-full text-muted-foreground">
-                            {report.summary.replace(
-                              /```(?:\w+)?\s*([\s\S]*?)\s*```/g,
-                              "$1",
-                            )}
-                          </MarkdownRenderer>
-                        </div>
+                  {/* Report Header */}
+                  <div className="prose prose-sm min-w-full">
+                    {report.summary && (
+                      <div className="border-l-2 border-border/80 py-2 pl-4 text-muted-foreground">
+                        <MarkdownRenderer className="min-w-full text-muted-foreground">
+                          {report.summary.replace(
+                            /```(?:\w+)?\s*([\s\S]*?)\s*```/g,
+                            "$1",
+                          )}
+                        </MarkdownRenderer>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Memories Section */}
+                  <div className="space-y-8">
+                    <Separator />
+
+                    <h3 className="text-xl font-semibold">Moments</h3>
+
+                    {/* Good Moments */}
+                    <div className="space-y-6">
+                      <h4 className="flex items-center gap-x-1 leading-none text-accent-foreground">
+                        <ArrowUpRightIcon className="inline h-7 w-7 pr-1 text-emerald-700 dark:text-emerald-400" />{" "}
+                        Good Examples
+                      </h4>
+
+                      {Object.entries(groupedMoments.positive).map(
+                        ([signalId, signalGroup]) => (
+                          <ReportSignalGroup
+                            key={signalId}
+                            signal={signalGroup.signal}
+                            moments={signalGroup.moments}
+                            signalDirection="positive"
+                            onHideMoment={handleHideMoment}
+                          />
+                        ),
                       )}
                     </div>
 
-                    {/* Memories Section */}
-                    <div className="space-y-8">
-                      <div className="prose prose-sm min-w-full">
-                        <h3>Moments</h3>
-                      </div>
+                    {/* Areas for Improvement */}
+                    <div className="space-y-6">
+                      <h4 className="flex items-center gap-x-1 leading-none text-accent-foreground">
+                        <ArrowUpIcon className="inline h-7 w-7 pr-1 text-yellow-500 dark:text-yellow-400" />{" "}
+                        Areas for Improvement
+                      </h4>
 
-                      {/* Good Moments */}
-                      <div className="space-y-4">
-                        <div className="prose prose-sm min-w-full">
-                          <h4 className="flex items-center gap-x-1 leading-none text-accent-foreground">
-                            <CircleCheck className="inline h-7 w-7 pr-1 text-xs text-emerald-700 dark:text-emerald-400" />{" "}
-                            Good Examples
-                          </h4>
-                        </div>
-
-                        <ReportMomentList
-                          moments={positiveMoments}
-                          signalDirection="positive"
-                          reportGoalSignals={report.report_goal_signals}
-                          onHideMoment={(momentId) =>
-                            handleHideMoment(momentId, report.id)
-                          }
-                        />
-                      </div>
-
-                      {/* Areas for Improvement */}
-                      <div className="space-y-4">
-                        <div className="prose prose-sm min-w-full">
-                          <h4 className="flex items-center gap-x-1 leading-none text-accent-foreground">
-                            <CircleFadingArrowUpIcon className="inline h-7 w-7 pr-1 text-xs text-amber-600 dark:text-amber-400" />{" "}
-                            Areas for Improvement
-                          </h4>
-                        </div>
-
-                        <ReportMomentList
-                          moments={negativeMoments}
-                          signalDirection="negative"
-                          reportGoalSignals={report.report_goal_signals}
-                          onHideMoment={(momentId) =>
-                            handleHideMoment(momentId, report.id)
-                          }
-                        />
-                      </div>
+                      {Object.entries(groupedMoments.negative).map(
+                        ([signalId, signalGroup]) => (
+                          <ReportSignalGroup
+                            key={signalId}
+                            signal={signalGroup.signal}
+                            moments={signalGroup.moments}
+                            signalDirection="negative"
+                            onHideMoment={handleHideMoment}
+                          />
+                        ),
+                      )}
                     </div>
-                  </motion.div>
-                  {reportIndex < reports.length - 1 && (
-                    <div className="flex justify-center">
-                      <div className="text-2xl text-muted-foreground">
-                        • • •
-                      </div>
+                  </div>
+
+                  {reportIndex !== reports.length - 1 && (
+                    <div className="flex justify-center space-x-2 pt-8">
+                      <span className="text-2xl text-muted-foreground">•</span>
+                      <span className="text-2xl text-muted-foreground">•</span>
+                      <span className="text-2xl text-muted-foreground">•</span>
                     </div>
                   )}
-                </>
+                </motion.div>
               );
             })}
-          </div>
 
-          {/* Hide Reason Dialog */}
-          <Dialog
-            open={showHideReasonDialog}
-            onOpenChange={setShowHideReasonDialog}
-          >
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Hide Moment</DialogTitle>
-                <DialogDescription>
-                  Please provide a reason for hiding this moment.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="reason">Reason</Label>
-                  <Input
-                    id="reason"
-                    value={hideReason}
-                    onChange={(e) => setHideReason(e.target.value)}
-                    placeholder="Enter your reason..."
-                  />
+            <Dialog
+              open={showHideReasonDialog}
+              onOpenChange={setShowHideReasonDialog}
+            >
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Hide Moment</DialogTitle>
+                  <DialogDescription>
+                    Please provide a reason for hiding this moment.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="reason">Reason</Label>
+                    <Input
+                      id="reason"
+                      value={hideReason}
+                      onChange={(e) => setHideReason(e.target.value)}
+                      placeholder="Enter your reason..."
+                    />
+                  </div>
                 </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowHideReasonDialog(false)}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={handleConfirmHide}>Confirm</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowHideReasonDialog(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button onClick={handleConfirmHide}>Confirm</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
       </main>
     </div>

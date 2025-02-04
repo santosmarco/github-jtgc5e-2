@@ -23,6 +23,7 @@ type ReportMomentListProps = {
   signalDirection: "positive" | "negative";
   reportGoalSignals: Tables<"report_goal_signals">[];
   onHideMoment: (momentId: string) => void;
+  hideSignalExplanation?: boolean;
 };
 
 export function ReportMomentList({
@@ -30,6 +31,7 @@ export function ReportMomentList({
   signalDirection,
   reportGoalSignals,
   onHideMoment,
+  hideSignalExplanation = false,
 }: ReportMomentListProps) {
   const [showAll, setShowAll] = useState(false);
   const [expandedHiddenMoments, setExpandedHiddenMoments] = useState<
@@ -54,7 +56,7 @@ export function ReportMomentList({
   const displayedMoments = showAll ? moments : moments.slice(0, 3);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {displayedMoments.map((reportMoment, index) => {
         const signal = reportGoalSignals.find(
           (s) => s.id === reportMoment.report_goal_signal_id,
@@ -158,18 +160,20 @@ export function ReportMomentList({
             transition={{ delay: index * 0.1 }}
           >
             <div className="space-y-2">
-              <div className="flex items-center gap-3 rounded-md border border-border/80 bg-background/50 px-3 py-2 shadow-sm">
-                <span className="text-sm text-foreground/80">
-                  Because you have defined &ldquo;{signal?.text}&rdquo; as a{" "}
-                  {signalDirection}
-                  {signalDirection === "positive" ? (
-                    <ArrowUpRightIcon className="inline h-4 w-4 text-xs text-emerald-700 dark:text-emerald-400" />
-                  ) : (
-                    <ArrowDownRightIcon className="inline h-4 w-4 text-xs text-red-700 dark:text-red-400" />
-                  )}{" "}
-                  signal
-                </span>
-              </div>
+              {!hideSignalExplanation && (
+                <div className="flex items-center gap-3 rounded-md border border-border/80 bg-background/50 px-3 py-2 shadow-sm">
+                  <span className="text-sm text-foreground/80">
+                    Because you have defined &ldquo;{signal?.text}&rdquo; as a{" "}
+                    {signalDirection}
+                    {signalDirection === "positive" ? (
+                      <ArrowUpRightIcon className="inline h-4 w-4 text-xs text-emerald-700 dark:text-emerald-400" />
+                    ) : (
+                      <ArrowDownRightIcon className="inline h-4 w-4 text-xs text-red-700 dark:text-red-400" />
+                    )}{" "}
+                    signal
+                  </span>
+                </div>
+              )}
               <div className="group relative">
                 <MomentCard
                   moment={reportMoment.moment}
@@ -212,12 +216,13 @@ export function ReportMomentList({
       {visibleMoments.length > 3 && (
         <Button
           variant="outline"
+          size="sm"
           className="w-full"
           onClick={() => setShowAll(!showAll)}
         >
           {showAll
             ? "Show Less"
-            : `Show More ${signalDirection === "positive" ? "Good Examples" : "Areas for Improvement"} (${visibleMoments.length - 3} remaining)`}
+            : `Show More (${visibleMoments.length - 3} total)`}
         </Button>
       )}
     </div>
