@@ -13,8 +13,10 @@ export default async function GoalsLayout({
 
   return (
     <HydrateClient>
-      <NavigationBar />
-      {children}
+      <div className="-mt-12">
+        <NavigationBar />
+        {children}
+      </div>
     </HydrateClient>
   );
 }

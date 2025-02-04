@@ -33,15 +33,23 @@ export function NavigationBar() {
   );
 
   return (
-    <div className="sticky top-0 z-10 -mx-12 border-b bg-background/80 backdrop-blur-lg">
-      <div className="container mx-auto flex items-center justify-between px-6 py-2">
+    <div className="sticky top-0 z-10 -mx-12 border-b bg-background/10 backdrop-blur-md">
+      <div className="-ml-2 flex items-center justify-between px-6 py-2">
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
           <Tabs
-            value={pathname.startsWith("/goals/reports") ? "reports" : "goals"}
+            value={
+              pathname.startsWith("/goals/reports")
+                ? pathname.match(
+                    /^\/goals\/reports\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+                  )
+                  ? undefined
+                  : "reports"
+                : "goals"
+            }
             className="inline-flex gap-1 rounded-lg bg-transparent p-1"
           >
             <TabsList className="-ml-3 bg-transparent">

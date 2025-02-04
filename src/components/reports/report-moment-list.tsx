@@ -43,6 +43,13 @@ export function ReportMomentList({
     }));
   };
 
+  const handleSkipToMoment = (moment: VideoMoment) => {
+    void window.open(
+      `/videos/${moment.video_id}?startAt=${moment.segment_start_timestamp_in_seconds}`,
+      "_blank",
+    );
+  };
+
   const visibleMoments = moments.filter((m) => m.is_visible);
   const displayedMoments = showAll ? moments : moments.slice(0, 3);
 
@@ -170,6 +177,9 @@ export function ReportMomentList({
                   noShare
                   hideRelevance
                   hideTimestamp
+                  hideBottomBar
+                  onSkipToMoment={() => handleSkipToMoment(reportMoment.moment)}
+                  jumpToLabel="Watch"
                 />
                 {reportMoment.is_visible && (
                   <div className="absolute right-2 top-2 overflow-hidden">

@@ -23,6 +23,7 @@ import type { VideoMoment } from "~/lib/schemas/video-moment";
 import type { RouterOutputs } from "~/trpc/shared";
 import { api } from "~/trpc/react";
 import _ from "lodash";
+import { ReportNavigation } from "./report-navigation";
 
 type GroupReports = RouterOutputs["reports"]["getGroupReports"];
 
@@ -102,179 +103,193 @@ export function ReportPageClient({ group, reports }: ReportPageClientProps) {
   });
 
   return (
-    <div className="mx-auto max-w-3xl space-y-12 py-6">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="space-y-2"
-      >
-        <h1 className="text-3xl font-bold">Group Report</h1>
-        <p className="text-muted-foreground">
-          Status: {group.status ?? "Unknown"}
-        </p>
-      </motion.div>
+    <div className="grid grid-cols-[auto_1fr]">
+      <ReportNavigation reports={reports} />
 
-      <div className="space-y-16">
-        {reports.map((report, reportIndex) => {
-          const goal = report.report_goals[0]?.goal;
+      <main className="min-h-[calc(100vh-4rem)] px-8 py-6 pl-[calc(16rem+2rem)]">
+        <div className="mx-auto max-w-3xl">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-2"
+          >
+            <h1 className="text-3xl font-bold">Group Report</h1>
+            <p className="text-muted-foreground">
+              Status: {group.status ?? "Unknown"}
+            </p>
+          </motion.div>
 
-          if (!goal) return null;
+          <div className="mt-12 space-y-16">
+            {reports.map((report, reportIndex) => {
+              const goal = report.report_goals[0]?.goal;
 
-          const positiveMoments = _.uniqBy(
-            _.orderBy(
-              report.report_moments
-                .map((m) => ({
-                  ...m,
-                  goal_signal: report.report_goal_signals.find(
-                    (s) => s.id === m.report_goal_signal_id,
-                  ),
-                }))
-                .filter((m) => m.goal_signal?.direction === "positive")
-                .map((m, i) => ({
-                  ...m,
-                  moment: transformMoment(m, i),
-                })),
-              [(m) => m.is_visible, (m) => m.score ?? 0],
-              ["desc", "desc"],
-            ),
-            (m) => m.id,
-          );
+              if (!goal) return null;
 
-          const negativeMoments = _.uniqBy(
-            _.orderBy(
-              report.report_moments
-                .map((m) => ({
-                  ...m,
-                  goal_signal: report.report_goal_signals.find(
-                    (s) => s.id === m.report_goal_signal_id,
-                  ),
-                }))
-                .filter((m) => m.goal_signal?.direction === "negative")
-                .map((m, i) => ({
-                  ...m,
-                  moment: transformMoment(m, i),
-                })),
-              [(m) => m.is_visible, (m) => m.score ?? 0],
-              ["desc", "desc"],
-            ),
-            (m) => m.id,
-          );
+              const positiveMoments = _.uniqBy(
+                _.orderBy(
+                  report.report_moments
+                    .map((m) => ({
+                      ...m,
+                      goal_signal: report.report_goal_signals.find(
+                        (s) => s.id === m.report_goal_signal_id,
+                      ),
+                    }))
+                    .filter((m) => m.goal_signal?.direction === "positive")
+                    .map((m, i) => ({
+                      ...m,
+                      moment: transformMoment(m, i),
+                    })),
+                  [(m) => m.is_visible, (m) => m.score ?? 0],
+                  ["desc", "desc"],
+                ),
+                (m) => m.id,
+              );
 
-          return (
-            <motion.div
-              key={report.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: reportIndex * 0.1 }}
-              className="space-y-8"
-            >
-              {/* Report Header */}
-              <div className="prose prose-sm min-w-full">
-                <h2>Progress Report {report.id}</h2>
-                {report.summary && (
-                  <div className="border-l-2 border-border/80 py-2 pl-4 text-muted-foreground">
-                    <MarkdownRenderer className="min-w-full text-muted-foreground">
-                      {report.summary.replace(
-                        /```(?:\w+)?\s*([\s\S]*?)\s*```/g,
-                        "$1",
+              const negativeMoments = _.uniqBy(
+                _.orderBy(
+                  report.report_moments
+                    .map((m) => ({
+                      ...m,
+                      goal_signal: report.report_goal_signals.find(
+                        (s) => s.id === m.report_goal_signal_id,
+                      ),
+                    }))
+                    .filter((m) => m.goal_signal?.direction === "negative")
+                    .map((m, i) => ({
+                      ...m,
+                      moment: transformMoment(m, i),
+                    })),
+                  [(m) => m.is_visible, (m) => m.score ?? 0],
+                  ["desc", "desc"],
+                ),
+                (m) => m.id,
+              );
+
+              return (
+                <>
+                  <motion.div
+                    id={`report-${report.id}`}
+                    key={report.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: reportIndex * 0.1 }}
+                    className="space-y-8"
+                  >
+                    <div className="space-y-4">
+                      <GoalCard
+                        goal={goal}
+                        mode="view"
+                        onGoalComplete={() => void 0}
+                      />
+                    </div>
+
+                    {/* Report Header */}
+                    <div className="prose prose-sm min-w-full">
+                      {report.summary && (
+                        <div className="border-l-2 border-border/80 py-2 pl-4 text-muted-foreground">
+                          <MarkdownRenderer className="min-w-full text-muted-foreground">
+                            {report.summary.replace(
+                              /```(?:\w+)?\s*([\s\S]*?)\s*```/g,
+                              "$1",
+                            )}
+                          </MarkdownRenderer>
+                        </div>
                       )}
-                    </MarkdownRenderer>
-                  </div>
-                )}
-              </div>
+                    </div>
 
-              {/* Goal Section */}
-              <div className="space-y-4">
-                <GoalCard
-                  goal={goal}
-                  mode="view"
-                  onGoalComplete={() => void 0}
-                />
-              </div>
+                    {/* Memories Section */}
+                    <div className="space-y-8">
+                      <div className="prose prose-sm min-w-full">
+                        <h3>Moments</h3>
+                      </div>
 
-              {/* Memories Section */}
-              <div className="space-y-8">
-                <div className="prose prose-sm min-w-full">
-                  <h3>Moments</h3>
-                </div>
+                      {/* Good Moments */}
+                      <div className="space-y-4">
+                        <div className="prose prose-sm min-w-full">
+                          <h4 className="flex items-center gap-x-1 leading-none text-accent-foreground">
+                            <CircleCheck className="inline h-7 w-7 pr-1 text-xs text-emerald-700 dark:text-emerald-400" />{" "}
+                            Good Examples
+                          </h4>
+                        </div>
 
-                {/* Good Moments */}
-                <div className="space-y-4">
-                  <div className="prose prose-sm min-w-full">
-                    <h4 className="flex items-center gap-x-1 leading-none text-accent-foreground">
-                      <CircleCheck className="inline h-7 w-7 pr-1 text-xs text-emerald-700 dark:text-emerald-400" />{" "}
-                      Good Examples
-                    </h4>
-                  </div>
+                        <ReportMomentList
+                          moments={positiveMoments}
+                          signalDirection="positive"
+                          reportGoalSignals={report.report_goal_signals}
+                          onHideMoment={(momentId) =>
+                            handleHideMoment(momentId, report.id)
+                          }
+                        />
+                      </div>
 
-                  <ReportMomentList
-                    moments={positiveMoments}
-                    signalDirection="positive"
-                    reportGoalSignals={report.report_goal_signals}
-                    onHideMoment={(momentId) =>
-                      handleHideMoment(momentId, report.id)
-                    }
-                  />
-                </div>
+                      {/* Areas for Improvement */}
+                      <div className="space-y-4">
+                        <div className="prose prose-sm min-w-full">
+                          <h4 className="flex items-center gap-x-1 leading-none text-accent-foreground">
+                            <CircleFadingArrowUpIcon className="inline h-7 w-7 pr-1 text-xs text-amber-600 dark:text-amber-400" />{" "}
+                            Areas for Improvement
+                          </h4>
+                        </div>
 
-                {/* Areas for Improvement */}
-                <div className="space-y-4">
-                  <div className="prose prose-sm min-w-full">
-                    <h4 className="flex items-center gap-x-1 leading-none text-accent-foreground">
-                      <CircleFadingArrowUpIcon className="inline h-7 w-7 pr-1 text-xs text-amber-600 dark:text-amber-400" />{" "}
-                      Areas for Improvement
-                    </h4>
-                  </div>
-
-                  <ReportMomentList
-                    moments={negativeMoments}
-                    signalDirection="negative"
-                    reportGoalSignals={report.report_goal_signals}
-                    onHideMoment={(momentId) =>
-                      handleHideMoment(momentId, report.id)
-                    }
-                  />
-                </div>
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {/* Hide Reason Dialog */}
-      <Dialog
-        open={showHideReasonDialog}
-        onOpenChange={setShowHideReasonDialog}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Hide Moment</DialogTitle>
-            <DialogDescription>
-              Please provide a reason for hiding this moment.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="reason">Reason</Label>
-              <Input
-                id="reason"
-                value={hideReason}
-                onChange={(e) => setHideReason(e.target.value)}
-                placeholder="Enter your reason..."
-              />
-            </div>
+                        <ReportMomentList
+                          moments={negativeMoments}
+                          signalDirection="negative"
+                          reportGoalSignals={report.report_goal_signals}
+                          onHideMoment={(momentId) =>
+                            handleHideMoment(momentId, report.id)
+                          }
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+                  {reportIndex < reports.length - 1 && (
+                    <div className="flex justify-center">
+                      <div className="text-2xl text-muted-foreground">
+                        • • •
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })}
           </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowHideReasonDialog(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmHide}>Confirm</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
+          {/* Hide Reason Dialog */}
+          <Dialog
+            open={showHideReasonDialog}
+            onOpenChange={setShowHideReasonDialog}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Hide Moment</DialogTitle>
+                <DialogDescription>
+                  Please provide a reason for hiding this moment.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="reason">Reason</Label>
+                  <Input
+                    id="reason"
+                    value={hideReason}
+                    onChange={(e) => setHideReason(e.target.value)}
+                    placeholder="Enter your reason..."
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowHideReasonDialog(false)}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleConfirmHide}>Confirm</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </main>
     </div>
   );
 }

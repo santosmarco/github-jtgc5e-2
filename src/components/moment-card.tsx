@@ -58,6 +58,7 @@ export type MomentCardProps = {
   videoDate?: string | null;
   hideRelevance?: boolean;
   hideTimestamp?: boolean;
+  hideBottomBar?: boolean;
 };
 
 export function MomentCard({
@@ -71,6 +72,7 @@ export function MomentCard({
   videoDate,
   hideRelevance,
   hideTimestamp,
+  hideBottomBar,
 }: MomentCardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -369,61 +371,19 @@ export function MomentCard({
           </Badge>
         </div>
 
-        {/* Summary */}
+        {/* Summary and Jump To Button */}
         <div className="flex flex-col sm:flex-row sm:items-end">
           <ExpandingText
             text={moment.summary}
             className="text-sm text-muted-foreground"
-            containerProps={{ className: "mb-4 sm:mb-0 sm:flex-grow" }}
+            containerProps={{
+              className: cn(
+                "mb-4 sm:mb-0",
+                hideBottomBar ? "sm:flex-grow" : "sm:flex-grow",
+              ),
+            }}
           />
-        </div>
-
-        <Separator className="my-4" />
-
-        {/* Actions */}
-        <div className="flex items-center justify-between">
-          <div className="flex gap-2">
-            <Button
-              variant="link"
-              size="sm"
-              className={cn(
-                "gap-2 text-foreground hover:text-primary hover:no-underline",
-                userReaction === "thumbs_up" && "cursor-default text-primary",
-                hasMoreThumbsDown && "z-30 text-muted-foreground",
-              )}
-              onClick={() => handleReaction("thumbs_up")}
-            >
-              <ThumbsUp className="h-4 w-4" />
-              <span>{thumbsUpCount}</span>
-            </Button>
-            <Button
-              variant="link"
-              size="sm"
-              className={cn(
-                "gap-2 text-foreground hover:text-red-500 hover:no-underline",
-                userReaction === "thumbs_down" && "cursor-default text-red-500",
-                hasMoreThumbsDown && "z-30",
-              )}
-              onClick={() => handleReaction("thumbs_down")}
-            >
-              <ThumbsDown className="h-4 w-4" />
-              <span>{thumbsDownCount}</span>
-            </Button>
-            <Button
-              variant="link"
-              size="sm"
-              className={cn(
-                "gap-2 text-foreground hover:text-primary hover:no-underline",
-                hasMoreThumbsDown && "z-30 text-muted-foreground",
-              )}
-              onClick={() => setShowComments(!showComments)}
-            >
-              <MessageCircle className="h-4 w-4" />
-              <span>{comments?.length ?? 0}</span>
-            </Button>
-          </div>
-
-          {onSkipToMoment && (
+          {hideBottomBar && onSkipToMoment && (
             <TooltipProvider delayDuration={0}>
               <Tooltip open={hasMoreThumbsDown ? undefined : false}>
                 <TooltipTrigger asChild>
@@ -454,72 +414,156 @@ export function MomentCard({
           )}
         </div>
 
-        {/* Comments Section */}
-        {showComments && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="z-30 -mb-4 mt-3 space-y-4"
-          >
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmitComment)}
-                className="flex items-center gap-2"
-              >
-                <FormField
-                  control={form.control}
-                  name="content"
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormControl>
-                        <Input
-                          placeholder="Add a comment..."
-                          {...field}
-                          className="bg-background"
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" size="sm">
-                  Send
-                </Button>
-              </form>
-            </Form>
+        {!hideBottomBar && (
+          <>
+            <Separator className="my-4" />
 
-            <div className="space-y-4">
-              {comments
-                ?.filter(
-                  (
-                    comment,
-                  ): comment is typeof comment & {
-                    user: NonNullable<(typeof comment)["user"]>;
-                  } => !!comment.user,
-                )
-                .map((comment) => (
-                  <div key={comment.id} className="flex gap-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={undefined} />
-                      <AvatarFallback>
-                        {comment.user.nickname?.[0]?.toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="flex items-baseline gap-2">
-                        <span className="font-medium">
-                          {comment.user.nickname}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(comment.created_at).toLocaleDateString()}
-                        </span>
+            {/* Actions */}
+            <div className="flex items-center justify-between">
+              <div className="flex gap-2">
+                <Button
+                  variant="link"
+                  size="sm"
+                  className={cn(
+                    "gap-2 text-foreground hover:text-primary hover:no-underline",
+                    userReaction === "thumbs_up" &&
+                      "cursor-default text-primary",
+                    hasMoreThumbsDown && "z-30 text-muted-foreground",
+                  )}
+                  onClick={() => handleReaction("thumbs_up")}
+                >
+                  <ThumbsUp className="h-4 w-4" />
+                  <span>{thumbsUpCount}</span>
+                </Button>
+                <Button
+                  variant="link"
+                  size="sm"
+                  className={cn(
+                    "gap-2 text-foreground hover:text-red-500 hover:no-underline",
+                    userReaction === "thumbs_down" &&
+                      "cursor-default text-red-500",
+                    hasMoreThumbsDown && "z-30",
+                  )}
+                  onClick={() => handleReaction("thumbs_down")}
+                >
+                  <ThumbsDown className="h-4 w-4" />
+                  <span>{thumbsDownCount}</span>
+                </Button>
+                <Button
+                  variant="link"
+                  size="sm"
+                  className={cn(
+                    "gap-2 text-foreground hover:text-primary hover:no-underline",
+                    hasMoreThumbsDown && "z-30 text-muted-foreground",
+                  )}
+                  onClick={() => setShowComments(!showComments)}
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  <span>{comments?.length ?? 0}</span>
+                </Button>
+              </div>
+
+              {onSkipToMoment && (
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip open={hasMoreThumbsDown ? undefined : false}>
+                    <TooltipTrigger asChild>
+                      <div
+                        className={cn(
+                          "flex justify-end sm:ml-4",
+                          hasMoreThumbsDown && "z-30 cursor-not-allowed",
+                        )}
+                      >
+                        <Button
+                          onClick={handleSkipToMoment}
+                          disabled={hasMoreThumbsDown}
+                        >
+                          {jumpToLabel ?? "Jump To"}
+                        </Button>
                       </div>
-                      <p className="text-sm">{comment.content}</p>
-                    </div>
-                  </div>
-                ))}
+                    </TooltipTrigger>
+                    <TooltipContent
+                      align="end"
+                      className="bg-accent"
+                      sideOffset={8}
+                    >
+                      You disliked this moment. React with a thumbs up to unlock
+                      the jump-to feature.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
-          </motion.div>
+
+            {/* Comments Section */}
+            {showComments && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="z-30 -mb-4 mt-3 space-y-4"
+              >
+                <Form {...form}>
+                  <form
+                    onSubmit={form.handleSubmit(onSubmitComment)}
+                    className="flex items-center gap-2"
+                  >
+                    <FormField
+                      control={form.control}
+                      name="content"
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormControl>
+                            <Input
+                              placeholder="Add a comment..."
+                              {...field}
+                              className="bg-background"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="submit" size="sm">
+                      Send
+                    </Button>
+                  </form>
+                </Form>
+
+                <div className="space-y-4">
+                  {comments
+                    ?.filter(
+                      (
+                        comment,
+                      ): comment is typeof comment & {
+                        user: NonNullable<(typeof comment)["user"]>;
+                      } => !!comment.user,
+                    )
+                    .map((comment) => (
+                      <div key={comment.id} className="flex gap-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={undefined} />
+                          <AvatarFallback>
+                            {comment.user.nickname?.[0]?.toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="flex items-baseline gap-2">
+                            <span className="font-medium">
+                              {comment.user.nickname}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(
+                                comment.created_at,
+                              ).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <p className="text-sm">{comment.content}</p>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </motion.div>
+            )}
+          </>
         )}
       </motion.div>
 
