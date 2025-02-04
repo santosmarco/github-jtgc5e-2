@@ -239,6 +239,7 @@ export default function GoalsPage() {
         .insert({
           profile_id: profile.id,
           text: values.text,
+          hidden_text: values.text,
           user_provided_context: values.context,
           is_current: true,
         })
