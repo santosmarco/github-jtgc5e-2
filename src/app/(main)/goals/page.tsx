@@ -81,7 +81,52 @@ export default function GoalsPage() {
     onSuccess: (data) => {
       if (data.success && data.job_id) {
         setCurrentJobId(data.job_id);
+        setReportStatus("processing");
         toast.success("Report generation initiated");
+
+        // Start polling for status
+        const interval = setInterval(() => {
+          void (async () => {
+            try {
+              const status = await apiUtils.reports.getGroupReportStatus.fetch({
+                groupId: data.job_id,
+              });
+
+              if (status) {
+                setReportStatus(status.status);
+                if (status.status === "completed") {
+                  clearInterval(interval);
+                  setIsGeneratingReport(false);
+                  setReportSuccess(true);
+                  router.push(`/reports/${data.job_id}`);
+                } else if (status.status === "failed") {
+                  clearInterval(interval);
+                  setIsGeneratingReport(false);
+                  setReportSuccess(false);
+                  toast.error("Report generation failed");
+                }
+              }
+            } catch (error) {
+              clearInterval(interval);
+              setIsGeneratingReport(false);
+              setReportSuccess(false);
+              toast.error("Failed to check report status");
+            }
+          })();
+        }, 2000); // Poll every 2 seconds
+
+        // Cleanup interval after 5 minutes (timeout)
+        setTimeout(
+          () => {
+            clearInterval(interval);
+            if (reportStatus === "processing") {
+              setIsGeneratingReport(false);
+              setReportSuccess(false);
+              toast.error("Report generation timed out");
+            }
+          },
+          5 * 60 * 1000,
+        );
       } else {
         toast.error(data.error ?? "Failed to initiate report generation");
         setIsGeneratingReport(false);

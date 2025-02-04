@@ -8,7 +8,9 @@ export default async function ReportPage({
   params: Promise<{ reportId: string }>;
 }) {
   const { reportId } = await params;
-  const report = await api.reports.getOne({ reportId });
+  const { group, reports } = await api.reports.getGroupReports({
+    groupId: reportId,
+  });
 
-  return <ReportPageClient report={report} />;
+  return <ReportPageClient group={group} reports={reports} />;
 }

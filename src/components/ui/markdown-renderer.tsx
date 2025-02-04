@@ -20,15 +20,19 @@ import { Button } from "./button";
 
 interface MarkdownRendererProps {
   children: string;
+  className?: string;
 }
 
-export function MarkdownRenderer({ children }: MarkdownRendererProps) {
+export function MarkdownRenderer({
+  children,
+  className,
+}: MarkdownRendererProps) {
   return (
     <Markdown
       remarkPlugins={[remarkGfm]}
       rehypePlugins={[rehypeRaw, rehypeMoment]}
       components={COMPONENTS}
-      className="prose prose-sm prose-invert space-y-3"
+      className={cn("prose prose-sm prose-invert space-y-3", className)}
     >
       {children}
     </Markdown>

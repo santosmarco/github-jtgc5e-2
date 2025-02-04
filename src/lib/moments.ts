@@ -9,8 +9,8 @@ import {
   UsersIcon,
 } from "lucide-react";
 
-import { type Badge } from "~/components/ui/badge";
-import { type VideoMoment } from "~/lib/schemas/video-moment";
+import type { Badge } from "~/components/ui/badge";
+import type { VideoMoment } from "~/lib/schemas/video-moment";
 
 export type MomentStyles = {
   activityTypeBadge?: React.ComponentProps<typeof Badge>;

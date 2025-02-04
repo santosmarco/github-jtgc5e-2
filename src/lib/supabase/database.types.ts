@@ -533,19 +533,37 @@ export type Database = {
         Row: {
           goal_ids: string | null
           id: string
+          profile_id: string | null
           status: string | null
         }
         Insert: {
           goal_ids?: string | null
           id: string
+          profile_id?: string | null
           status?: string | null
         }
         Update: {
           goal_ids?: string | null
           id?: string
+          profile_id?: string | null
           status?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "group_report_processing_status_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "group_report_processing_status_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       integration_credentials: {
         Row: {
