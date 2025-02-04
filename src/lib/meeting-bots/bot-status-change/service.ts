@@ -23,12 +23,12 @@ export type RecallTranscript = Except<
 
 export type MeetingBotWithProfileAndEvent = Tables<"meeting_bots_v2"> & {
   profile: Tables<"profiles">;
-  event: Tables<"calendar_events_v2">;
+  event: Tables<"calendar_events_v2"> | null;
 };
 
 export type MeetingBotWithProfileAndEventAndCalendar =
   MeetingBotWithProfileAndEvent & {
-    calendar: Tables<"recall_calendars_v2">;
+    calendar: Tables<"recall_calendars_v2"> | null;
   };
 
 export type ApiVideoMetadataObject = {
@@ -539,9 +539,9 @@ export function createBotStatusChangeService(
   ) {
     const metadataObject = {
       user_id: bot.profile.id,
-      event_id: bot.event.id,
+      event_id: bot.event?.id,
       meeting_bot_id: bot.id,
-    } satisfies Required<ApiVideoMetadataObject>;
+    } satisfies ApiVideoMetadataObject;
 
     return Object.entries(metadataObject).map(([key, value]) => ({
       key,
@@ -554,7 +554,7 @@ export function createBotStatusChangeService(
   ) {
     const fallbackTitle = `Meeting Recording - ${bot.id}`;
     try {
-      return bot.event.raw &&
+      return bot.event?.raw &&
         typeof bot.event.raw === "object" &&
         "summary" in bot.event.raw &&
         typeof bot.event.raw.summary === "string"
@@ -575,7 +575,7 @@ export function createBotStatusChangeService(
     bot: MeetingBotWithProfileAndEventAndCalendar,
   ) {
     try {
-      return bot.event.raw &&
+      return bot.event?.raw &&
         typeof bot.event.raw === "object" &&
         "description" in bot.event.raw &&
         typeof bot.event.raw.description === "string"
@@ -787,15 +787,16 @@ export function createBotStatusChangeService(
     content: string,
   ) {
     const headerParts = [
-      bot.event.meeting_platform === "google_meet"
+      bot.event?.meeting_platform === "google_meet"
         ? "🎥 GMeet"
-        : bot.event.meeting_platform === "zoom"
+        : bot.event?.meeting_platform === "zoom"
           ? "🎥 Zoom"
           : "🎥 Unknown",
       `*User:* \`${bot.profile.email}\``,
       `*Bot:* <https://supabase.com/dashboard/project/gukeqqpzhaignmhdduma/editor/289720?schema=${encodeURIComponent("public")}&filter=${encodeURIComponent(`id:eq:${bot.id}`)}|${bot.id}>`,
-      `*Event:* <https://supabase.com/dashboard/project/gukeqqpzhaignmhdduma/editor/287060?schema=${encodeURIComponent("public")}&filter=${encodeURIComponent(`id:eq:${bot.event.id}`)}|${bot.event.id}>`,
-    ];
+      bot.event &&
+        `*Event:* <https://supabase.com/dashboard/project/gukeqqpzhaignmhdduma/editor/287060?schema=${encodeURIComponent("public")}&filter=${encodeURIComponent(`id:eq:${bot.event.id}`)}|${bot.event.id}>`,
+    ].filter(Boolean);
 
     const footer = `<https://supabase.com/dashboard/project/gukeqqpzhaignmhdduma/editor/289720?schema=${encodeURIComponent("public")}&filter=${encodeURIComponent(`id:eq:${bot.id}`)}|View in Supabase>`;
 

@@ -531,22 +531,22 @@ export type Database = {
       }
       group_report_processing_status: {
         Row: {
-          goal_ids: string | null
+          goal_ids: string[] | null
           id: string
           profile_id: string | null
-          status: string | null
+          status: Database["public"]["Enums"]["processing_status"] | null
         }
         Insert: {
-          goal_ids?: string | null
+          goal_ids?: string[] | null
           id: string
           profile_id?: string | null
-          status?: string | null
+          status?: Database["public"]["Enums"]["processing_status"] | null
         }
         Update: {
-          goal_ids?: string | null
+          goal_ids?: string[] | null
           id?: string
           profile_id?: string | null
-          status?: string | null
+          status?: Database["public"]["Enums"]["processing_status"] | null
         }
         Relationships: [
           {
@@ -1017,22 +1017,7 @@ export type Database = {
           vectorized?: boolean
           video_api_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "meetings_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "meetings_with_profile"
-            referencedColumns: ["profile_id"]
-          },
-          {
-            foreignKeyName: "meetings_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       moment_comments: {
         Row: {
@@ -1248,6 +1233,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "moments_video_api_id_fkey"
+            columns: ["video_api_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["video_api_id"]
+          },
+          {
             foreignKeyName: "moments_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
@@ -1260,20 +1252,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "moments_video_api_id_fkey"
-            columns: ["video_api_id"]
-            isOneToOne: false
-            referencedRelation: "meetings"
-            referencedColumns: ["video_api_id"]
-          },
-          {
-            foreignKeyName: "moments_video_api_id_fkey"
-            columns: ["video_api_id"]
-            isOneToOne: false
-            referencedRelation: "meetings_with_profile"
-            referencedColumns: ["video_api_id"]
           },
         ]
       }
@@ -1580,35 +1558,29 @@ export type Database = {
       report_goal_signals: {
         Row: {
           created_at: string
-          direction:
-            | Database["public"]["Enums"]["goal_signal_direction_type"]
-            | null
-          goal_signal_id: string | null
+          direction: Database["public"]["Enums"]["goal_signal_direction_type"]
+          goal_signal_id: string
           hidden_text: string | null
           id: string
-          report_id: string | null
+          report_id: string
           text: string | null
         }
         Insert: {
           created_at?: string
-          direction?:
-            | Database["public"]["Enums"]["goal_signal_direction_type"]
-            | null
-          goal_signal_id?: string | null
+          direction: Database["public"]["Enums"]["goal_signal_direction_type"]
+          goal_signal_id: string
           hidden_text?: string | null
           id?: string
-          report_id?: string | null
+          report_id: string
           text?: string | null
         }
         Update: {
           created_at?: string
-          direction?:
-            | Database["public"]["Enums"]["goal_signal_direction_type"]
-            | null
-          goal_signal_id?: string | null
+          direction?: Database["public"]["Enums"]["goal_signal_direction_type"]
+          goal_signal_id?: string
           hidden_text?: string | null
           id?: string
-          report_id?: string | null
+          report_id?: string
           text?: string | null
         }
         Relationships: [
@@ -1631,30 +1603,33 @@ export type Database = {
       report_goals: {
         Row: {
           created_at: string | null
-          goal_id: string | null
+          goal_id: string
           hidden_text: string | null
           id: string
-          report_id: string | null
+          report_id: string
           text: string | null
           updated_at: string | null
+          user_provided_context: string | null
         }
         Insert: {
           created_at?: string | null
-          goal_id?: string | null
+          goal_id: string
           hidden_text?: string | null
           id?: string
-          report_id?: string | null
+          report_id: string
           text?: string | null
           updated_at?: string | null
+          user_provided_context?: string | null
         }
         Update: {
           created_at?: string | null
-          goal_id?: string | null
+          goal_id?: string
           hidden_text?: string | null
           id?: string
-          report_id?: string | null
+          report_id?: string
           text?: string | null
           updated_at?: string | null
+          user_provided_context?: string | null
         }
         Relationships: [
           {
@@ -1678,10 +1653,10 @@ export type Database = {
           created_at: string
           id: string
           is_visible: boolean | null
-          moment_id: string | null
+          moment_id: string
           omission_reason: string | null
-          report_goal_signal_id: string | null
-          report_id: string | null
+          report_goal_signal_id: string
+          report_id: string
           score: number | null
           updated_at: string | null
         }
@@ -1689,10 +1664,10 @@ export type Database = {
           created_at?: string
           id?: string
           is_visible?: boolean | null
-          moment_id?: string | null
+          moment_id: string
           omission_reason?: string | null
-          report_goal_signal_id?: string | null
-          report_id?: string | null
+          report_goal_signal_id: string
+          report_id: string
           score?: number | null
           updated_at?: string | null
         }
@@ -1700,10 +1675,10 @@ export type Database = {
           created_at?: string
           id?: string
           is_visible?: boolean | null
-          moment_id?: string | null
+          moment_id?: string
           omission_reason?: string | null
-          report_goal_signal_id?: string | null
-          report_id?: string | null
+          report_goal_signal_id?: string
+          report_id?: string
           score?: number | null
           updated_at?: string | null
         }
@@ -1741,26 +1716,36 @@ export type Database = {
       report_processing_status: {
         Row: {
           created_at: string
-          group_processing_status_id: string | null
+          error_msg: string | null
+          group_processing_status_id: string
           id: string
-          report_id: string
-          status: string | null
+          report_id: string | null
+          status: Database["public"]["Enums"]["report_processing_status_type"]
         }
         Insert: {
           created_at?: string
-          group_processing_status_id?: string | null
+          error_msg?: string | null
+          group_processing_status_id: string
           id: string
-          report_id: string
-          status?: string | null
+          report_id?: string | null
+          status?: Database["public"]["Enums"]["report_processing_status_type"]
         }
         Update: {
           created_at?: string
-          group_processing_status_id?: string | null
+          error_msg?: string | null
+          group_processing_status_id?: string
           id?: string
-          report_id?: string
-          status?: string | null
+          report_id?: string | null
+          status?: Database["public"]["Enums"]["report_processing_status_type"]
         }
         Relationships: [
+          {
+            foreignKeyName: "report_processing_status_group_processing_status_id_fkey"
+            columns: ["group_processing_status_id"]
+            isOneToOne: false
+            referencedRelation: "group_report_processing_status"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "report_processing_status_report_id_fkey"
             columns: ["report_id"]
@@ -2372,20 +2357,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "moments_video_api_id_fkey"
-            columns: ["video_api_id"]
-            isOneToOne: false
-            referencedRelation: "meetings"
-            referencedColumns: ["video_api_id"]
-          },
-          {
-            foreignKeyName: "moments_video_api_id_fkey"
-            columns: ["video_api_id"]
-            isOneToOne: false
-            referencedRelation: "meetings_with_profile"
-            referencedColumns: ["video_api_id"]
-          },
         ]
       }
     }
@@ -2519,8 +2490,10 @@ export type Database = {
         | "watch_moment"
         | "use_moments_command"
         | "reset_chat"
+      processing_status: "pending" | "completed" | "failed" | "partial"
       profile_status_enum: "active" | "pending" | "inactive"
       recall_calendar_platform_type: "google_calendar" | "microsoft_outlook"
+      report_processing_status_type: "pending" | "completed" | "failed"
       user_role_enum: "user" | "coach" | "admin"
     }
     CompositeTypes: {

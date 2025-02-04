@@ -143,8 +143,8 @@ export function MomentCard({
             user_id: user?.id ?? "",
             reaction_type: type,
             created_at: new Date().toISOString(),
-            user: user ?? null,
-          },
+            user,
+          } as any,
         ];
       });
 
@@ -188,8 +188,8 @@ export function MomentCard({
             content,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            user: user ?? null,
-          },
+            user,
+          } as any,
         ];
       });
 
@@ -460,7 +460,7 @@ export function MomentCard({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="z-30 mt-6 space-y-4"
+            className="z-30 -mb-4 mt-3 space-y-4"
           >
             <Form {...form}>
               <form

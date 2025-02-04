@@ -22,21 +22,9 @@ export const reportsRouter = createTRPCRouter({
         .select(
           `
             *,
-            report_goals(
-              *,
-              goal:goals!inner(
-                *,
-                signals:goal_signals(*)
-              )
-            ),
-            report_goal_signals(
-              *,
-              goal_signal:goal_signals!inner(*)
-            ),
-            report_moments(
-              *,
-              moment:moments!inner(*)
-            )
+            report_goals(*, goal:goals!inner(*, signals:goal_signals(*))),
+            report_goal_signals(*, goal_signal:goal_signals!inner(*)),
+            report_moments(*, moment:moments!inner(*))
           `,
         )
         .eq("id", reportId)
@@ -105,7 +93,9 @@ export const reportsRouter = createTRPCRouter({
           .select("*")
           .in(
             "report_id",
-            reportProcessingStatuses.map((r) => r.report_id),
+            reportProcessingStatuses
+              .map((r) => r.report_id)
+              .filter((r): r is NonNullable<typeof r> => r !== null),
           );
 
         if (reportGoalsError) {
@@ -167,48 +157,34 @@ export const reportsRouter = createTRPCRouter({
         });
       }
 
-      const { data: reportGoals, error: reportGoalsError } = await supabase
-        .from("report_goals")
+      const { data: reports, error: reportsError } = await supabase
+        .from("reports")
         .select(
           `
             *,
-            report:reports!inner(
-              *,
-              report_goals(
-                *,
-                goal:goals!inner(
-                  *,
-                  signals:goal_signals(*)
-                )
-              ),
-              report_goal_signals(
-                *,
-                goal_signal:goal_signals!inner(*)
-              ),
-              report_moments(
-                *,
-                moment:moments!inner(*)
-              )
-            )
+            report_goals(*, goal:goals!inner(*, signals:goal_signals(*))),
+            report_goal_signals(*, goal_signal:goal_signals!inner(*)),
+            report_moments!inner(*, moment:moments!inner(*))
           `,
         )
         .in(
-          "report_id",
-          reportProcessingStatuses.map((r) => r.report_id),
-        );
+          "id",
+          reportProcessingStatuses
+            .map((r) => r.report_id)
+            .filter((r): r is NonNullable<typeof r> => r !== null),
+        )
+        .not("report_moments.omission_reason", "eq", "duplicated")
+        .not("report_moments.omission_reason", "eq", "conflict");
 
-      if (reportGoalsError) {
+      if (reportsError) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: reportGoalsError.message,
-          cause: reportGoalsError,
+          message: reportsError.message,
+          cause: reportsError,
         });
       }
 
-      return {
-        group,
-        reports: reportGoals.map((reportGoal) => reportGoal.report),
-      };
+      return { group, reports };
     }),
 
   getGroupReportStatus: publicProcedure
@@ -235,5 +211,36 @@ export const reportsRouter = createTRPCRouter({
       }
 
       return group;
+    }),
+
+  hideMoment: publicProcedure
+    .input(
+      z.object({
+        momentId: z.string(),
+        reportId: z.string(),
+        reason: z.string(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const supabase = await createClient();
+
+      const { error } = await supabase
+        .from("report_moments")
+        .update({
+          is_visible: false,
+          omission_reason: input.reason,
+        })
+        .eq("moment_id", input.momentId)
+        .eq("report_id", input.reportId);
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+          cause: error,
+        });
+      }
+
+      return { success: true };
     }),
 });

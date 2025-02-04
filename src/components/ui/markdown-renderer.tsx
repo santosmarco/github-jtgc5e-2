@@ -32,7 +32,7 @@ export function MarkdownRenderer({
       remarkPlugins={[remarkGfm]}
       rehypePlugins={[rehypeRaw, rehypeMoment]}
       components={COMPONENTS}
-      className={cn("prose prose-sm prose-invert space-y-3", className)}
+      className={cn("prose prose-sm space-y-3", className)}
     >
       {children}
     </Markdown>

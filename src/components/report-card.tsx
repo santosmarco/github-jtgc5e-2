@@ -42,7 +42,8 @@ export function ReportCard({
     report.status === "pending" || report.status === "partial";
   const isFailed = report.status === "failed";
   const isComplete = report.status === "completed";
-  const goalCount = report.report_goals?.length ?? 0;
+  const goals = report.report_goals ?? [];
+  const remainingGoals = Math.max(0, goals.length - 2);
 
   return (
     <motion.div
@@ -85,9 +86,22 @@ export function ReportCard({
           </div>
         </div>
 
-        <div className="flex h-3.5 items-center gap-1.5 text-xs text-muted-foreground">
-          <Goal className="h-3.5 w-3.5" />
-          <span className="leading-none">{goalCount} goals</span>
+        <div className="space-y-2">
+          {goals.slice(0, 2).map((goal) => (
+            <div
+              key={goal.id}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground"
+            >
+              <Goal className="h-3.5 w-3.5" />
+              <span className="truncate leading-none">{goal.text}</span>
+            </div>
+          ))}
+          {remainingGoals > 0 && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Goal className="h-3.5 w-3.5" />
+              <span className="leading-none">+{remainingGoals} more goals</span>
+            </div>
+          )}
         </div>
       </div>
 

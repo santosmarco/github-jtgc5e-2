@@ -1,19 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { initial } from "lodash";
-import {
-  ArrowDownRightIcon,
-  ArrowUpRightIcon,
-  CircleCheck,
-  CircleFadingArrowUpIcon,
-  EyeOffIcon,
-} from "lucide-react";
+import { CircleCheck, CircleFadingArrowUpIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { GoalCard } from "~/components/goals/goal-card";
-import { MomentCard } from "~/components/moment-card";
+import { ReportMomentList } from "~/components/reports/report-moment-list";
 import { Button } from "~/components/ui/button";
 import {
   Dialog,
@@ -28,49 +21,100 @@ import { Label } from "~/components/ui/label";
 import MarkdownRenderer from "~/components/ui/markdown-renderer";
 import type { VideoMoment } from "~/lib/schemas/video-moment";
 import type { RouterOutputs } from "~/trpc/shared";
+import { api } from "~/trpc/react";
 
 type GroupReports = RouterOutputs["reports"]["getGroupReports"];
 
 type Report = GroupReports["reports"][number];
-type ReportGoalSignal = NonNullable<Report["report_goal_signals"]>[number];
 
 export type ReportPageClientProps = GroupReports;
 
-type MomentWithSignal = {
-  id: string;
-  moment_id: string;
-  report_id: string;
-  report_goal_signal_id: string;
-  moment: VideoMoment;
-};
-
 export function ReportPageClient({ group, reports }: ReportPageClientProps) {
-  const [hiddenMoments, setHiddenMoments] = useState<Record<string, string>>(
-    {},
-  );
+  const [hiddenMoments, setHiddenMoments] = useState<
+    Record<string, string | null>
+  >(() => {
+    const hiddenMoments: Record<string, string | null> = {};
+    for (const reportMoment of reports.flatMap((r) => r.report_moments)) {
+      if (!reportMoment.is_visible) {
+        hiddenMoments[reportMoment.moment_id] = reportMoment.omission_reason;
+      }
+    }
+    return hiddenMoments;
+  });
   const [showHideReasonDialog, setShowHideReasonDialog] = useState(false);
-  const [selectedMomentId, setSelectedMomentId] = useState<string | null>(null);
+  const [selectedMoment, setSelectedMoment] = useState<{
+    id: string;
+    reportId: string;
+  } | null>(null);
   const [hideReason, setHideReason] = useState("");
-  const [showAllPositive, setShowAllPositive] = useState(false);
-  const [showAllNegative, setShowAllNegative] = useState(false);
+  const apiUtils = api.useUtils();
 
-  const handleHideMoment = (momentId: string) => {
-    setSelectedMomentId(momentId);
+  const hideMomentMutation = api.reports.hideMoment.useMutation({
+    onSuccess: () => {
+      toast.success("Moment hidden successfully");
+      void apiUtils.reports.getGroupReports.invalidate({ groupId: group.id });
+    },
+    onError: (error) => {
+      toast.error("Failed to hide moment", {
+        description: error.message,
+      });
+    },
+  });
+
+  const handleHideMoment = (momentId: string, reportId: string) => {
+    setSelectedMoment({ id: momentId, reportId });
     setShowHideReasonDialog(true);
   };
 
   const handleConfirmHide = () => {
-    if (selectedMomentId) {
+    if (selectedMoment) {
       setHiddenMoments((prev) => ({
         ...prev,
-        [selectedMomentId]: hideReason,
+        [selectedMoment.id]: hideReason,
       }));
+
+      hideMomentMutation.mutate({
+        momentId: selectedMoment.id,
+        reportId: selectedMoment.reportId,
+        reason: hideReason || "user",
+      });
+
       setHideReason("");
       setShowHideReasonDialog(false);
-      setSelectedMomentId(null);
-      toast.success("Moment hidden successfully");
+      setSelectedMoment(null);
     }
   };
+
+  const transformMoment = (
+    reportMoment: Report["report_moments"][number],
+    index: number,
+  ): VideoMoment => ({
+    id: reportMoment.moment_id,
+    index: `${reportMoment.moment.video_api_id}_${reportMoment.moment.activity}_${index}`,
+    sequence_id: Number(index) ?? 0,
+    segment_id_sequence_start:
+      reportMoment.moment.segment_id_sequence_start ?? 0,
+    segment_id_sequence_end: reportMoment.moment.segment_id_sequence_end ?? 0,
+    title: (reportMoment.moment.title ?? "").replace(/^"|"$/g, ""),
+    summary: (reportMoment.moment.summary ?? "").replace(/^"|"$/g, ""),
+    segment_start_timestamp: reportMoment.moment.segment_start_timestamp ?? "",
+    segment_end_timestamp: reportMoment.moment.segment_end_timestamp ?? "",
+    segment_start_timestamp_in_seconds:
+      reportMoment.moment.segment_start_timestamp_in_seconds ?? 0,
+    segment_end_timestamp_in_seconds:
+      reportMoment.moment.segment_end_timestamp_in_seconds ?? 0,
+    video_id: reportMoment.moment.video_api_id ?? "",
+    activity_type: reportMoment.moment.activity_type ?? "",
+    activity_reasoning: (reportMoment.moment.activity_reasoning ?? "").replace(
+      /^"|"$/g,
+      "",
+    ),
+    target_person_type: reportMoment.moment.target_person_type ?? "",
+    target_person_reasoning: null,
+    activity: reportMoment.moment.activity ?? "",
+    relevant: reportMoment.moment.relevant ?? false,
+    reactions: [],
+  });
 
   return (
     <div className="mx-auto max-w-3xl space-y-12 py-6">
@@ -88,97 +132,50 @@ export function ReportPageClient({ group, reports }: ReportPageClientProps) {
       <div className="space-y-16">
         {reports.map((report, reportIndex) => {
           const goal = report.report_goals[0]?.goal;
-          const goalSignals = (report.report_goal_signals ?? []).map(
-            (signal) => ({
-              id: signal.id,
-              goal_id: goal?.id ?? "",
-              text: signal.text ?? "",
-              hidden_text: signal.hidden_text,
-              direction:
-                signal.direction === "positive"
-                  ? ("positive" as const)
-                  : ("negative" as const),
-              created_at: signal.created_at,
-              is_current: true,
-              previous_goal_signal_id: null,
-            }),
-          );
-
-          // Group moments by goal signal for this report
-          const momentsBySignal = {
-            positive: {
-              signal: null as ReportGoalSignal | null,
-              moments: [] as MomentWithSignal[],
-            },
-            negative: {
-              signal: null as ReportGoalSignal | null,
-              moments: [] as MomentWithSignal[],
-            },
-          };
-
-          for (const [index, moment] of Object.entries(
-            report.report_moments ?? [],
-          )) {
-            if (
-              moment.moment &&
-              moment.moment_id &&
-              moment.report_goal_signal_id
-            ) {
-              const signal = report.report_goal_signals?.find(
-                (s) => s.id === moment.report_goal_signal_id,
-              );
-              if (signal) {
-                const momentWithSignal: MomentWithSignal = {
-                  id: moment.id,
-                  moment_id: moment.moment_id,
-                  report_id: moment.report_id ?? "",
-                  report_goal_signal_id: moment.report_goal_signal_id,
-                  moment: {
-                    id: moment.moment_id,
-                    index: `${moment.moment.video_api_id}_${moment.moment.activity}_${index}`,
-                    sequence_id: Number(index) ?? 0,
-                    segment_id_sequence_start:
-                      moment.moment.segment_id_sequence_start ?? 0,
-                    segment_id_sequence_end:
-                      moment.moment.segment_id_sequence_end ?? 0,
-                    title: (moment.moment.title ?? "").replace(/^"|"$/g, ""),
-                    summary: (moment.moment.summary ?? "").replace(
-                      /^"|"$/g,
-                      "",
-                    ),
-                    segment_start_timestamp:
-                      moment.moment.segment_start_timestamp ?? "",
-                    segment_end_timestamp:
-                      moment.moment.segment_end_timestamp ?? "",
-                    segment_start_timestamp_in_seconds:
-                      moment.moment.segment_start_timestamp_in_seconds ?? 0,
-                    segment_end_timestamp_in_seconds:
-                      moment.moment.segment_end_timestamp_in_seconds ?? 0,
-                    video_id: moment.moment.video_api_id ?? "",
-                    activity_type: moment.moment.activity_type ?? "",
-                    activity_reasoning: (
-                      moment.moment.activity_reasoning ?? ""
-                    ).replace(/^"|"$/g, ""),
-                    target_person_type: moment.moment.target_person_type ?? "",
-                    target_person_reasoning: null,
-                    activity: moment.moment.activity ?? "",
-                    relevant: moment.moment.relevant,
-                    reactions: [],
-                  },
-                };
-
-                if (signal.direction === "positive") {
-                  momentsBySignal.positive.moments.push(momentWithSignal);
-                  momentsBySignal.positive.signal = signal;
-                } else {
-                  momentsBySignal.negative.moments.push(momentWithSignal);
-                  momentsBySignal.negative.signal = signal;
-                }
-              }
-            }
-          }
 
           if (!goal) return null;
+
+          const positiveMoments = report.report_moments
+            .map((m) => ({
+              ...m,
+              goal_signal: report.report_goal_signals.find(
+                (s) => s.id === m.report_goal_signal_id,
+              ),
+            }))
+            .filter((m) => m.goal_signal?.direction === "positive")
+            .map((m, i) => ({
+              ...m,
+              moment: transformMoment(m, i),
+            }))
+            .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+            .sort((a, b) =>
+              a.omission_reason === "user"
+                ? -1
+                : b.omission_reason === "user"
+                  ? 1
+                  : 0,
+            );
+
+          const negativeMoments = report.report_moments
+            .map((m) => ({
+              ...m,
+              goal_signal: report.report_goal_signals.find(
+                (s) => s.id === m.report_goal_signal_id,
+              ),
+            }))
+            .filter((m) => m.goal_signal?.direction === "negative")
+            .map((m, i) => ({
+              ...m,
+              moment: transformMoment(m, i),
+            }))
+            .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+            .sort((a, b) =>
+              a.omission_reason === "user"
+                ? -1
+                : b.omission_reason === "user"
+                  ? 1
+                  : 0,
+            );
 
           return (
             <motion.div
@@ -227,78 +224,15 @@ export function ReportPageClient({ group, reports }: ReportPageClientProps) {
                     </h4>
                   </div>
 
-                  <div className="space-y-4">
-                    {momentsBySignal.positive.moments
-                      ?.slice(0, showAllPositive ? undefined : 3)
-                      .map((reportMoment, index) => {
-                        const signal = report.report_goal_signals?.find(
-                          (s) => s.id === reportMoment.report_goal_signal_id,
-                        );
-                        return (
-                          <motion.div
-                            key={reportMoment.moment_id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                          >
-                            <div className="space-y-2">
-                              <div className="-mx-0.5 flex items-center gap-3 rounded-md border border-border/80 bg-background/50 px-3 py-2 shadow-sm">
-                                <span className="text-sm text-foreground/80">
-                                  Because you have defined &ldquo;{signal?.text}
-                                  &rdquo; as a positive
-                                  <ArrowUpRightIcon className="inline h-4 w-4 text-xs text-emerald-700 dark:text-emerald-400" />{" "}
-                                  signal
-                                </span>
-                              </div>
-                              <div className="group relative">
-                                <MomentCard
-                                  moment={reportMoment.moment}
-                                  index={index}
-                                  noShare
-                                  hideRelevance
-                                  hideTimestamp
-                                  className={
-                                    hiddenMoments[reportMoment.moment_id]
-                                      ? "h-20 overflow-hidden"
-                                      : ""
-                                  }
-                                />
-                                {!hiddenMoments[reportMoment.moment_id] && (
-                                  <div className="absolute right-2 top-2 overflow-hidden">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() =>
-                                        handleHideMoment(reportMoment.moment_id)
-                                      }
-                                      className="group relative h-8 w-8 overflow-hidden rounded-full bg-background/80 p-0 backdrop-blur-sm transition-all duration-200 hover:w-40"
-                                    >
-                                      <span className="absolute left-2 top-1/2 -translate-y-1/2">
-                                        <EyeOffIcon className="h-4 w-4" />
-                                      </span>
-                                      <span className="absolute left-8 top-1/2 -translate-y-1/2 whitespace-nowrap text-xs">
-                                        Hide as non-relevant
-                                      </span>
-                                    </Button>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    {momentsBySignal.positive.moments?.length > 3 && (
-                      <Button
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => setShowAllPositive(!showAllPositive)}
-                      >
-                        {showAllPositive
-                          ? "Show Less"
-                          : `Show More Good Examples (${momentsBySignal.positive.moments.length - 3} remaining)`}
-                      </Button>
-                    )}
-                  </div>
+                  <ReportMomentList
+                    moments={positiveMoments}
+                    signalDirection="positive"
+                    reportGoalSignals={report.report_goal_signals}
+                    onHideMoment={(momentId) =>
+                      handleHideMoment(momentId, report.id)
+                    }
+                    hiddenMoments={hiddenMoments}
+                  />
                 </div>
 
                 {/* Areas for Improvement */}
@@ -310,78 +244,15 @@ export function ReportPageClient({ group, reports }: ReportPageClientProps) {
                     </h4>
                   </div>
 
-                  <div className="space-y-4">
-                    {momentsBySignal.negative.moments
-                      ?.slice(0, showAllNegative ? undefined : 3)
-                      .map((reportMoment, index) => {
-                        const signal = report.report_goal_signals?.find(
-                          (s) => s.id === reportMoment.report_goal_signal_id,
-                        );
-                        return (
-                          <motion.div
-                            key={reportMoment.moment_id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                          >
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-3 rounded-md border border-border/80 bg-background/50 px-3 py-2 shadow-sm">
-                                <span className="text-sm text-foreground/80">
-                                  Because you have defined &ldquo;{signal?.text}
-                                  &rdquo; as a negative
-                                  <ArrowDownRightIcon className="inline h-4 w-4 text-xs text-red-700 dark:text-red-400" />{" "}
-                                  signal
-                                </span>
-                              </div>
-                              <div className="group relative">
-                                <MomentCard
-                                  moment={reportMoment.moment}
-                                  index={index}
-                                  noShare
-                                  hideRelevance
-                                  hideTimestamp
-                                  className={
-                                    hiddenMoments[reportMoment.moment_id]
-                                      ? "h-20 overflow-hidden"
-                                      : ""
-                                  }
-                                />
-                                {!hiddenMoments[reportMoment.moment_id] && (
-                                  <div className="absolute right-2 top-2 overflow-hidden">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() =>
-                                        handleHideMoment(reportMoment.moment_id)
-                                      }
-                                      className="group relative h-8 w-8 overflow-hidden rounded-full bg-background/80 p-0 backdrop-blur-sm transition-all duration-200 hover:w-[140px]"
-                                    >
-                                      <span className="absolute left-2 top-1/2 -translate-y-1/2">
-                                        <EyeOffIcon className="h-4 w-4" />
-                                      </span>
-                                      <span className="absolute left-8 top-1/2 -translate-y-1/2 whitespace-nowrap text-xs">
-                                        Hide as non-relevant
-                                      </span>
-                                    </Button>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    {momentsBySignal.negative.moments?.length > 3 && (
-                      <Button
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => setShowAllNegative(!showAllNegative)}
-                      >
-                        {showAllNegative
-                          ? "Show Less"
-                          : `Show More Areas for Improvement (${momentsBySignal.negative.moments.length - 3} remaining)`}
-                      </Button>
-                    )}
-                  </div>
+                  <ReportMomentList
+                    moments={negativeMoments}
+                    signalDirection="negative"
+                    reportGoalSignals={report.report_goal_signals}
+                    onHideMoment={(momentId) =>
+                      handleHideMoment(momentId, report.id)
+                    }
+                    hiddenMoments={hiddenMoments}
+                  />
                 </div>
               </div>
             </motion.div>
