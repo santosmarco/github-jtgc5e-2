@@ -143,7 +143,7 @@ export function MomentCard({
             user_id: user?.id ?? "",
             reaction_type: type,
             created_at: new Date().toISOString(),
-            user: user ?? null,
+            user: user!,
           },
         ];
       });
@@ -188,7 +188,7 @@ export function MomentCard({
             content,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            user: user ?? null,
+            user: user!,
           },
         ];
       });
