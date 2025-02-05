@@ -10,6 +10,7 @@ import { momentsRouter } from "./routers/moments";
 import { notionRouter } from "./routers/notion";
 import { onboardingRouter } from "./routers/onboarding";
 import { settingsRouter } from "./routers/settings";
+import { transcriptsRouter } from "./routers/transcripts";
 import { userInvitesRouter } from "./routers/user-invites";
 import { videosRouter } from "./routers/videos";
 
@@ -26,6 +27,7 @@ export const appRouter = createTRPCRouter({
   onboarding: onboardingRouter,
   meetings: meetingsRouter,
   calendar: calendarRouter,
+  transcripts: transcriptsRouter,
 });
 
 export type AppRouter = typeof appRouter;
