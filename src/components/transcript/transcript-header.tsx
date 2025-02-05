@@ -33,7 +33,9 @@ export function TranscriptHeader({
           const timestamp = slice.words[0]?.start_time
             ? ` [${formatTimestamp(slice.words[0].start_time)}]`
             : "";
-          const text = slice.words.map((w) => w.content ?? "").join(" ");
+          const text = slice.words
+            .map((w) => (w.content ?? "").trim())
+            .join(" ");
           return `${slice.speaker_name || "Speaker"}${timestamp}:\n${text}`;
         })
         .join("\n\n");
