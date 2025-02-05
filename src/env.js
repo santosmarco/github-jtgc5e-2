@@ -28,9 +28,6 @@ export const env = createEnv({
     API_VIDEO_API_KEY: z.string(),
     // Meeting Baas
     MEETING_BAAS_API_KEY: z.string(),
-    // Notion
-    NOTION_INTEGRATION_SECRET: z.string(),
-    NOTION_REPORTS_DATABASE_ID: z.string(),
     // Slack
     SLACK_BOT_TOKEN: z.string(),
     SLACK_NOTIFICATIONS_CHANNEL: z.string().default("eng-alerts"),
