@@ -1,3 +1,5 @@
+import { api, HydrateClient } from "~/trpc/server";
+
 import { VideoPageClient } from "./page.client";
 
 export default async function VideoPage({
@@ -5,5 +7,15 @@ export default async function VideoPage({
 }: {
   params: { videoId: string };
 }) {
-  return <VideoPageClient videoId={params.videoId} />;
+  await api.transcripts.getOne
+    .prefetch({ videoId: params.videoId })
+    .catch(() => {
+      // do nothing
+    });
+
+  return (
+    <HydrateClient>
+      <VideoPageClient videoId={params.videoId} />
+    </HydrateClient>
+  );
 }
