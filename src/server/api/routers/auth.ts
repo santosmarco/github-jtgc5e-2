@@ -3,7 +3,11 @@ import { z } from "zod";
 
 import { JsonObject } from "~/lib/schemas/utils";
 import { createClient } from "~/lib/supabase/server";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "~/server/api/trpc";
 
 export const authRouter = createTRPCRouter({
   signOut: publicProcedure.mutation(async () => {
@@ -192,5 +196,41 @@ export const authRouter = createTRPCRouter({
           cause: error,
         });
       return { success: true };
+    }),
+
+  getCoach: protectedProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const supabase = await createClient();
+
+      // Get user's profile to find coach_id
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("coach_id")
+        .eq("id", input.userId)
+        .single();
+
+      if (!profile?.coach_id) return null;
+
+      // Get coach's profile
+      const { data: coachProfile, error: coachProfileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", profile.coach_id)
+        .single();
+
+      if (coachProfileError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to get coach profile: ${(coachProfileError as Error).message}`,
+          cause: coachProfileError,
+        });
+      }
+
+      return coachProfile;
     }),
 });
