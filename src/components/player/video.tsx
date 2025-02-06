@@ -100,7 +100,7 @@ export function VideoPlayer({
     if (videoRef.current) {
       videoRef.current.playbackRate = playbackSpeed;
     }
-  }, [playbackSpeed]);
+  }, [videoRef, playbackSpeed]);
 
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60);

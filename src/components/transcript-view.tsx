@@ -327,6 +327,27 @@ export function TranscriptView({
     });
   }, [searchResult, transcript, onWordClick]);
 
+  const handleNextMatch = useCallback(() => {
+    if (searchResult.matches.length === 0) return;
+
+    setSearchResult((prev) => ({
+      ...prev,
+      currentMatchIndex:
+        (prev.currentMatchIndex + 1) % searchResult.matches.length,
+    }));
+  }, [searchResult]);
+
+  const handlePreviousMatch = useCallback(() => {
+    if (searchResult.matches.length === 0) return;
+
+    setSearchResult((prev) => ({
+      ...prev,
+      currentMatchIndex:
+        (prev.currentMatchIndex - 1 + searchResult.matches.length) %
+        searchResult.matches.length,
+    }));
+  }, [searchResult]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!searchQuery) return;
@@ -342,28 +363,7 @@ export function TranscriptView({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [searchQuery]);
-
-  const handleNextMatch = () => {
-    if (searchResult.matches.length === 0) return;
-
-    setSearchResult((prev) => ({
-      ...prev,
-      currentMatchIndex:
-        (prev.currentMatchIndex + 1) % searchResult.matches.length,
-    }));
-  };
-
-  const handlePreviousMatch = () => {
-    if (searchResult.matches.length === 0) return;
-
-    setSearchResult((prev) => ({
-      ...prev,
-      currentMatchIndex:
-        (prev.currentMatchIndex - 1 + searchResult.matches.length) %
-        searchResult.matches.length,
-    }));
-  };
+  }, [searchQuery, handleNextMatch, handlePreviousMatch]);
 
   return (
     <div className="-mx-1 w-[calc(100%+8px)] overflow-hidden rounded-md border border-border/70 bg-background/50 data-[state=open]:border-border/50">

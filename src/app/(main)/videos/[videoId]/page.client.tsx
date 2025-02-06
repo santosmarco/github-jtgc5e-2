@@ -171,10 +171,10 @@ type InnerTranscriptViewProps = {
 
 const InnerTranscriptView = ({ videoId }: InnerTranscriptViewProps) => {
   const { currentTime, seek } = usePlayer();
-  const { data: transcript, isLoading } = api.transcripts.getOne.useQuery({
+  const { data: transcript, error } = api.transcripts.getOne.useQuery({
     videoId,
   });
-  if (!transcript && !isLoading) return null;
+  if (error) return null;
   return (
     <TranscriptView
       transcript={transcript}

@@ -210,7 +210,7 @@ export function OnboardingFlowStage2({ user }: OnboardingFlowStage2Props) {
                   >
                     {steps.map((step, index) => (
                       <motion.div
-                        key={step.title?.toString()}
+                        key={`${index}`}
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         transition={{ delay: 0.6 + index * 0.1 }}

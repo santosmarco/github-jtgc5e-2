@@ -170,7 +170,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               }
 
               if (toolInvocation.toolName === "displayMoment") {
-                const { id, reasoning, moment } = toolInvocation.result as {
+                const { id, moment } = toolInvocation.result as {
                   id: string;
                   reasoning: string;
                   moment: VideoMoment;

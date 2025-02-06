@@ -4,7 +4,7 @@ import { generateObject } from "ai";
 import dedent from "ts-dedent";
 import { z } from "zod";
 
-import { AICoreMessage, UIMessage } from "~/lib/schemas/ai";
+import { AICoreMessage } from "~/lib/schemas/ai";
 import type { Json } from "~/lib/supabase/database.types";
 import { createClient } from "~/lib/supabase/server";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
