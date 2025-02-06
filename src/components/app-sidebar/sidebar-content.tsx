@@ -32,6 +32,7 @@ import type { Tables } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
 import { api, type RouterOutputs } from "~/trpc/react";
 
+import { CoachBadge } from "../coach-badge";
 import { TaskList } from "../onboarding-task-list";
 
 export type SidebarContentProps = {
@@ -203,6 +204,15 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
         (!tasks || tasks.some((task) => !task.completed)) && (
           <TaskList tasks={tasks} />
         )}
+
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="my-4 w-full px-4"
+      >
+        <CoachBadge userId={selectedProfile?.id ?? user.id} />
+      </motion.div>
 
       {/* Footer with Auth */}
       <motion.div
