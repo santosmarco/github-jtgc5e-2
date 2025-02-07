@@ -1,19 +1,13 @@
 "use client";
 
-import { BarChart3Icon, CalendarDaysIcon, GoalIcon } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { BarChart3Icon, GoalIcon } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 
-import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "~/components/ui/tooltip";
 import { GenerateReportButton } from "~/components/goals/generate-report-button";
-import { api } from "~/trpc/react";
+import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useProfile } from "~/hooks/use-profile";
+import { api } from "~/trpc/react";
 
 export function NavigationBar() {
   const router = useRouter();
@@ -43,8 +37,8 @@ export function NavigationBar() {
           <Tabs
             value={
               pathname.startsWith("/goals/reports")
-                ? pathname.match(
-                    /^\/goals\/reports\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+                ? /^\/goals\/reports\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.exec(
+                    pathname,
                   )
                   ? undefined
                   : "reports"
@@ -53,17 +47,6 @@ export function NavigationBar() {
             className="inline-flex gap-1 rounded-lg bg-transparent p-1"
           >
             <TabsList className="-ml-3 bg-transparent">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="inline-flex cursor-not-allowed items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground opacity-50">
-                      <CalendarDaysIcon className="h-4 w-4 stroke-[2.5px]" />
-                      Summary
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>Coming soon</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
               <TabsTrigger
                 value="goals"
                 className="inline-flex items-center gap-2 rounded-md bg-transparent px-3 py-1.5 text-sm font-medium transition-all hover:text-primary data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
