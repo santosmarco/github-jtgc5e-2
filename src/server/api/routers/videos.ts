@@ -218,6 +218,37 @@ export const videosRouter = createTRPCRouter({
       }
     }),
 
+  getFromApiVideo: publicProcedure
+    .input(
+      z.object({
+        videoId: z.string(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const supabase = await createClient();
+
+      const video = await getVideo(input.videoId);
+
+      let videoSrc = `https://vod.api.video/vod/${video.videoId}/mp4/source.mp4`;
+      const videoFetch = await fetch(videoSrc);
+      if (videoFetch.status !== 200) {
+        // if not, check accross all meeting_bots table
+        const { data: meetingBots } = await supabase
+          .from("meeting_bots")
+          .select("mp4_source_url")
+          .eq("api_video_id", video.videoId)
+          .not("mp4_source_url", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(1);
+        videoSrc = meetingBots?.[0]?.mp4_source_url ?? videoSrc;
+      }
+
+      return {
+        ...video,
+        videoSrc,
+      };
+    }),
+
   deleteMeeting: publicProcedure
     .input(z.object({ meetingId: z.string() }))
     .mutation(async ({ input }) => {
