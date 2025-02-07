@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  ArrowRight,
   MessagesSquareIcon,
   TrophyIcon,
   UserCheck,
@@ -135,15 +136,13 @@ export function CoachBadge({ userId, className }: CoachBadgeProps) {
                 transition={{ duration: 0.3, staggerChildren: 0.1 }}
               >
                 <motion.p className="text-center text-sm leading-relaxed">
-                  Ready to take your leadership skills to the next level? A
-                  professional coach can be your secret weapon in navigating the
-                  complexities of modern leadership.
+                  A coach can be your secret weapon to leveling up.
                 </motion.p>
 
                 <motion.ul className="space-y-3 pl-2 text-sm text-muted-foreground">
                   <motion.li className="flex items-start">
                     <TrophyIcon className="mr-3 h-5 w-5 text-primary" />
-                    <span>Enhance your leadership presence and impact</span>
+                    <span>Enhance your leadership presence</span>
                   </motion.li>
                   <motion.li className="flex items-start">
                     <Users2Icon className="mr-3 h-5 w-5 text-primary" />
@@ -174,13 +173,14 @@ export function CoachBadge({ userId, className }: CoachBadgeProps) {
                   <Button
                     className="w-full bg-gradient-to-r from-primary to-primary/90 transition-all duration-300 hover:from-primary/90 hover:to-primary"
                     onClick={() => {
-                      window.location.href = "mailto:dave@withtitan.com";
+                      window.location.href =
+                        "mailto:dave@withtitan.com?subject=I'm interested in finding a coach";
                       setIsInviteDialogOpen(false);
                     }}
                   >
                     <span className="flex items-center gap-2">
-                      Start Your Coaching Journey
-                      <UserPlus className="h-4 w-4" />
+                      Find Your Coach
+                      <ArrowRight className="h-4 w-4" />
                     </span>
                   </Button>
                 </motion.div>
@@ -194,7 +194,9 @@ export function CoachBadge({ userId, className }: CoachBadgeProps) {
                   <span className="text-muted-foreground">
                     Already have a coach?
                   </span>
-                  <Link href="/settings/invite">Invite them instead</Link>
+                  <Link href="mailto:dave@withtitan.com?subject=I'd like to invite my coach">
+                    Invite them instead
+                  </Link>
                 </motion.p>
               </motion.div>
             </DialogContent>
