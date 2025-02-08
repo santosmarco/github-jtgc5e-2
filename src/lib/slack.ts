@@ -9,6 +9,12 @@ const slackClient = env.SLACK_BOT_TOKEN
   : null;
 
 const NOTIFICATIONS_CHANNEL = env.SLACK_NOTIFICATIONS_CHANNEL;
+const FEEDBACKS_CHANNEL = env.SLACK_FEEDBACKS_CHANNEL;
+
+export const SLACK_CHANNELS = {
+  NOTIFICATIONS: NOTIFICATIONS_CHANNEL,
+  FEEDBACKS: FEEDBACKS_CHANNEL,
+} as const;
 
 type SlackMessage = {
   text: string;

@@ -30,7 +30,8 @@ export const env = createEnv({
     MEETING_BAAS_API_KEY: z.string(),
     // Slack
     SLACK_BOT_TOKEN: z.string(),
-    SLACK_NOTIFICATIONS_CHANNEL: z.string().default("eng-alerts"),
+    SLACK_NOTIFICATIONS_CHANNEL: z.string().default("eng-alerts-dev"),
+    SLACK_FEEDBACKS_CHANNEL: z.string().default("feedback-alerts-dev"),
     LOGTAIL_SOURCE_TOKEN: z.string(),
     // Langfuse
     LANGFUSE_BASEURL: z.string(),
@@ -80,6 +81,7 @@ export const env = createEnv({
     MEETING_BAAS_API_KEY: process.env.MEETING_BAAS_API_KEY,
     SLACK_BOT_TOKEN: process.env.SLACK_BOT_TOKEN,
     SLACK_NOTIFICATIONS_CHANNEL: process.env.SLACK_NOTIFICATIONS_CHANNEL,
+    SLACK_FEEDBACKS_CHANNEL: process.env.SLACK_FEEDBACKS_CHANNEL,
     LOGTAIL_SOURCE_TOKEN: process.env.LOGTAIL_SOURCE_TOKEN,
     LANGFUSE_BASEURL: process.env.LANGFUSE_BASEURL,
     LANGFUSE_PUBLIC_KEY: process.env.LANGFUSE_PUBLIC_KEY,

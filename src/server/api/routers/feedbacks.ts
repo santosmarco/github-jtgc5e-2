@@ -1,7 +1,7 @@
 import type { Block, KnownBlock } from "@slack/types";
 import { TRPCError } from "@trpc/server";
 import { FeedbackInput } from "~/lib/feedbacks/schemas";
-import { slack } from "~/lib/slack";
+import { SLACK_CHANNELS, slack } from "~/lib/slack";
 import { createClient } from "~/lib/supabase/server";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
@@ -73,12 +73,14 @@ export const feedbacksRouter = createTRPCRouter({
           bug: "🐛",
         }[feedback.type];
 
+        /*
         // Get emoji based on criticality
         const criticalityEmoji = {
           low: "🟢",
           medium: "🟡",
           high: "🔴",
         }[feedback.criticality];
+        */
 
         // Build blocks array
         const blocks: (Block | KnownBlock)[] = [
@@ -103,6 +105,7 @@ export const feedbacksRouter = createTRPCRouter({
               },
             ],
           },
+          /*
           {
             type: "section",
             fields: [
@@ -112,6 +115,7 @@ export const feedbacksRouter = createTRPCRouter({
               },
             ],
           },
+          */
           {
             type: "divider",
           },
@@ -149,7 +153,7 @@ export const feedbacksRouter = createTRPCRouter({
 
         await slack.info({
           text: `New feedback submitted by ${ctx.user.email}`,
-          channel: "C082U2P6R5F",
+          channel: SLACK_CHANNELS.FEEDBACKS,
           blocks,
         });
 
