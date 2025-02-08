@@ -6,7 +6,11 @@ const eslintConfig = {
   parserOptions: {
     project: true,
   },
-  plugins: ["@typescript-eslint", "simple-import-sort"],
+  plugins: [
+    "@typescript-eslint",
+    "simple-import-sort",
+    "plugin:security/recommended",
+  ],
   extends: [
     "next/core-web-vitals",
     "plugin:@typescript-eslint/recommended-type-checked",
@@ -35,6 +39,7 @@ const eslintConfig = {
     "@typescript-eslint/no-unsafe-return": "off",
     "@typescript-eslint/no-unsafe-argument": "off",
     "@typescript-eslint/no-non-null-asserted-optional-chain": "off",
+    "@typescript-eslint/no-unsafe-call": "off",
   },
 };
 

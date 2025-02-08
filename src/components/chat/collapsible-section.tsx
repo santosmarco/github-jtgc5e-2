@@ -53,7 +53,7 @@ export function CollapsibleSection({
       <CollapsibleTrigger asChild>
         <Button
           variant="ghost"
-          className="flex w-full items-center justify-between gap-3 text-left hover:bg-accent/50"
+          className="flex w-full items-center justify-between gap-3 text-left hover:rounded-b-none hover:bg-accent/50"
         >
           <div className="flex items-center gap-x-2">
             <Icon className="h-4 w-4 text-primary" />

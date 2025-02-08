@@ -6,6 +6,7 @@ import {
   CogIcon,
   GoalIcon,
   LogOut,
+  MessageSquare,
   Puzzle,
   Target,
   TrendingUpIcon,
@@ -35,7 +36,9 @@ import type { Tables } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
 import { api, type RouterOutputs } from "~/trpc/react";
 
+import { CoachBadge } from "../coach-badge";
 import { TaskList } from "../onboarding-task-list";
+import { FeedbackDialog } from "~/components/ui/feedback-dialog";
 
 export type SidebarContentProps = {
   user: RouterOutputs["auth"]["getUser"];
@@ -64,6 +67,8 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
         refetchInterval: 60000, // Refetch every minute
       },
     );
+
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   useEffect(() => {
     if (didSetProfiles) return;
@@ -187,6 +192,15 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
         (!tasks || tasks.some((task) => !task.completed)) && (
           <TaskList tasks={tasks} />
         )}
+
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="my-4 w-full px-4"
+      >
+        <CoachBadge userId={selectedProfile?.id ?? user.id} />
+      </motion.div>
 
       {/* Footer with Auth */}
       <motion.div
@@ -337,6 +351,13 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
+                  onClick={() => setFeedbackOpen(true)}
+                  className="cursor-pointer gap-2"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  Submit feedback
+                </DropdownMenuItem>
+                <DropdownMenuItem
                   onClick={handleSignOut}
                   className="cursor-pointer gap-2 text-destructive"
                 >
@@ -348,6 +369,8 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
           </div>
         )}
       </motion.div>
+
+      <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </>
   );
 }

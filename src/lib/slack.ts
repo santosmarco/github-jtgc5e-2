@@ -1,4 +1,5 @@
 import { WebClient as SlackWebClient } from "@slack/web-api";
+import type { Block, KnownBlock } from "@slack/types";
 
 import { env } from "~/env";
 
@@ -8,16 +9,24 @@ const slackClient = env.SLACK_BOT_TOKEN
   : null;
 
 const NOTIFICATIONS_CHANNEL = env.SLACK_NOTIFICATIONS_CHANNEL;
+const FEEDBACKS_CHANNEL = env.SLACK_FEEDBACKS_CHANNEL;
+
+export const SLACK_CHANNELS = {
+  NOTIFICATIONS: NOTIFICATIONS_CHANNEL,
+  FEEDBACKS: FEEDBACKS_CHANNEL,
+} as const;
 
 type SlackMessage = {
   text: string;
   channel?: string;
+  blocks?: (Block | KnownBlock)[];
 };
 
 class SlackService {
   private async sendMessage({
     text,
     channel = NOTIFICATIONS_CHANNEL,
+    blocks,
   }: SlackMessage) {
     if (!slackClient || env.NODE_ENV !== "production") {
       console.warn(
@@ -30,6 +39,7 @@ class SlackService {
       await slackClient.chat.postMessage({
         channel,
         text,
+        blocks,
         unfurl_links: false,
         unfurl_media: false,
       });
@@ -43,24 +53,24 @@ class SlackService {
     return this.sendMessage(message);
   }
 
-  async info({ text, channel }: SlackMessage) {
-    return this.sendMessage({ text: `ℹ️ ${text}`, channel });
+  async info({ text, channel, blocks }: SlackMessage) {
+    return this.sendMessage({ text: `ℹ️ ${text}`, channel, blocks });
   }
 
-  async success({ text, channel }: SlackMessage) {
-    return this.sendMessage({ text: `✅ ${text}`, channel });
+  async success({ text, channel, blocks }: SlackMessage) {
+    return this.sendMessage({ text: `✅ ${text}`, channel, blocks });
   }
 
-  async warn({ text, channel }: SlackMessage) {
-    return this.sendMessage({ text: `⚠️ ${text}`, channel });
+  async warn({ text, channel, blocks }: SlackMessage) {
+    return this.sendMessage({ text: `⚠️ ${text}`, channel, blocks });
   }
 
-  async error({ text, channel }: SlackMessage) {
-    return this.sendMessage({ text: `❌ ${text}`, channel });
+  async error({ text, channel, blocks }: SlackMessage) {
+    return this.sendMessage({ text: `❌ ${text}`, channel, blocks });
   }
 
-  async done({ text, channel }: SlackMessage) {
-    return this.sendMessage({ text: `✨ ${text}`, channel });
+  async done({ text, channel, blocks }: SlackMessage) {
+    return this.sendMessage({ text: `✨ ${text}`, channel, blocks });
   }
 }
 

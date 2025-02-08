@@ -49,7 +49,6 @@ export function ChatInput({
   onEditorReady,
   disabled,
   buttonPosition = "bottom",
-  ...props
 }: ChatInputProps) {
   const showSelectionsList =
     selectedMoments.length > 0 || selectedVideos.length > 0;

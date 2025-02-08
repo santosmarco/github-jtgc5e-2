@@ -7,8 +7,9 @@ import { useRouter } from "next/navigation";
 import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
 
 import { DeleteMeetingButton } from "~/components/meetings/delete-meeting-button";
-import { PlayerProvider } from "~/components/player/provider";
+import { PlayerProvider, usePlayer } from "~/components/player/provider";
 import { VideoPlayer } from "~/components/player/video";
+import { TranscriptView } from "~/components/transcript-view";
 import { Button } from "~/components/ui/button";
 import { useProfile } from "~/hooks/use-profile";
 import type { VideoMoment } from "~/lib/schemas/video-moment";
@@ -153,12 +154,32 @@ export function VideoPageClient({ videoId }: VideoPageClientProps) {
               onSkipToMoment={handleSkipToMoment}
             />
           </div>
-          <div className="hidden space-y-2 lg:block">
+          <div className="hidden space-y-3 lg:block">
             {summary && <MeetingSummary summary={summary} />}
             <VideoTags video={video} />
+            <InnerTranscriptView videoId={videoId} />
           </div>
         </div>
       </div>
     </PlayerProvider>
   );
 }
+
+type InnerTranscriptViewProps = {
+  videoId: string;
+};
+
+const InnerTranscriptView = ({ videoId }: InnerTranscriptViewProps) => {
+  const { currentTime, seek } = usePlayer();
+  const { data: transcript, error } = api.transcripts.getOne.useQuery({
+    videoId,
+  });
+  if (error) return null;
+  return (
+    <TranscriptView
+      transcript={transcript}
+      currentTime={currentTime ?? 0}
+      onWordClick={seek}
+    />
+  );
+};
