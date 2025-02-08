@@ -5,6 +5,7 @@ import {
   Brain,
   CogIcon,
   LogOut,
+  MessageSquare,
   Puzzle,
   TrendingUpIcon,
   User,
@@ -34,6 +35,7 @@ import { api, type RouterOutputs } from "~/trpc/react";
 
 import { CoachBadge } from "../coach-badge";
 import { TaskList } from "../onboarding-task-list";
+import { FeedbackDialog } from "~/components/ui/feedback-dialog";
 
 export type SidebarContentProps = {
   user: RouterOutputs["auth"]["getUser"];
@@ -62,6 +64,8 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
         refetchInterval: 60000, // Refetch every minute
       },
     );
+
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   useEffect(() => {
     if (didSetProfiles) return;
@@ -332,6 +336,13 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
                   </>
                 )}
                 <DropdownMenuItem
+                  onClick={() => setFeedbackOpen(true)}
+                  className="cursor-pointer gap-2"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  Submit feedback
+                </DropdownMenuItem>
+                <DropdownMenuItem
                   onClick={handleSignOut}
                   className="cursor-pointer gap-2 text-destructive-foreground"
                 >
@@ -343,6 +354,8 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
           </div>
         )}
       </motion.div>
+
+      <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </>
   );
 }
