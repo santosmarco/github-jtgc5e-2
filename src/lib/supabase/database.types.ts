@@ -1294,6 +1294,20 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "moments_video_api_id_fkey"
+            columns: ["video_api_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["video_api_id"]
+          },
+          {
+            foreignKeyName: "moments_video_api_id_fkey"
+            columns: ["video_api_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["video_api_id"]
+          },
         ]
       }
       observation_prompts: {
@@ -2515,6 +2529,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moments_video_api_id_fkey"
+            columns: ["video_api_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["video_api_id"]
+          },
+          {
+            foreignKeyName: "moments_video_api_id_fkey"
+            columns: ["video_api_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["video_api_id"]
           },
         ]
       }

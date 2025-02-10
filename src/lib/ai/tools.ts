@@ -229,8 +229,7 @@ export const listMeetingsTool = (profileId: string, apiVideoIds?: string[]) =>
           date: meeting.date,
           speaker: meeting.speaker,
           summary: meeting.summary,
-          momentIds:
-            (meeting.moments as any)?.map((moment: any) => moment.id) ?? [],
+          momentIds: meeting.moments?.map((moment) => moment.id) ?? [],
         })) ?? null;
 
       return {
