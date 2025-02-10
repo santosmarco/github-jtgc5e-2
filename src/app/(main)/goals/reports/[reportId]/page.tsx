@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import type { z } from "zod";
 import { createClient } from "~/lib/supabase/client";
 import type { Tables } from "~/lib/supabase/database.types";
+import { useSearchParams } from "next/navigation";
 
 import {
   GoalCreationDrawer,
@@ -42,8 +43,12 @@ export default function ReportPage({
 }: {
   params: { reportId: string };
 }) {
+  const searchParams = useSearchParams();
+  const goalId = searchParams.get("goalId");
   const [expandedGoals, setExpandedGoals] = useState<Record<string, boolean>>(
-    {},
+    () => ({
+      ...(goalId ? { [goalId]: true } : {}),
+    }),
   );
   const [selectedReportSectionId, setSelectedReportSectionId] = useState<
     string | null
@@ -190,10 +195,48 @@ export default function ReportPage({
 
   const handleExpand = (reportId: string, goalId: string) => {
     reviewGoal.mutate({ reportId, goalId });
-    setExpandedGoals((prev) => ({
-      ...prev,
-      [goalId]: !prev[goalId],
-    }));
+    setExpandedGoals((prev) => {
+      const newState = { ...prev, [goalId]: !prev[goalId] };
+
+      if (!groupReports) return newState;
+
+      // If we're expanding the goal, select its first positive section
+      if (newState[goalId]) {
+        const report = groupReports.reports.find((r) =>
+          r.report_goals.some((rg) => rg.goal_id === goalId),
+        );
+
+        if (report) {
+          const firstPositiveSection = report.report_sections.find(
+            (section) => section.direction === "positive",
+          );
+
+          if (firstPositiveSection) {
+            setSelectedReportSectionId(firstPositiveSection.id);
+          }
+        }
+      } else {
+        // If we're closing the goal, find the next expanded goal's first positive section
+        const nextExpandedReport = groupReports.reports.find((r) => {
+          const reportGoalId = r.report_goals[0]?.goal_id;
+          return (
+            reportGoalId && reportGoalId !== goalId && newState[reportGoalId]
+          );
+        });
+
+        if (nextExpandedReport) {
+          const firstPositiveSection = nextExpandedReport.report_sections.find(
+            (section) => section.direction === "positive",
+          );
+
+          if (firstPositiveSection) {
+            setSelectedReportSectionId(firstPositiveSection.id);
+          }
+        }
+      }
+
+      return newState;
+    });
   };
 
   useEffect(() => {
@@ -235,8 +278,6 @@ export default function ReportPage({
       </div>
     );
   }
-
-  console.log(groupReports);
 
   return (
     <>
@@ -405,9 +446,9 @@ export default function ReportPage({
                             tabIndex={0}
                             role="button"
                             className={cn(
-                              "cursor-pointer rounded-lg border p-4",
+                              "cursor-pointer rounded-lg border p-4 hover:border-primary",
                               selectedReportSectionId === section.id &&
-                                "cursor-default bg-accent",
+                                "border-primary/70 bg-accent",
                             )}
                           >
                             <h3 className="font-semibold">{section.title}</h3>

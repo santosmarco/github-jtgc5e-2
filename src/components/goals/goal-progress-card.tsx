@@ -175,7 +175,7 @@ export function GoalProgressCard({ goal }: GoalProgressCardProps) {
         {goalReportProcessingStatus?.group_processing_status_id && (
           <CardFooter>
             <Link
-              href={`/goals/reports/${goalReportProcessingStatus?.group_processing_status_id}`}
+              href={`/goals/reports/${goalReportProcessingStatus?.group_processing_status_id}?goalId=${goal.id}`}
               className="w-full"
             >
               <Button className="w-full">Review</Button>
