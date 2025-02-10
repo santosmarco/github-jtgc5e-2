@@ -137,38 +137,30 @@ export function GoalCreationDrawer({
     [goalForm, onSubmit, handleOpenChange],
   );
 
-  useEffect(() => {
-    if (!goal) return;
-
-    if (mode === "edit" && !didInitializeOnEdit) {
-      setDidInitializeOnEdit(true);
-      goalForm.setValue("text", goal.text);
-      if (!goal.user_provided_context) {
-        generateGoalContextQuestions.mutate({ goal_text: goal.text });
+  const initializeGoal = useCallback(
+    (goalToInit: NonNullable<typeof goal>) => {
+      goalForm.setValue("text", goalToInit.text);
+      if (!goalToInit.user_provided_context) {
+        generateGoalContextQuestions.mutate({ goal_text: goalToInit.text });
       } else {
-        goalForm.setValue("context", goal.user_provided_context ?? "");
+        goalForm.setValue("context", goalToInit.user_provided_context ?? "");
       }
-      goalForm.setValue("signals", goal.signals ?? []);
-      return;
-    }
 
-    if (mode === "create" && generateGoalSignals.isIdle) {
-      goalForm.setValue("text", goal.text);
-      if (!goal.user_provided_context) {
-        generateGoalContextQuestions.mutate({ goal_text: goal.text });
+      if (mode === "create" && !goalToInit.signals?.length) {
+        generateGoalSignals.mutate({ goal_text: goalToInit.text });
+      } else {
+        goalForm.setValue("signals", goalToInit.signals ?? []);
       }
-      if (!goal.signals?.length) {
-        generateGoalSignals.mutate({ goal_text: goal.text });
-      }
-    }
-  }, [
-    mode,
-    goal,
-    didInitializeOnEdit,
-    generateGoalContextQuestions,
-    generateGoalSignals,
-    goalForm,
-  ]);
+    },
+    [generateGoalContextQuestions, generateGoalSignals, goalForm, mode],
+  );
+
+  useEffect(() => {
+    if (!goal || didInitializeOnEdit) return;
+
+    setDidInitializeOnEdit(true);
+    initializeGoal(goal);
+  }, [goal, didInitializeOnEdit, initializeGoal]);
 
   const isLoading =
     mode === "create" &&
