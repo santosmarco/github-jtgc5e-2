@@ -1,4 +1,4 @@
-import type { Block, KnownBlock } from "@slack/types";
+import type { Block, KnownBlock } from "@slack/web-api";
 import { TRPCError } from "@trpc/server";
 import { FeedbackInput } from "~/lib/feedbacks/schemas";
 import { SLACK_CHANNELS, slack } from "~/lib/slack";
