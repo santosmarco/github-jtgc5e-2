@@ -579,18 +579,21 @@ export type Database = {
       }
       group_report_processing_status: {
         Row: {
+          created_at: string
           goal_ids: string[] | null
           id: string
           profile_id: string | null
           status: Database["public"]["Enums"]["processing_status"] | null
         }
         Insert: {
+          created_at?: string
           goal_ids?: string[] | null
           id: string
           profile_id?: string | null
           status?: Database["public"]["Enums"]["processing_status"] | null
         }
         Update: {
+          created_at?: string
           goal_ids?: string[] | null
           id?: string
           profile_id?: string | null

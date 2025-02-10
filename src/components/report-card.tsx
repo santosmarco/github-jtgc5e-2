@@ -1,5 +1,6 @@
 "use client";
 
+import dayjs from "dayjs";
 import { motion, type MotionProps } from "framer-motion";
 import { AlertTriangle, FileText, Goal, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -81,7 +82,7 @@ export function ReportCard({
           <div className="flex items-center gap-2">
             <FileText className="h-4 w-4 text-muted-foreground" />
             <h3 className="text-sm font-medium leading-none">
-              Report {report.id}
+              Report {dayjs(report.created_at).format("MMM D, YYYY")}
             </h3>
           </div>
         </div>
