@@ -247,7 +247,7 @@ export default function GoalsPage() {
       initial="initial"
       animate="animate"
       variants={staggerAnimation}
-      className="-mx-5 space-y-6 py-6"
+      className="container mx-auto space-y-6 py-6"
     >
       <div className="flex items-center gap-x-8 pb-2">
         <h1 className="text-2xl font-semibold tracking-tight">My Goals</h1>
