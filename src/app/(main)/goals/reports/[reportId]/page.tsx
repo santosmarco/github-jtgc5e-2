@@ -370,17 +370,17 @@ export default function ReportPage({
                       }
                     }}
                   >
-                    <TabsList className="flex w-full justify-between gap-4 bg-transparent px-4">
+                    <TabsList className="flex w-full justify-between gap-4 bg-transparent px-0">
                       <TabsTrigger
                         value="positive"
-                        className="flex items-center gap-2 rounded-none border-none bg-transparent p-0 text-lg font-semibold data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground"
+                        className="flex w-full items-center gap-2 rounded-lg border text-lg font-semibold transition-colors hover:bg-accent data-[state=active]:border-emerald-500 data-[state=active]:bg-emerald-500/10 data-[state=inactive]:text-muted-foreground"
                       >
                         <ArrowUpRight className="h-6 w-6 text-emerald-500" />
                         Doing Well
                       </TabsTrigger>
                       <TabsTrigger
                         value="negative"
-                        className="flex items-center gap-2 rounded-none border-none bg-transparent p-0 text-lg font-semibold data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground"
+                        className="flex w-full items-center gap-2 rounded-lg border text-lg font-semibold transition-colors hover:bg-accent data-[state=active]:border-rose-500 data-[state=active]:bg-rose-500/10 data-[state=inactive]:text-muted-foreground"
                       >
                         <ArrowDownRight className="h-6 w-6 text-rose-500" />
                         Growth Opportunities
@@ -410,9 +410,9 @@ export default function ReportPage({
                             tabIndex={0}
                             role="button"
                             className={cn(
-                              "cursor-pointer rounded-lg border p-4 hover:border-primary",
+                              "cursor-pointer rounded-lg border p-4 hover:border-emerald-500/50",
                               selectedReportSectionId === section.id &&
-                                "border-primary/70 bg-accent",
+                                "border-emerald-500/50 bg-emerald-500/5",
                             )}
                           >
                             <h3 className="font-semibold">{section.title}</h3>
@@ -446,9 +446,9 @@ export default function ReportPage({
                             tabIndex={0}
                             role="button"
                             className={cn(
-                              "cursor-pointer rounded-lg border p-4 hover:border-primary",
+                              "cursor-pointer rounded-lg border p-4 hover:border-rose-500/50",
                               selectedReportSectionId === section.id &&
-                                "border-primary/70 bg-accent",
+                                "border-rose-500/50 bg-rose-500/5",
                             )}
                           >
                             <h3 className="font-semibold">{section.title}</h3>
