@@ -7,6 +7,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "~/components/ui/button";
+import { useProfile } from "~/hooks/use-profile";
 import type { Tables } from "~/lib/supabase/database.types";
 import { api } from "~/trpc/react";
 
@@ -17,10 +18,13 @@ type GenerateReportButtonProps = {
 export function GenerateReportButton({ goals }: GenerateReportButtonProps) {
   const router = useRouter();
   const apiUtils = api.useUtils();
+  const { profile } = useProfile();
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [reportSuccess, setReportSuccess] = useState(false);
   const [reportStatus, setReportStatus] = useState<string | null>(null);
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
+
+  console.log("reportStatus", reportStatus);
 
   const generateReportMutation = api.goals.generateReport.useMutation({
     onSuccess: (data) => {
@@ -36,6 +40,8 @@ export function GenerateReportButton({ goals }: GenerateReportButtonProps) {
               const status = await apiUtils.reports.getGroupReportStatus.fetch({
                 groupId: data.job_id,
               });
+
+              console.log("status", status);
 
               if (status) {
                 setReportStatus(status.status);
@@ -97,6 +103,7 @@ export function GenerateReportButton({ goals }: GenerateReportButtonProps) {
 
     generateReportMutation.mutate({
       goal_ids: goals.map((goal) => goal.id),
+      profile_id: profile?.id ?? "",
     });
   };
 

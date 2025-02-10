@@ -36,9 +36,12 @@ import type { RouterOutputs } from "~/trpc/react";
 import { usePlayer } from "./provider";
 
 export type VideoPlayerProps = {
-  video: RouterOutputs["videos"]["getOne"];
+  video: RouterOutputs["videos"]["getFromApiVideo"];
   momentsShown?: VideoMoment[];
   startAt?: number;
+  onVideoEnd?: () => void;
+  start_time?: number;
+  end_time?: number;
 };
 
 const PLAYBACK_SPEEDS = [0.8, 1, 1.2, 1.5, 1.7, 2, 2.5];
@@ -47,6 +50,9 @@ export function VideoPlayer({
   video,
   momentsShown,
   startAt,
+  onVideoEnd,
+  start_time,
+  end_time,
 }: VideoPlayerProps) {
   const {
     videoRef,
@@ -66,6 +72,12 @@ export function VideoPlayer({
     skip,
   } = usePlayer();
 
+  // Determine if we are trimming and set our timeline duration.
+  const isTrimmed = start_time !== undefined && end_time !== undefined;
+  const timelineDuration = isTrimmed
+    ? end_time - start_time
+    : (duration ?? 100);
+
   const [currentMoment, setCurrentMoment] = useState<VideoMoment | undefined>(
     undefined,
   );
@@ -73,11 +85,36 @@ export function VideoPlayer({
   const [isVideoLoading, setIsVideoLoading] = useState(true);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
 
+  // Filter moments within the trimmed range (if any)
+  const filteredMoments = momentsShown?.filter((moment) => {
+    if (!isTrimmed) return true;
+    return (
+      moment.segment_start_timestamp_in_seconds >= start_time &&
+      moment.segment_end_timestamp_in_seconds <= end_time
+    );
+  });
+
+  // Only seek on load if not trimmed (the trimmed video should start at 0)
   useEffect(() => {
-    if (startAt !== undefined && videoRef.current) {
-      videoRef.current.currentTime = startAt;
+    if (!isTrimmed && videoRef.current) {
+      if (start_time !== undefined) {
+        videoRef.current.currentTime = start_time;
+      } else if (startAt !== undefined) {
+        videoRef.current.currentTime = startAt;
+      }
     }
-  }, [startAt, videoRef]);
+  }, [start_time, startAt, videoRef, isTrimmed]);
+
+  // Auto-play when video source changes
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.play().catch(() => {
+        // Autoplay might be blocked by browser policy
+        console.log("Autoplay blocked by browser");
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [video.videoSrc]);
 
   useEffect(() => {
     toggleMute(true);
@@ -86,21 +123,54 @@ export function VideoPlayer({
   }, []);
 
   useEffect(() => {
-    if (momentsShown && currentTime) {
-      const newCurrentMoment = momentsShown.find(
+    // Check if we need to end the video playback
+    if (isTrimmed && currentTime && currentTime >= timelineDuration) {
+      onVideoEnd?.();
+      return;
+    }
+
+    if (filteredMoments && currentTime) {
+      // Note: if trimmed, the video's timeline is shifted to 0
+      const newCurrentMoment = filteredMoments.find(
         (moment) =>
-          currentTime >= moment.segment_start_timestamp_in_seconds &&
-          currentTime < moment.segment_end_timestamp_in_seconds,
+          currentTime >=
+            (isTrimmed
+              ? moment.segment_start_timestamp_in_seconds - start_time
+              : moment.segment_start_timestamp_in_seconds) &&
+          currentTime <
+            (isTrimmed
+              ? moment.segment_end_timestamp_in_seconds - start_time
+              : moment.segment_end_timestamp_in_seconds),
       );
+
+      // If a moment ended, trigger onVideoEnd if needed.
+      if (
+        currentMoment &&
+        currentTime >=
+          (isTrimmed
+            ? currentMoment.segment_end_timestamp_in_seconds - start_time
+            : currentMoment.segment_end_timestamp_in_seconds)
+      ) {
+        onVideoEnd?.();
+      }
       setCurrentMoment(newCurrentMoment);
     }
-  }, [currentTime, momentsShown]);
+  }, [
+    currentTime,
+    filteredMoments,
+    currentMoment,
+    onVideoEnd,
+    isTrimmed,
+    start_time,
+    timelineDuration,
+  ]);
 
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.playbackRate = playbackSpeed;
     }
-  }, [videoRef, playbackSpeed]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playbackSpeed]);
 
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60);
@@ -118,9 +188,12 @@ export function VideoPlayer({
         )}
         <video
           ref={videoRef}
-          src={video.videoSrc}
+          // Pass our query parameters so the server can trim the file.
+          src={`${video.videoSrc}${
+            isTrimmed ? `?t=${start_time},${end_time}` : ""
+          }`}
           className={cn(
-            "w-full cursor-pointer rounded-lg",
+            "aspect-video w-full cursor-pointer rounded-lg",
             isVideoLoading && "invisible",
           )}
           crossOrigin="anonymous"
@@ -128,6 +201,11 @@ export function VideoPlayer({
           preload="auto"
           onClick={togglePlay}
           onLoadedData={() => setIsVideoLoading(false)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              togglePlay();
+            }
+          }}
           tabIndex={0}
         />
 
@@ -187,8 +265,22 @@ export function VideoPlayer({
                   <TooltipTrigger
                     className="absolute top-0 h-full rounded-full bg-primary"
                     style={{
-                      left: `${(moment.segment_start_timestamp_in_seconds / (duration ?? 1)) * 100}%`,
-                      width: `${((moment.segment_end_timestamp_in_seconds - moment.segment_start_timestamp_in_seconds) / (duration ?? 1)) * 100}%`,
+                      // Adjust the marker positions by subtracting start_time if trimmed.
+                      left: `${
+                        ((moment.segment_start_timestamp_in_seconds -
+                          (start_time ?? 0)) /
+                          timelineDuration) *
+                        100
+                      }%`,
+                      width: `${
+                        ((moment.segment_end_timestamp_in_seconds -
+                          (start_time ?? 0)) /
+                          timelineDuration -
+                          (moment.segment_start_timestamp_in_seconds -
+                            (start_time ?? 0)) /
+                            timelineDuration) *
+                        100
+                      }%`,
                     }}
                   />
                   <TooltipContent className="bg-accent text-xs text-foreground">
@@ -201,23 +293,32 @@ export function VideoPlayer({
             <TooltipTrigger asChild>
               <Slider
                 min={0}
-                max={duration ?? 100}
+                max={timelineDuration}
                 value={[currentTime ?? 0]}
                 onValueChange={(value) => seek(value[0] ?? 0)}
                 aria-label="Seek"
                 onMouseMove={(ev) => {
-                  if (momentsShown && duration) {
+                  if (momentsShown) {
                     const rect = ev.currentTarget.getBoundingClientRect();
                     const mouseX = ev.clientX - rect.left;
-                    const mouseTimePosition = (mouseX / rect.width) * duration;
+                    const mouseTimePosition =
+                      (mouseX / rect.width) * timelineDuration;
 
-                    const newHoveredMoment = momentsShown.find(
-                      (moment) =>
-                        mouseTimePosition >=
-                          moment.segment_start_timestamp_in_seconds &&
-                        mouseTimePosition <
-                          moment.segment_end_timestamp_in_seconds,
-                    );
+                    // Adjust the moment boundaries if trimmed.
+                    const newHoveredMoment = momentsShown.find((moment) => {
+                      const momentStart = isTrimmed
+                        ? moment.segment_start_timestamp_in_seconds -
+                          (start_time ?? 0)
+                        : moment.segment_start_timestamp_in_seconds;
+                      const momentEnd = isTrimmed
+                        ? moment.segment_end_timestamp_in_seconds -
+                          (start_time ?? 0)
+                        : moment.segment_end_timestamp_in_seconds;
+                      return (
+                        mouseTimePosition >= momentStart &&
+                        mouseTimePosition < momentEnd
+                      );
+                    });
 
                     setHoveredMoment(newHoveredMoment ?? null);
                   }
@@ -322,7 +423,7 @@ export function VideoPlayer({
                 />
               </div>
               <span className="ml-2 text-xs">
-                {formatTime(currentTime)} / {formatTime(duration)}
+                {formatTime(currentTime)} / {formatTime(timelineDuration)}
               </span>
             </div>
             <div className="flex items-center space-x-2">

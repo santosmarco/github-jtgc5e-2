@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { GoalIcon, Loader2Icon } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
 import { GoalCard } from "~/components/goals/goal-card";
@@ -13,8 +13,11 @@ import {
 import { NewGoalForm } from "~/components/goals/new-goal-form";
 import { useProfile } from "~/hooks/use-profile";
 import { createClient } from "~/lib/supabase/client";
-import type { Tables } from "~/lib/supabase/database.types";
+import type { Tables, TablesInsert } from "~/lib/supabase/database.types";
 import { api } from "~/trpc/react";
+import type { RouterOutputs } from "~/trpc/react";
+import type { inferRouterOutputs } from "@trpc/server";
+import type { AppRouter } from "~/server/api/root";
 
 const ANIMATION_STAGGER_DELAY = 0.05;
 const LOADING_ANIMATION_DURATION = 0.5;
@@ -51,103 +54,111 @@ export default function GoalsPage() {
       {
         refetchOnWindowFocus: false,
         enabled: Boolean(user?.id),
+        refetchInterval: ({ state: { data } }) => {
+          const hasProcessingReports =
+            data?.some(
+              (goal) => goal.reportProcessingStatus?.status !== "completed",
+            ) ?? false;
+          return hasProcessingReports ? 1000 : false;
+        },
       },
     );
 
-  const handleAddGoal = async (values: { text: string }) => {
+  const handleAddGoal = useCallback(async (values: { text: string }) => {
     setPendingGoal({
       text: values.text,
       user_provided_context: "",
       signals: [],
     });
-  };
+  }, []);
 
-  const handleGoalDelete = async (id: string) => {
-    const { error } = await supabase
-      .from("goals")
-      .update({
-        is_current: false,
-        deleted_at: new Date().toISOString(),
-      })
-      .eq("id", id);
-
-    if (error) {
-      toast.error("Failed to remove goal", {
-        description: error.message,
-      });
-      return;
-    }
-
-    await apiUtils.goals.getGoals.invalidate();
-  };
-
-  const handleGoalComplete = async (id: string): Promise<void> => {
-    const { error } = await supabase
-      .from("goals")
-      .update({
-        progress: 100,
-        completed_at: new Date().toISOString(),
-      })
-      .eq("id", id);
-
-    if (error) {
-      toast.error("Failed to complete goal", {
-        description: error.message,
-      });
-      return;
-    }
-
-    toast.success("Goal completed! 🎉", {
-      description: "Great job on achieving your goal!",
-    });
-
-    await apiUtils.goals.getGoals.invalidate();
-  };
-
-  const handleGoalEdit = (
-    goal: Tables<"goals"> & { signals: Tables<"goal_signals">[] },
-  ) => {
-    setIsEditingGoalId(goal.id);
-    setPendingGoal({
-      text: goal.text,
-      user_provided_context: goal.user_provided_context,
-      signals: goal.signals,
-    });
-  };
-
-  const handleGoalSubmit = async (
-    values: GoalFormValues,
-    mode: "create" | "edit",
-  ) => {
-    if (!profile?.id || !pendingGoal?.text) {
-      toast.error("Failed to add goal");
-      return;
-    }
-
-    if (mode === "edit") {
-      // Set current goal and signals to not current
-      const { error: updateCurrentError } = await supabase
+  const handleGoalComplete = useCallback(
+    async (id: string): Promise<void> => {
+      const { error } = await supabase
         .from("goals")
-        .update({ is_current: false })
-        .eq("id", isEditingGoalId ?? "");
+        .update({
+          progress: 100,
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", id);
 
-      if (updateCurrentError) {
-        toast.error("Failed to update goal history", {
-          description: updateCurrentError.message,
+      if (error) {
+        toast.error("Failed to complete goal", {
+          description: error.message,
         });
         return;
       }
 
-      setIsEditingGoalId(null);
+      toast.success("Goal completed! 🎉", {
+        description: "Great job on achieving your goal!",
+      });
 
-      await handleGoalSubmit(values, "create");
+      await apiUtils.goals.getGoals.invalidate();
+    },
+    [supabase, apiUtils.goals.getGoals],
+  );
 
-      const timeout = setTimeout(() => {
-        toast.success("Goal updated successfully");
-        clearTimeout(timeout);
-      }, 1500);
-    } else {
-      // Handle creating new goal
+  const handleGoalEdit = useCallback(
+    async (goal: Tables<"goals"> & { signals: Tables<"goal_signals">[] }) => {
+      setIsEditingGoalId(goal.id);
+      setPendingGoal({
+        text: goal.text,
+        user_provided_context: goal.user_provided_context,
+        signals: goal.signals,
+      });
+    },
+    [],
+  );
+
+  const handleGoalSubmit = useCallback(
+    async (values: GoalFormValues, mode: "create" | "edit") => {
+      if (!profile?.id || !pendingGoal?.text) {
+        toast.error("Failed to add goal");
+        return;
+      }
+
+      if (mode === "edit") {
+        // Set current goal and signals to not current
+        const { error: updateCurrentError } = await supabase
+          .from("goals")
+          .update({
+            is_current: false,
+            previous_goal_id: isEditingGoalId,
+          })
+          .eq("id", isEditingGoalId ?? "");
+
+        if (updateCurrentError) {
+          toast.error("Failed to create/update goal", {
+            description: updateCurrentError.message,
+          });
+          return;
+        }
+
+        const { error: signalsError } = await supabase
+          .from("goal_signals")
+          .update({
+            is_current: false,
+            // @todo: add previous_signal_goal_id
+          })
+          .eq("goal_id", isEditingGoalId ?? "");
+
+        if (signalsError) {
+          toast.error("Failed to create/update goal", {
+            description: signalsError.message,
+          });
+          await supabase
+            .from("goals")
+            .update({
+              is_current: true,
+              // @todo: revert previous_goal_id
+            })
+            .eq("id", isEditingGoalId ?? "");
+          return;
+        }
+
+        setIsEditingGoalId(null);
+      }
+
       const { data: goal, error: goalError } = await supabase
         .from("goals")
         .insert({
@@ -170,30 +181,40 @@ export default function GoalsPage() {
       const { error: signalsError } = await supabase
         .from("goal_signals")
         .insert(
-          values.signals.map((signal) => ({
-            ...signal,
-            goal_id: goal.id,
-          })),
+          values.signals.map(
+            (signal) =>
+              ({
+                ...signal,
+                hidden_text: signal.text,
+                is_current: true,
+                goal_id: goal.id,
+              }) satisfies TablesInsert<"goal_signals">,
+          ),
         );
 
       if (signalsError) {
-        toast.error("Failed to add goal signals", {
+        toast.error("Failed to create/update goal", {
           description: signalsError.message,
         });
         await supabase.from("goals").delete().eq("id", goal.id);
         return;
       }
 
-      const timeout = setTimeout(() => {
-        toast.success("Goal created successfully");
-        clearTimeout(timeout);
-      }, 1500);
-    }
+      toast.success("Goal created/updated successfully");
 
-    await apiUtils.goals.getGoals.invalidate();
-    setPendingGoal(null);
-    setIsEditingGoalId(null);
-  };
+      await apiUtils.goals.getGoals.invalidate();
+
+      setPendingGoal(null);
+      setIsEditingGoalId(null);
+    },
+    [
+      profile?.id,
+      pendingGoal?.text,
+      isEditingGoalId,
+      supabase,
+      apiUtils.goals.getGoals,
+    ],
+  );
 
   if (!profile || !user || !goals || isUserLoading || isGoalsLoading) {
     return (
@@ -226,10 +247,13 @@ export default function GoalsPage() {
       initial="initial"
       animate="animate"
       variants={staggerAnimation}
-      className="container mx-auto space-y-6 px-6 py-6 md:px-8"
+      className="-mx-5 space-y-6 py-6"
     >
-      <div className="pb-2">
-        <NewGoalForm onSubmit={handleAddGoal} />
+      <div className="flex items-center gap-x-8 pb-2">
+        <h1 className="text-2xl font-semibold tracking-tight">My Goals</h1>
+        <div className="max-w-xl flex-1">
+          <NewGoalForm onSubmit={handleAddGoal} />
+        </div>
       </div>
 
       <AnimatePresence mode="popLayout">
@@ -237,9 +261,7 @@ export default function GoalsPage() {
           <GoalCard
             key={goal.id}
             goal={goal}
-            mode="view"
             onGoalComplete={handleGoalComplete}
-            onGoalDelete={handleGoalDelete}
             onGoalEdit={handleGoalEdit}
           />
         ))}

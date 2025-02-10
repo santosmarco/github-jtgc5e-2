@@ -1,9 +1,9 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import _ from "lodash";
 
 import { createClient } from "~/lib/supabase/server";
-
-import { createTRPCRouter, publicProcedure } from "../trpc";
+import { createTRPCRouter, publicProcedure, protectedProcedure } from "../trpc";
 
 export const reportsRouter = createTRPCRouter({
   getOne: publicProcedure
@@ -162,9 +162,11 @@ export const reportsRouter = createTRPCRouter({
         .select(
           `
             *,
+            report_sections(*),
             report_goals(*, goal:goals!inner(*, signals:goal_signals(*))),
             report_goal_signals(*, goal_signal:goal_signals!inner(*)),
-            report_moments!inner(*, moment:moments!inner(*))
+            report_moments!inner(*, moment:moments!inner(*), report_goal_signal:report_goal_signals!inner(*)),
+            report_comments(*, user:profiles!inner(*))
           `,
         )
         .in(
@@ -184,7 +186,16 @@ export const reportsRouter = createTRPCRouter({
         });
       }
 
-      return { group, reports };
+      return {
+        group,
+        reports: reports.map((report) => ({
+          ...report,
+          report_sections: _.sortBy(
+            report.report_sections,
+            (rs) => rs.index ?? 0,
+          ),
+        })),
+      };
     }),
 
   getGroupReportStatus: publicProcedure
@@ -231,6 +242,59 @@ export const reportsRouter = createTRPCRouter({
           omission_reason: input.reason,
         })
         .eq("moment_id", input.momentId)
+        .eq("report_id", input.reportId);
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+          cause: error,
+        });
+      }
+
+      return { success: true };
+    }),
+
+  createComment: protectedProcedure
+    .input(
+      z.object({
+        reportId: z.string(),
+        content: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const supabase = await createClient();
+
+      const { data: comment, error } = await supabase
+        .from("report_comments")
+        .insert({
+          report_id: input.reportId,
+          profile_id: ctx.user.id,
+          content: input.content,
+        })
+        .select("*, user:profiles(*)")
+        .single();
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+          cause: error,
+        });
+      }
+
+      return comment;
+    }),
+
+  reviewGoal: protectedProcedure
+    .input(z.object({ goalId: z.string(), reportId: z.string() }))
+    .mutation(async ({ input }) => {
+      const supabase = await createClient();
+
+      const { error } = await supabase
+        .from("report_goals")
+        .update({ is_reviewed: true })
+        .eq("goal_id", input.goalId)
         .eq("report_id", input.reportId);
 
       if (error) {

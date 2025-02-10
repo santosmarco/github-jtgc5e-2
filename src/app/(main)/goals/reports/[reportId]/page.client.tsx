@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import type { Merge } from "type-fest";
 
 import { GoalCard } from "~/components/goals/goal-card";
 import { ReportSignalGroup } from "~/components/reports/report-signal-group";
@@ -24,13 +25,12 @@ import {
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import MarkdownRenderer from "~/components/ui/markdown-renderer";
+import { Separator } from "~/components/ui/separator";
 import type { VideoMoment } from "~/lib/schemas/video-moment";
-import type { Tables } from "~/lib/supabase/database.types";
 import { api } from "~/trpc/react";
 import type { RouterOutputs } from "~/trpc/shared";
+
 import { ReportNavigation } from "./report-navigation";
-import type { Merge } from "type-fest";
-import { Separator } from "~/components/ui/separator";
 
 type GroupReport = RouterOutputs["reports"]["getGroupReports"]["group"];
 type Report = RouterOutputs["reports"]["getGroupReports"]["reports"][number];
@@ -126,7 +126,7 @@ export function ReportPageClient({ group, reports }: ReportPageClientProps) {
   const groupedMoments = reports.reduce<GroupedMoments>(
     (acc, report) => {
       for (const signal of report.report_goal_signals) {
-        const direction = signal.direction as "positive" | "negative";
+        const direction = signal.direction;
         const signalId = signal.id;
 
         // Initialize the signal group if it doesn't exist

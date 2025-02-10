@@ -12,6 +12,8 @@ import {
 } from "~/lib/goals/schemas";
 import { createClient } from "~/lib/supabase/server";
 
+import dayjs from "dayjs";
+import _ from "lodash";
 import { createTRPCRouter, publicProcedure } from "../trpc";
 
 export const goalsRouter = createTRPCRouter({
@@ -34,7 +36,9 @@ export const goalsRouter = createTRPCRouter({
       const supabase = await createClient();
       const { data, error } = await supabase
         .from("goals")
-        .select("*, signals:goal_signals(*)")
+        .select(
+          "*, signals:goal_signals(*), report_goals(*, report:reports!inner(*))",
+        )
         .eq("profile_id", input.user_id)
         .eq("is_current", true)
         .is("deleted_at", null)
@@ -48,7 +52,41 @@ export const goalsRouter = createTRPCRouter({
         });
       }
 
-      return data;
+      const finalData = data.map((goal) => ({
+        ...goal,
+        reports: _.orderBy(
+          _.map(goal.report_goals, (gr) => gr.report),
+          [(r) => dayjs(r.created_at)],
+          ["desc"],
+        ),
+      }));
+
+      const reportIds = finalData.flatMap((goal) =>
+        goal.reports.map((r) => r.id),
+      );
+
+      const {
+        data: reportProcessingStatuses,
+        error: reportProcessingStatusesError,
+      } = await supabase
+        .from("report_processing_status")
+        .select("*")
+        .in("report_id", reportIds);
+
+      if (reportProcessingStatusesError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: reportProcessingStatusesError.message,
+          cause: reportProcessingStatusesError,
+        });
+      }
+
+      return finalData.map((goal) => ({
+        ...goal,
+        reportProcessingStatus: reportProcessingStatuses.find(
+          (r) => r.report_id === goal.reports[0]?.id,
+        ),
+      }));
     }),
 
   generateGoalSignals: publicProcedure
@@ -160,12 +198,14 @@ export const goalsRouter = createTRPCRouter({
     .input(
       z.object({
         goal_ids: z.array(z.string()),
+        profile_id: z.string(),
       }),
     )
     .mutation(async ({ input }) => {
       try {
         const response = await client.post("/reports", {
           goalIds: input.goal_ids,
+          profileId: input.profile_id,
         });
 
         if (response.data?.error) {
@@ -193,5 +233,60 @@ export const goalsRouter = createTRPCRouter({
                 : String(error),
         };
       }
+    }),
+
+  update: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        text: z.string(),
+        userProvidedContext: z.string(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const supabase = await createClient();
+      const { error } = await supabase
+        .from("goals")
+        .update({
+          text: input.text,
+          hidden_text: input.text,
+          user_provided_context: input.userProvidedContext,
+        })
+        .eq("id", input.id);
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+      }
+
+      return { success: true };
+    }),
+
+  complete: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const supabase = await createClient();
+      const { error } = await supabase
+        .from("goals")
+        .update({
+          progress: 100,
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", input.id);
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+      }
+
+      return { success: true };
     }),
 });

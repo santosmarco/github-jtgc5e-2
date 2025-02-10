@@ -1,280 +1,177 @@
 "use client";
 
-import dayjs from "dayjs";
-import { AnimatePresence, motion, stagger } from "framer-motion";
-import {
-  CheckCircleIcon,
-  GoalIcon,
-  Loader2Icon,
-  PencilIcon,
-  Trash2Icon,
-} from "lucide-react";
-import { forwardRef, useRef, useState } from "react";
+import { motion } from "framer-motion";
+import { ArrowUpRight, Check, Goal, Pencil, PlusCircle } from "lucide-react";
+import { useRef, useState } from "react";
 
 import { Button } from "~/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "~/components/ui/dialog";
-import { Input } from "~/components/ui/input";
-import { createConfettiEmitter } from "~/lib/confetti";
+import { Card } from "~/components/ui/card";
 import type { Tables } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
+import { type RouterOutputs, api } from "~/trpc/react";
 
-import { GoalSignal } from "./goal-signal";
-
-export type GoalCardMode = "view" | "edit" | "muted";
+import { createConfettiEmitter } from "~/lib/confetti";
+import { GoalProgressCard } from "./goal-progress-card";
 
 export type GoalCardProps = {
-  goal: Tables<"goals"> & { signals: Tables<"goal_signals">[] };
-  mode: GoalCardMode;
-  onGoalTextEditComplete?: (goalId: string, newText: string) => void;
-  onGoalComplete?: (goalId: string) => void;
-  onGoalDelete?: (goalId: string) => void;
+  goal: RouterOutputs["goals"]["getGoals"][number];
+  onGoalComplete?: (goalId: string) => Promise<void>;
   onGoalEdit?: (
     goal: Tables<"goals"> & { signals: Tables<"goal_signals">[] },
-  ) => void;
+  ) => Promise<void>;
+  className?: string;
 };
 
-export const GoalCard = forwardRef<HTMLDivElement, GoalCardProps>(
-  (
-    {
-      goal,
-      mode,
-      onGoalTextEditComplete,
-      onGoalComplete,
-      onGoalDelete,
-      onGoalEdit,
-    },
-    ref,
-  ) => {
-    const [isEditing, setIsEditing] = useState(false);
-    const [editedText, setEditedText] = useState(goal.text);
-    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-    const [isCompleting, setIsCompleting] = useState(false);
-    const inputRef = useRef<HTMLInputElement>(null);
-    const completeButtonRef = useRef<HTMLButtonElement>(null);
+export function GoalCard({
+  goal,
+  onGoalComplete,
+  onGoalEdit,
+  className,
+}: GoalCardProps) {
+  const [isCompleting, setIsCompleting] = useState(false);
+  const completeButtonRef = useRef<HTMLButtonElement>(null);
 
-    const isCompleted = Boolean(goal.completed_at);
+  const isCompleted = Boolean(goal.completed_at);
+  const utils = api.useUtils();
 
-    const handleComplete = async () => {
-      setIsCompleting(true);
+  const handleComplete = async () => {
+    setIsCompleting(true);
 
-      try {
-        await onGoalComplete?.(goal.id);
+    try {
+      await onGoalComplete?.(goal.id);
 
-        // Only fire confetti after successful completion
-        const button = completeButtonRef.current;
-        if (button) {
-          const rect = button.getBoundingClientRect();
-          const x = (rect.left + rect.width / 2) / window.innerWidth;
-          const y = (rect.top + rect.height / 2) / window.innerHeight;
+      // Only fire confetti after successful completion
+      const button = completeButtonRef.current;
+      if (button) {
+        const rect = button.getBoundingClientRect();
+        const x = (rect.left + rect.width / 2) / window.innerWidth;
+        const y = (rect.top + rect.height / 2) / window.innerHeight;
 
-          const confetti = createConfettiEmitter({ x, y });
-          void confetti.fireDefault();
-        }
-      } finally {
-        setIsCompleting(false);
+        const confetti = createConfettiEmitter({ x, y });
+        void confetti.fireDefault();
       }
-    };
+    } finally {
+      setIsCompleting(false);
+    }
+  };
 
-    const handleEdit = () => {
-      onGoalEdit?.(goal);
-    };
+  // Count positive and negative signals
+  const signalCounts = goal.signals.reduce(
+    (acc, signal) => {
+      if (signal.direction === "positive") acc.positive++;
+      if (signal.direction === "negative") acc.negative++;
+      return acc;
+    },
+    { positive: 0, negative: 0 },
+  );
 
-    const handleDelete = () => {
-      onGoalDelete?.(goal.id);
-      setShowDeleteDialog(false);
-    };
+  console.log(goal);
 
-    return (
-      <>
-        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete Goal</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete this goal? This action cannot be
-                undone.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setShowDeleteDialog(false)}
-              >
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={handleDelete}>
-                Delete
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        <motion.div
-          ref={ref}
-          key={goal.id}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: mode === "muted" ? 0.5 : 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{
-            type: "spring",
-            stiffness: 500,
-            damping: 30,
-          }}
-          className="mb-4"
-        >
-          <Card
-            className={cn(
-              "overflow-hidden bg-card shadow-md transition-shadow duration-300 hover:shadow-lg",
-              mode === "edit" && "border-primary",
-              mode === "muted" && "pointer-events-none",
-              isCompleted && "border-primary",
-              isCompleting && "pointer-events-none opacity-80",
-            )}
-          >
-            <CardHeader className="p-4 px-5">
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex h-6 flex-grow items-center gap-2">
-                  <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="relative h-5 w-5 flex-shrink-0"
-                  >
-                    <GoalIcon
-                      className={cn(
-                        "absolute h-5 w-5",
-                        isCompleted ? "text-primary" : "text-muted-foreground",
-                      )}
-                    />
-                    <div
-                      className="absolute bottom-0 h-5 w-5 overflow-hidden"
-                      style={{
-                        height: isCompleted ? "100%" : `${goal.progress ?? 0}%`,
-                      }}
-                    >
-                      <GoalIcon className="h-5 w-5 text-primary" />
-                    </div>
-                  </motion.div>
-                  <motion.div
-                    key="text"
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 20 }}
-                    className="flex-1 text-base"
-                  >
-                    {goal.text}
-                  </motion.div>
+  return (
+    <div className="grid grid-cols-[1fr,350px] gap-4 border-b border-border pb-4">
+      <motion.div
+        className={cn(
+          "group relative h-full overflow-hidden transition-all",
+          className,
+        )}
+      >
+        <Card className="flex h-full flex-col border-none bg-transparent p-6">
+          <div className="flex h-full flex-col justify-between space-y-4">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Goal
+                    className={cn(
+                      "h-5 w-5 shrink-0 text-primary",
+                      isCompleted && "text-emerald-500",
+                    )}
+                  />
+                  <h3 className="text-lg font-semibold">{goal.text}</h3>
                 </div>
+              </div>
 
-                {isCompleted ? (
-                  <div className="text-sm text-muted-foreground">
-                    You completed this on{" "}
-                    {dayjs(goal.completed_at).format("MMMM D, YYYY")}
-                  </div>
-                ) : (
-                  mode !== "edit" &&
-                  mode !== "muted" && (
-                    <div className="flex items-center gap-x-3 pl-2">
-                      <AnimatePresence>
-                        {!isEditing && onGoalEdit && (
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ duration: 0.2, delay: 0.2 }}
-                          >
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={handleEdit}
-                              className="h-4 w-4 p-0 transition-colors hover:bg-card hover:text-primary"
-                              disabled={isEditing || isCompleting}
-                            >
-                              <PencilIcon className="h-4 w-4" />
-                            </Button>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                      {onGoalComplete && (
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ duration: 0.2, delay: 0.3 }}
-                        >
-                          <Button
-                            ref={completeButtonRef}
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleComplete}
-                            className={cn(
-                              "h-4 w-4 p-0 transition-colors hover:bg-card hover:text-emerald-700 hover:dark:text-emerald-400",
-                              isCompleting &&
-                                "text-primary disabled:text-primary",
-                            )}
-                            disabled={isEditing || isCompleting}
-                          >
-                            {isCompleting ? (
-                              <Loader2Icon className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <CheckCircleIcon className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </motion.div>
-                      )}
-                      {onGoalDelete && (
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ duration: 0.2, delay: 0.4 }}
-                        >
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setShowDeleteDialog(true)}
-                            className="h-4 w-4 p-0 transition-colors hover:bg-card hover:text-destructive"
-                            disabled={isEditing || isCompleting}
-                          >
-                            <Trash2Icon className="h-4 w-4" />
-                          </Button>
-                        </motion.div>
-                      )}
-                    </div>
-                  )
-                )}
-              </CardTitle>
-            </CardHeader>
-
-            <CardContent className="space-y-2 px-4 pb-4">
-              {goal.signals.map((signal, index) => (
-                <motion.div
-                  key={signal.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{
-                    duration: 0.2,
-                    delay: stagger(0.1, { startDelay: 0.2 })(
-                      index,
-                      goal.signals.length,
-                    ),
-                  }}
-                  className="flex-shrink-0"
+              {goal.user_provided_context ? (
+                <p className="text-sm text-muted-foreground">
+                  {goal.user_provided_context}
+                </p>
+              ) : (
+                <motion.button
+                  onClick={() => onGoalEdit?.(goal)}
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ scale: 1.01 }}
+                  className="flex w-full cursor-pointer items-center gap-2 rounded-md border border-dashed border-muted bg-muted/5 px-3 py-2 transition-colors hover:border-muted-foreground/25 hover:bg-muted/10"
                 >
-                  <GoalSignal index={index} data={signal} />
-                </motion.div>
-              ))}
-            </CardContent>
-          </Card>
-        </motion.div>
-      </>
-    );
-  },
-);
-GoalCard.displayName = "GoalCard";
+                  <PlusCircle className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
+                    Add context to help track this goal
+                  </span>
+                </motion.button>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                {signalCounts.positive > 0 && (
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <div className="flex items-center gap-0.5">
+                      <ArrowUpRight className="h-4 w-4 text-emerald-500" />
+                      <span className="font-medium text-emerald-500">
+                        {signalCounts.positive}
+                      </span>
+                    </div>
+                    <span className="text-muted-foreground">
+                      positive signals
+                    </span>
+                  </div>
+                )}
+                {signalCounts.negative > 0 && (
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <div className="flex items-center gap-0.5">
+                      <ArrowUpRight className="h-4 w-4 rotate-90 text-red-500" />
+                      <span className="font-medium text-red-500">
+                        {signalCounts.negative}
+                      </span>
+                    </div>
+                    <span className="text-muted-foreground">
+                      negative signals
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {isCompleted ? (
+                <span className="text-sm text-muted-foreground">
+                  Completed at{" "}
+                  {new Date(goal.completed_at ?? "").toLocaleDateString()}
+                </span>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => onGoalEdit?.(goal)}
+                    className="h-8 w-8"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    ref={completeButtonRef}
+                    size="icon"
+                    variant="secondary"
+                    onClick={handleComplete}
+                    className="h-8 w-8"
+                  >
+                    <Check className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
+      </motion.div>
+
+      <GoalProgressCard goal={goal} />
+    </div>
+  );
+}

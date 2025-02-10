@@ -54,6 +54,7 @@ export default function ReportsPage() {
 
   return (
     <div className="container mx-auto space-y-8 py-6">
+      <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

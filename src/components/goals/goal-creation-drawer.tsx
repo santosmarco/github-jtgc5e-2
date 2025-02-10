@@ -47,6 +47,7 @@ export type GoalCreationDrawerProps = {
     | null;
   setGoal: (goal: GoalCreationDrawerProps["goal"] | null) => void;
   onSubmit: (values: GoalFormValues) => void | Promise<void>;
+  contextDefaultOpen?: boolean;
 };
 
 export const GoalFormValues = z.object({
@@ -68,11 +69,12 @@ export function GoalCreationDrawer({
   goal,
   setGoal,
   onSubmit,
+  contextDefaultOpen = false,
 }: GoalCreationDrawerProps) {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showContext, setShowContext] = useState(
-    () => !!goal?.user_provided_context,
+    () => contextDefaultOpen || !!goal?.user_provided_context,
   );
   const [contextQuestions, setContextQuestions] = useState<string[]>([]);
   const [didInitializeOnEdit, setDidInitializeOnEdit] = useState(false);
@@ -111,6 +113,7 @@ export function GoalCreationDrawer({
       setIsHelpOpen(false);
       setIsSubmitting(false);
       setShowContext(false);
+      setContextQuestions([]);
       setDidInitializeOnEdit(false);
       setIsEditingText(false);
       if (!open) {
@@ -135,15 +138,21 @@ export function GoalCreationDrawer({
   );
 
   useEffect(() => {
-    if (mode === "edit" && goal && !didInitializeOnEdit) {
+    if (!goal) return;
+
+    if (mode === "edit" && !didInitializeOnEdit) {
       setDidInitializeOnEdit(true);
       goalForm.setValue("text", goal.text);
-      goalForm.setValue("context", goal.user_provided_context ?? "");
+      if (!goal.user_provided_context) {
+        generateGoalContextQuestions.mutate({ goal_text: goal.text });
+      } else {
+        goalForm.setValue("context", goal.user_provided_context ?? "");
+      }
       goalForm.setValue("signals", goal.signals ?? []);
       return;
     }
 
-    if (goal && generateGoalSignals.isIdle && mode === "create") {
+    if (mode === "create" && generateGoalSignals.isIdle) {
       goalForm.setValue("text", goal.text);
       if (!goal.user_provided_context) {
         generateGoalContextQuestions.mutate({ goal_text: goal.text });
@@ -162,8 +171,28 @@ export function GoalCreationDrawer({
   ]);
 
   const isLoading =
-    mode === "create" && !goal?.signals?.length && !generateGoalSignals.data;
+    mode === "create" &&
+    goal &&
+    !goal.signals?.length &&
+    !generateGoalSignals.data;
   const formErrors = goalForm.formState.errors;
+
+  const handleTextEdit = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter") {
+        void goalForm.register("text").onChange(e);
+        setIsEditingText(false);
+      }
+    },
+    [goalForm],
+  );
+
+  const handleSignalAdd = useCallback(() => {
+    goalSignalFields.append({
+      text: "",
+      direction: "positive",
+    });
+  }, [goalSignalFields]);
 
   return (
     <>
@@ -205,12 +234,7 @@ export function GoalCreationDrawer({
                             placeholder="Enter your goal..."
                             autoFocus
                             onBlur={() => setIsEditingText(false)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                void goalForm.register("text").onChange(e);
-                                setIsEditingText(false);
-                              }
-                            }}
+                            onKeyDown={handleTextEdit}
                             className="-mb-1 -mr-3 h-7 w-full focus-visible:ring-0"
                           />
                         ) : (
@@ -386,12 +410,7 @@ export function GoalCreationDrawer({
                       <Button
                         variant="ghost"
                         className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border/80 bg-background/50 py-2 text-sm text-muted-foreground hover:border-border hover:bg-background/80"
-                        onClick={() =>
-                          goalSignalFields.append({
-                            text: "",
-                            direction: "positive",
-                          })
-                        }
+                        onClick={handleSignalAdd}
                         tabIndex={-1}
                         disabled={
                           isSubmitting || goalSignalFields.fields.length >= 10

@@ -1,13 +1,13 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { GoalIcon, Loader2Icon, Sparkles } from "lucide-react";
+import { Loader2Icon, PlusIcon } from "lucide-react";
 import { useCallback } from "react";
 import { z } from "zod";
 
 import {
-  useValidatedForm,
   type UseValidatedFormReturn,
+  useValidatedForm,
 } from "~/hooks/use-validated-form";
 
 import { Form, FormControl, FormField, FormItem } from "../ui/form";
@@ -49,7 +49,7 @@ export function NewGoalForm({ onSubmit }: NewGoalFormProps) {
       >
         <form
           onSubmit={form.handleSubmit(handleSubmit)}
-          className="group relative -mx-10 flex items-center gap-3 rounded-xl bg-gradient-to-br from-card to-card/80 p-2 shadow-lg ring-1 ring-primary/5 backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:ring-primary/10"
+          className="group relative flex items-center gap-3 rounded-xl border border-primary/20 bg-gradient-to-br from-card to-card/80 p-2 shadow-lg ring-1 ring-primary/5 backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:ring-primary/10"
         >
           <motion.div
             initial={false}
@@ -60,7 +60,7 @@ export function NewGoalForm({ onSubmit }: NewGoalFormProps) {
               {form.formState.isSubmitting ? (
                 <Loader2Icon className="h-5 w-5 animate-spin" />
               ) : (
-                <Sparkles className="h-5 w-5" />
+                <PlusIcon className="h-5 w-5" />
               )}
             </div>
 
@@ -75,10 +75,10 @@ export function NewGoalForm({ onSubmit }: NewGoalFormProps) {
                       placeholder={
                         form.formState.errors.text
                           ? form.formState.errors.text.message
-                          : "What's your next step? Click to add goal..."
+                          : "Set a new goal..."
                       }
                       disabled={form.formState.isSubmitting}
-                      className={`border-none bg-transparent p-0 text-base font-medium shadow-none placeholder:text-muted-foreground/60 focus-visible:ring-0 ${form.formState.errors.text ? "placeholder:text-destructive" : ""}`}
+                      className={`w-full border-none bg-transparent p-0 text-base font-medium shadow-none placeholder:text-muted-foreground/60 focus-visible:ring-0 ${form.formState.errors.text ? "placeholder:text-destructive" : ""}`}
                       onKeyDown={(e) => {
                         if (
                           e.key === "Enter" &&
