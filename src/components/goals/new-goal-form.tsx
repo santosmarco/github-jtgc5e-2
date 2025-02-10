@@ -49,14 +49,14 @@ export function NewGoalForm({ onSubmit }: NewGoalFormProps) {
       >
         <form
           onSubmit={form.handleSubmit(handleSubmit)}
-          className="group relative flex items-center gap-3 rounded-xl border border-primary/20 bg-gradient-to-br from-card to-card/80 p-2 shadow-lg ring-1 ring-primary/5 backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:ring-primary/10"
+          className="group relative flex items-center gap-3 rounded-xl border border-primary/50 bg-gradient-to-br from-card to-card/80 p-2 shadow-lg ring-1 ring-primary/5 backdrop-blur-sm transition-all duration-300 focus-within:border-primary focus-within:ring-primary/30 hover:shadow-xl hover:ring-primary/10"
         >
           <motion.div
             initial={false}
             animate={{ scale: form.formState.isSubmitting ? 0.97 : 1 }}
             className="flex w-full items-center gap-3"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-focus-within:bg-primary/20 group-focus-within:text-primary">
               {form.formState.isSubmitting ? (
                 <Loader2Icon className="h-5 w-5 animate-spin" />
               ) : (
@@ -78,7 +78,7 @@ export function NewGoalForm({ onSubmit }: NewGoalFormProps) {
                           : "Set a new goal..."
                       }
                       disabled={form.formState.isSubmitting}
-                      className={`w-full border-none bg-transparent p-0 text-base font-medium shadow-none placeholder:text-muted-foreground/60 focus-visible:ring-0 ${form.formState.errors.text ? "placeholder:text-destructive" : ""}`}
+                      className={`w-full border-none bg-transparent p-0 text-base font-medium shadow-none placeholder:text-muted-foreground/60 focus:placeholder:text-primary focus-visible:ring-0 ${form.formState.errors.text ? "placeholder:text-destructive" : ""}`}
                       onKeyDown={(e) => {
                         if (
                           e.key === "Enter" &&
