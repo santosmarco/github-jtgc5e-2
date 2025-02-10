@@ -190,9 +190,8 @@ export function ReportPageClient({ group, reports }: ReportPageClientProps) {
                 >
                   <div className="space-y-4">
                     <GoalCard
-                      goal={goal}
-                      mode="view"
-                      onGoalComplete={() => void 0}
+                      goal={goal as any}
+                      onGoalComplete={async () => void 0}
                     />
                   </div>
 

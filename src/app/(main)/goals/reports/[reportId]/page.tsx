@@ -180,9 +180,8 @@ export default function ReportPage({
         void utils.reports.getGroupReports.invalidate({
           groupId: params.reportId,
         });
+        clearTimeout(timeoutId);
       }, 500);
-
-      return () => clearTimeout(timeoutId);
     } catch (error) {
       toast.error("Failed to update goal");
       console.error(error);
