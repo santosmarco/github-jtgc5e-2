@@ -1,5 +1,8 @@
-import { WebClient as SlackWebClient } from "@slack/web-api";
-import type { Block, KnownBlock } from "@slack/types";
+import {
+  WebClient as SlackWebClient,
+  type Block,
+  type KnownBlock,
+} from "@slack/web-api";
 
 import { env } from "~/env";
 
