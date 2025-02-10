@@ -28,12 +28,14 @@ type ApiVideo = NonNullable<RouterOutputs["videos"]["getFromApiVideo"]>;
 const ReportMomentCard = memo(function ReportMomentCard({
   reportMoment,
   isUpNext = false,
+  onClick,
 }: {
   reportMoment: Tables<"report_moments"> & {
     moment: VideoMoment;
     report_goal_signal: Tables<"report_goal_signals">;
   };
   isUpNext?: boolean;
+  onClick?: () => void;
 }) {
   const { data: momentVideo } = api.videos.getFromApiVideo.useQuery(
     {
@@ -46,7 +48,20 @@ const ReportMomentCard = memo(function ReportMomentCard({
   );
 
   return (
-    <div className="relative flex items-center overflow-hidden rounded-lg border border-border transition-all duration-200">
+    <div
+      className={cn(
+        "relative flex items-center overflow-hidden rounded-lg border border-border transition-all duration-200",
+        isUpNext && "cursor-pointer hover:bg-accent/50",
+      )}
+      onClick={onClick}
+      role={isUpNext ? "button" : undefined}
+      tabIndex={isUpNext ? 0 : undefined}
+      onKeyDown={(e) => {
+        if (isUpNext && onClick && (e.key === "Enter" || e.key === " ")) {
+          onClick();
+        }
+      }}
+    >
       {isUpNext && <div className="absolute inset-0 z-50 bg-background/50" />}
       <div
         className={cn(
@@ -244,7 +259,13 @@ export function MomentsPlayer({
                 variants={listItemVariants}
                 custom={index + 3}
               >
-                <ReportMomentCard reportMoment={moment} isUpNext />
+                <ReportMomentCard
+                  reportMoment={moment}
+                  isUpNext
+                  onClick={() =>
+                    setCurrentMomentIndex(currentMomentIndex + index + 1)
+                  }
+                />
               </motion.div>
             ))}
           </div>
