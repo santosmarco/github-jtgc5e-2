@@ -114,7 +114,10 @@ export async function GET(request: NextRequest) {
       logger.info("Google Calendar setup complete");
     }
 
-    // Step 7: Handle final redirect
+    // Step 7: Handle Zoom setup if applicable
+    // @todo
+
+    // Step 8: Handle final redirect
     logger.info("Processing final redirect", { next });
     return handleRedirect(request, next);
   } catch (error) {
@@ -138,6 +141,7 @@ function validateAndSetupRequest(request: NextRequest) {
 
   let invite: string | null = null;
   let provider: string | null = null;
+  let next: string | null = searchParams.get("next");
 
   // Parse and validate the state parameter
   const stateParam = searchParams.get("state");
@@ -148,6 +152,7 @@ function validateAndSetupRequest(request: NextRequest) {
         provider: string | null;
         nonce: string;
         timestamp: number;
+        next: string | null;
       };
 
       // Validate timestamp to prevent replay attacks (15 minute window)
@@ -161,13 +166,13 @@ function validateAndSetupRequest(request: NextRequest) {
           timestamp,
           now: Date.now(),
         });
-      } else if (stateData.provider !== "google") {
-        logger.warn("Invalid provider in state", {
-          provider: stateData.provider,
-        });
       } else {
         invite = stateData.invite ?? null;
         provider = stateData.provider;
+        // Only override next from URL if state has a next value
+        if (stateData.next) {
+          next = stateData.next;
+        }
       }
     } catch (error) {
       logger.warn("Failed to parse state parameter", {
@@ -180,7 +185,7 @@ function validateAndSetupRequest(request: NextRequest) {
   const result = {
     code: searchParams.get("code"),
     provider: provider ?? searchParams.get("provider"),
-    next: searchParams.get("next") ?? "",
+    next: next ?? "",
     invite: invite ?? searchParams.get("invite"),
   };
 
@@ -188,6 +193,7 @@ function validateAndSetupRequest(request: NextRequest) {
     ...result,
     hasInvite: !!invite,
     hasProvider: !!provider,
+    hasNext: !!next,
   });
   return result;
 }

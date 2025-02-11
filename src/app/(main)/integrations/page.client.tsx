@@ -8,6 +8,7 @@ import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { useCallback, useEffect, useState } from "react";
 import { SiApple, SiGoogle, SiSlack, SiZoom } from "react-icons/si";
 import { toast } from "sonner";
+import { v4 as uuidv4 } from "uuid";
 
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
@@ -101,15 +102,20 @@ export function IntegrationsPageClient() {
     async (provider: Integration["provider"]) => {
       setConnectingProviders((prev) => [...prev, provider]);
 
-      const { data, error } = await supabase.auth.linkIdentity({
+      const nonce = uuidv4();
+      const state = encodeURIComponent(
+        JSON.stringify({
+          provider,
+          nonce,
+          timestamp: Date.now(),
+          next: "/integrations",
+        }),
+      );
+
+      void supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${getBaseUrl()}auth/callback?${new URLSearchParams({
-            provider,
-            next: `/integrations?${new URLSearchParams({
-              connectedTo: provider,
-            })}`,
-          })}`,
+          redirectTo: `${getBaseUrl()}auth/callback?state=${state}`,
           ...(provider === "google" && {
             queryParams: {
               access_type: "offline",
@@ -118,18 +124,17 @@ export function IntegrationsPageClient() {
             scopes:
               "https://www.googleapis.com/auth/calendar.calendarlist.readonly https://www.googleapis.com/auth/calendar.calendars.readonly https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.readonly",
           }),
+          ...(provider === "zoom" && {
+            queryParams: {
+              response_type: "code",
+              access_type: "offline",
+            },
+            scopes: "meeting:read meeting:write recording:read recording:write",
+          }),
         },
       });
-
-      if (error) {
-        toast.error("Failed to connect", { description: error.message });
-      }
-
-      if (data.url) {
-        router.push(data.url);
-      }
     },
-    [supabase, router],
+    [supabase],
   );
 
   const handleDisconnect = useCallback(
