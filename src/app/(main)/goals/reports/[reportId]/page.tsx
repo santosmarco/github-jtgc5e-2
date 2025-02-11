@@ -37,6 +37,11 @@ import { Textarea } from "~/components/ui/textarea";
 import { transformMoment } from "~/lib/db/moments";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
 
 export default function ReportPage({
   params,
@@ -64,6 +69,7 @@ export default function ReportPage({
   >(null);
 
   const utils = api.useUtils();
+  const { data: user } = api.auth.getUser.useQuery();
   const { data: groupReports, isLoading } =
     api.reports.getGroupReports.useQuery({
       groupId: params.reportId,
@@ -420,7 +426,16 @@ export default function ReportPage({
                                 "border-emerald-500/50 bg-emerald-500/5",
                             )}
                           >
-                            <h3 className="font-semibold">{section.title}</h3>
+                            <Tooltip open={user?.is_admin ? undefined : false}>
+                              <TooltipTrigger>
+                                <h3 className="font-semibold">
+                                  {section.title}
+                                </h3>
+                              </TooltipTrigger>
+                              <TooltipContent align="start">
+                                {section.id}
+                              </TooltipContent>
+                            </Tooltip>
                             <p className="mt-1 text-sm text-muted-foreground">
                               {section.summary}
                             </p>
@@ -456,7 +471,16 @@ export default function ReportPage({
                                 "border-amber-500/50 bg-amber-500/5",
                             )}
                           >
-                            <h3 className="font-semibold">{section.title}</h3>
+                            <Tooltip open={user?.is_admin ? undefined : false}>
+                              <TooltipTrigger>
+                                <h3 className="font-semibold">
+                                  {section.title}
+                                </h3>
+                              </TooltipTrigger>
+                              <TooltipContent align="start">
+                                {section.id}
+                              </TooltipContent>
+                            </Tooltip>
                             <p className="mt-1 text-sm text-muted-foreground">
                               {section.summary}
                             </p>
