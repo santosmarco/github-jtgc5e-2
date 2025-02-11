@@ -53,10 +53,16 @@ export async function POST(request: NextRequest) {
 
       const { handleBotStatusChange } = createBotStatusChangeService(deps);
 
-      if (parsedBody.event === "bot.status_change") {
+      if (
+        parsedBody.event === "bot.status_change" ||
+        parsedBody.event === "complete" ||
+        parsedBody.event === "failed"
+      ) {
         logger.info("🤖 Processing bot status change event", {
           bot_id: parsedBody.data.bot_id,
-          status: parsedBody.data.status,
+          ...("status" in parsedBody.data && {
+            status: parsedBody.data.status,
+          }),
         });
         await handleBotStatusChange(parsedBody);
       }

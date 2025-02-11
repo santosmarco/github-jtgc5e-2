@@ -21,14 +21,17 @@ export type RecallTranscript = Except<
   "language" | "speaker_id"
 >[];
 
-export type MeetingBotWithProfileAndEvent = Tables<"meeting_bots_v2"> & {
+export type MeetingBotWithProfileAndEvent = (
+  | Tables<"meeting_bots_v2">
+  | Tables<"meeting_bots">
+) & {
   profile: Tables<"profiles">;
-  event: Tables<"calendar_events_v2"> | null;
+  event: Tables<"calendar_events_v2"> | Tables<"calendar_events"> | null;
 };
 
 export type MeetingBotWithProfileAndEventAndCalendar =
   MeetingBotWithProfileAndEvent & {
-    calendar: Tables<"recall_calendars_v2"> | null;
+    calendar: Tables<"recall_calendars_v2"> | Tables<"recall_calendars"> | null;
   };
 
 export type ApiVideoMetadataObject = {
@@ -67,7 +70,7 @@ export function createBotStatusChangeService(
           event,
         });
 
-        const { data: meetingBot, error: updateError } = await supabase
+        let { data: meetingBot, error: updateError } = await supabase
           .from("meeting_bots_v2")
           .update({
             status: "fatal",
@@ -77,7 +80,7 @@ export function createBotStatusChangeService(
           .select(
             "*, profile:profiles!inner(*), event:calendar_events_v2!inner(*)",
           )
-          .single();
+          .maybeSingle();
 
         if (updateError) {
           logger.error("❌ Failed to update meeting bot status", {
@@ -85,6 +88,34 @@ export function createBotStatusChangeService(
             bot_id: event.data.bot_id,
           });
           return;
+        }
+
+        if (!meetingBot) {
+          ({ data: meetingBot, error: updateError } = await supabase
+            .from("meeting_bots")
+            .update({
+              status: "fatal",
+              error_code: event.data.error,
+            })
+            .eq("id", event.data.bot_id)
+            .select(
+              "*, profile:profiles!inner(*), event:calendar_events!inner(*)",
+            )
+            .maybeSingle());
+
+          if (updateError) {
+            logger.error("❌ Failed to update meeting bot status", {
+              error: updateError,
+              bot_id: event.data.bot_id,
+            });
+          }
+
+          if (!meetingBot) {
+            logger.error("❌ Failed to find meeting bot", {
+              bot_id: event.data.bot_id,
+            });
+            return;
+          }
         }
 
         await slack.error({
@@ -99,7 +130,9 @@ export function createBotStatusChangeService(
 
       const status = "status" in event.data ? event.data.status : undefined;
 
-      const { data: meetingBot, error: meetingBotError } = await supabase
+      let isV2 = true;
+
+      let { data: meetingBot, error: meetingBotError } = await supabase
         .from("meeting_bots_v2")
         .update({
           ...(status?.code && { status: status.code }),
@@ -111,7 +144,7 @@ export function createBotStatusChangeService(
         .select(
           "*, profile:profiles!inner(*), calendar:recall_calendars_v2!inner(*), event:calendar_events_v2!inner(*)",
         )
-        .single();
+        .maybeSingle();
 
       if (meetingBotError) {
         logger.error("❌ Failed to update meeting bot status", {
@@ -120,6 +153,40 @@ export function createBotStatusChangeService(
           status,
         });
         return;
+      }
+
+      if (!meetingBot) {
+        ({ data: meetingBot, error: meetingBotError } = await supabase
+          .from("meeting_bots")
+          .update({
+            ...(status?.code && { status: status.code }),
+            ...(status?.sub_code && { sub_code: status.sub_code }),
+            ...(status?.message && { message: status.message }),
+            ...(status?.recording_id && { recording_id: status.recording_id }),
+          })
+          .eq("id", event.data.bot_id)
+          .select(
+            "*, profile:profiles!inner(*), calendar:recall_calendars!inner(*), event:calendar_events!inner(*)",
+          )
+          .maybeSingle());
+
+        if (meetingBotError) {
+          logger.error("❌ Failed to update meeting bot status", {
+            error: meetingBotError,
+            event_id: event.data.bot_id,
+            status,
+          });
+          return;
+        }
+
+        if (!meetingBot) {
+          logger.error("❌ Failed to find meeting bot", {
+            bot_id: event.data.bot_id,
+          });
+          return;
+        }
+
+        isV2 = false;
       }
 
       logger.info("✅ Successfully updated meeting bot status", {
@@ -191,7 +258,7 @@ export function createBotStatusChangeService(
         });
 
         const { error: meetingBotUpdateError } = await supabase
-          .from("meeting_bots_v2")
+          .from(isV2 ? "meeting_bots_v2" : "meeting_bots")
           .update({
             speakers,
             ...(storageUrl && { mp4_source_url: storageUrl }),
@@ -241,7 +308,7 @@ export function createBotStatusChangeService(
           user_email: meetingBot.profile.email,
         });
 
-        await handleTranscript(meetingBot, transcript);
+        await handleTranscript(meetingBot, transcript, isV2);
 
         if (apiVideoId && !meetingBotUpdateError) {
           await handleVideoProcessing(meetingBot);
@@ -360,7 +427,7 @@ export function createBotStatusChangeService(
 
       void uploadVideoToSupabaseStorage.trigger({
         botId: bot.id,
-        provider: bot.provider,
+        provider: bot.provider ?? "meeting_baas",
         videoUrl: videoUrl,
         fileName: fileName,
       });
@@ -437,7 +504,9 @@ export function createBotStatusChangeService(
         };
       }
 
-      const tags = [...participants, bot.profile_id];
+      const tags = [...participants, bot.profile_id].filter(
+        (tag): tag is NonNullable<typeof tag> => tag !== null,
+      );
 
       logger.info("👥 Detected meeting participants", {
         bot_id: bot.id,
@@ -648,6 +717,7 @@ export function createBotStatusChangeService(
   async function handleTranscript(
     bot: MeetingBotWithProfileAndEventAndCalendar,
     transcript: RecallTranscript,
+    isV2: boolean,
   ) {
     logger.info("📝 Processing transcript", {
       bot_id: bot.id,
@@ -669,7 +739,7 @@ export function createBotStatusChangeService(
 
     const { data: transcriptSlices, error: transcriptSlicesError } =
       await supabase
-        .from("transcript_slices_v2")
+        .from(isV2 ? "transcript_slices_v2" : "transcript_slices")
         .insert(
           transcript.map(
             (slice, index) =>
@@ -677,7 +747,8 @@ export function createBotStatusChangeService(
                 bot_id: bot.id,
                 speaker_name: slice.speaker,
                 index,
-              }) satisfies TablesInsert<"transcript_slices_v2">,
+              }) satisfies TablesInsert<"transcript_slices_v2"> &
+                TablesInsert<"transcript_slices">,
           ),
         )
         .select("*");
@@ -735,7 +806,8 @@ export function createBotStatusChangeService(
             end_time: word.end_timestamp,
             content: word.text,
             index: wordIndex,
-          }) satisfies TablesInsert<"transcript_words_v2">,
+          }) satisfies TablesInsert<"transcript_words_v2"> &
+            TablesInsert<"transcript_words">,
       ),
     );
 
@@ -747,7 +819,7 @@ export function createBotStatusChangeService(
     });
 
     const { error: wordsError } = await supabase
-      .from("transcript_words_v2")
+      .from(isV2 ? "transcript_words_v2" : "transcript_words")
       .insert(words);
 
     if (wordsError) {
