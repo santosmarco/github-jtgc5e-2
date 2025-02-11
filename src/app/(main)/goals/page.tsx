@@ -10,6 +10,7 @@ import {
   GoalCreationDrawer,
   type GoalFormValues,
 } from "~/components/goals/goal-creation-drawer";
+import { GoalsEmptyState } from "~/components/goals/goals-empty-state";
 import { NewGoalForm } from "~/components/goals/new-goal-form";
 import { useProfile } from "~/hooks/use-profile";
 import { createClient } from "~/lib/supabase/client";
@@ -242,6 +243,8 @@ export default function GoalsPage() {
     );
   }
 
+  const hasGoals = goals.length > 0;
+
   return (
     <motion.div
       initial="initial"
@@ -249,23 +252,29 @@ export default function GoalsPage() {
       variants={staggerAnimation}
       className="container mx-auto space-y-6 py-6"
     >
-      <div className="flex items-center gap-x-8 pb-2">
-        <h1 className="text-2xl font-semibold tracking-tight">My Goals</h1>
-        <div className="max-w-xl flex-1">
-          <NewGoalForm onSubmit={handleAddGoal} />
-        </div>
-      </div>
+      {hasGoals ? (
+        <>
+          <div className="flex items-center gap-x-8 pb-2">
+            <h1 className="text-2xl font-semibold tracking-tight">My Goals</h1>
+            <div className="max-w-xl flex-1">
+              <NewGoalForm onSubmit={handleAddGoal} />
+            </div>
+          </div>
 
-      <AnimatePresence mode="popLayout">
-        {goals.map((goal) => (
-          <GoalCard
-            key={goal.id}
-            goal={goal}
-            onGoalComplete={handleGoalComplete}
-            onGoalEdit={handleGoalEdit}
-          />
-        ))}
-      </AnimatePresence>
+          <AnimatePresence mode="popLayout">
+            {goals.map((goal) => (
+              <GoalCard
+                key={goal.id}
+                goal={goal}
+                onGoalComplete={handleGoalComplete}
+                onGoalEdit={handleGoalEdit}
+              />
+            ))}
+          </AnimatePresence>
+        </>
+      ) : (
+        <GoalsEmptyState onSubmit={handleAddGoal} />
+      )}
 
       <GoalCreationDrawer
         mode={isEditingGoalId ? "edit" : "create"}
