@@ -123,8 +123,22 @@ export function VideoPlayer({
   }, []);
 
   useEffect(() => {
+    // If we are trimmed and the video is not at the start, seek to the start
+    if (
+      isTrimmed &&
+      currentTime &&
+      currentTime < start_time &&
+      videoRef.current
+    ) {
+      videoRef.current.currentTime = start_time;
+    }
+
     // Check if we need to end the video playback
-    if (isTrimmed && currentTime && currentTime >= timelineDuration) {
+    if (
+      isTrimmed &&
+      currentTime &&
+      currentTime - start_time >= timelineDuration
+    ) {
       onVideoEnd?.();
       return;
     }
@@ -145,11 +159,9 @@ export function VideoPlayer({
 
       // If a moment ended, trigger onVideoEnd if needed.
       if (
+        isTrimmed &&
         currentMoment &&
-        currentTime >=
-          (isTrimmed
-            ? currentMoment.segment_end_timestamp_in_seconds - start_time
-            : currentMoment.segment_end_timestamp_in_seconds)
+        currentTime >= currentMoment.segment_end_timestamp_in_seconds
       ) {
         onVideoEnd?.();
       }
@@ -294,7 +306,7 @@ export function VideoPlayer({
               <Slider
                 min={0}
                 max={timelineDuration}
-                value={[currentTime ?? 0]}
+                value={[currentTime - (isTrimmed ? start_time : 0)]}
                 onValueChange={(value) => seek(value[0] ?? 0)}
                 aria-label="Seek"
                 onMouseMove={(ev) => {
@@ -423,7 +435,8 @@ export function VideoPlayer({
                 />
               </div>
               <span className="ml-2 text-xs">
-                {formatTime(currentTime)} / {formatTime(timelineDuration)}
+                {formatTime(currentTime - (isTrimmed ? start_time : 0))} /{" "}
+                {formatTime(timelineDuration)}
               </span>
             </div>
             <div className="flex items-center space-x-2">
