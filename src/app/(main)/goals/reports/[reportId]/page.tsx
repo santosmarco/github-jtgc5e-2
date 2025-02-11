@@ -495,6 +495,15 @@ export default function ReportPage({
                     .filter(
                       (rm) => rm.report_section_id === selectedReportSectionId,
                     )
+                    .filter((rm) => {
+                      if (user?.is_admin) return true;
+                      const sectionDirection = report.report_sections.find(
+                        (rs) => rs.id === rm.report_section_id,
+                      )?.direction;
+                      return (
+                        rm.report_goal_signal.direction === sectionDirection
+                      );
+                    })
                     .map((rm, idx) => ({
                       ...rm,
                       moment: transformMoment(rm.moment, idx),
