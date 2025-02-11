@@ -47,6 +47,9 @@ const ReportMomentCard = memo(function ReportMomentCard({
     },
   );
 
+  const { data: user } = api.auth.getUser.useQuery();
+  const isAdmin = user?.is_admin;
+
   return (
     <div
       className={cn(
@@ -63,6 +66,14 @@ const ReportMomentCard = memo(function ReportMomentCard({
       }}
     >
       {isUpNext && <div className="absolute inset-0 z-50 bg-background/50" />}
+      {isAdmin && (
+        <div className="absolute left-0 top-0 z-50 flex flex-col items-end gap-1 rounded rounded-tl-lg bg-background/80 px-2 py-1 text-right text-xs text-muted-foreground">
+          <span>
+            Conf: {reportMoment.report_section_confidence?.toFixed(2)}
+          </span>
+          <span>Score: {reportMoment.score?.toFixed(2)}</span>
+        </div>
+      )}
       <div
         className={cn(
           "relative h-[7.25rem] w-[7.25rem] shrink-0 overflow-hidden rounded-l-lg",
@@ -92,7 +103,7 @@ const ReportMomentCard = memo(function ReportMomentCard({
           {reportMoment.moment.title}
         </h3>
         <p className={cn("my-2 line-clamp-2 text-sm", isUpNext && "text-xs")}>
-          {reportMoment.moment.summary}
+          {reportMoment.report_section_reasoning}
         </p>
         <div className="flex items-center gap-x-1">
           {reportMoment.report_goal_signal.direction === "positive" ? (

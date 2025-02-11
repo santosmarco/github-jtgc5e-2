@@ -282,7 +282,12 @@ export default function ReportPage({
   return (
     <>
       {groupReports.reports.map((report) => {
-        const reportMoments = report.report_moments;
+        const unsortedReportMoments = report.report_moments;
+        const reportMoments = _.orderBy(
+          unsortedReportMoments,
+          [(rm) => rm.report_section_confidence, (rm) => rm.score],
+          ["desc", "desc"],
+        );
         const momentIds = _.uniq(reportMoments.map((rm) => rm.moment.id));
         const videoApiIds = _.uniq(
           reportMoments.map((rm) => rm.moment.video_api_id),
