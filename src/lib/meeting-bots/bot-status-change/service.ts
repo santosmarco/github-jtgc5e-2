@@ -70,45 +70,56 @@ export function createBotStatusChangeService(
           event,
         });
 
-        let { data: meetingBot, error: updateError } = await supabase
+        let { data: meetingBot } = await supabase
           .from("meeting_bots_v2")
-          .update({
-            status: "fatal",
-            error_code: event.data.error,
-          })
-          .eq("id", event.data.bot_id)
           .select(
-            "*, profile:profiles!inner(*), event:calendar_events_v2!inner(*)",
+            "*, profile:profiles!inner(*), calendar:recall_calendars_v2!inner(*), event:calendar_events_v2!inner(*)",
           )
+          .eq("id", event.data.bot_id)
           .maybeSingle();
 
-        if (updateError) {
-          logger.error("❌ Failed to update meeting bot status", {
-            error: updateError,
-            bot_id: event.data.bot_id,
-          });
-          return;
-        }
-
-        if (!meetingBot) {
-          ({ data: meetingBot, error: updateError } = await supabase
-            .from("meeting_bots")
+        if (meetingBot) {
+          const { error: updateError } = await supabase
+            .from("meeting_bots_v2")
             .update({
               status: "fatal",
               error_code: event.data.error,
             })
-            .eq("id", event.data.bot_id)
-            .select("*, profile:profiles!inner(*)")
-            .maybeSingle());
+            .eq("id", event.data.bot_id);
 
           if (updateError) {
             logger.error("❌ Failed to update meeting bot status", {
               error: updateError,
               bot_id: event.data.bot_id,
             });
+            return;
           }
+        } else {
+          ({ data: meetingBot } = await supabase
+            .from("meeting_bots")
+            .select(
+              "*, profile:profiles!inner(*), calendar:recall_calendars!inner(*)",
+            )
+            .eq("id", event.data.bot_id)
+            .maybeSingle());
 
-          if (!meetingBot) {
+          if (meetingBot) {
+            const { error: updateError } = await supabase
+              .from("meeting_bots")
+              .update({
+                status: "fatal",
+                error_code: event.data.error,
+              })
+              .eq("id", event.data.bot_id);
+
+            if (updateError) {
+              logger.error("❌ Failed to update meeting bot status", {
+                error: updateError,
+                bot_id: event.data.bot_id,
+              });
+              return;
+            }
+          } else {
             logger.error("❌ Failed to find meeting bot", {
               bot_id: event.data.bot_id,
             });
@@ -130,43 +141,24 @@ export function createBotStatusChangeService(
 
       let isV2 = true;
 
-      let { data: meetingBot, error: meetingBotError } = await supabase
+      let { data: meetingBot } = await supabase
         .from("meeting_bots_v2")
-        .update({
-          ...(status?.code && { status: status.code }),
-          ...(status?.sub_code && { sub_code: status.sub_code }),
-          ...(status?.message && { message: status.message }),
-          ...(status?.recording_id && { recording_id: status.recording_id }),
-        })
-        .eq("id", event.data.bot_id)
         .select(
           "*, profile:profiles!inner(*), calendar:recall_calendars_v2!inner(*), event:calendar_events_v2!inner(*)",
         )
+        .eq("id", event.data.bot_id)
         .maybeSingle();
 
-      if (meetingBotError) {
-        logger.error("❌ Failed to update meeting bot status", {
-          error: meetingBotError,
-          event_id: event.data.bot_id,
-          status,
-        });
-        return;
-      }
-
-      if (!meetingBot) {
-        ({ data: meetingBot, error: meetingBotError } = await supabase
-          .from("meeting_bots")
+      if (meetingBot) {
+        const { error: meetingBotError } = await supabase
+          .from("meeting_bots_v2")
           .update({
             ...(status?.code && { status: status.code }),
             ...(status?.sub_code && { sub_code: status.sub_code }),
             ...(status?.message && { message: status.message }),
             ...(status?.recording_id && { recording_id: status.recording_id }),
           })
-          .eq("id", event.data.bot_id)
-          .select(
-            "*, profile:profiles!inner(*), calendar:recall_calendars!inner(*)",
-          )
-          .maybeSingle());
+          .eq("id", event.data.bot_id);
 
         if (meetingBotError) {
           logger.error("❌ Failed to update meeting bot status", {
@@ -176,8 +168,37 @@ export function createBotStatusChangeService(
           });
           return;
         }
+      } else {
+        ({ data: meetingBot } = await supabase
+          .from("meeting_bots")
+          .select(
+            "*, profile:profiles!inner(*), calendar:recall_calendars!inner(*)",
+          )
+          .eq("id", event.data.bot_id)
+          .maybeSingle());
 
-        if (!meetingBot) {
+        if (meetingBot) {
+          const { error: meetingBotError } = await supabase
+            .from("meeting_bots")
+            .update({
+              ...(status?.code && { status: status.code }),
+              ...(status?.sub_code && { sub_code: status.sub_code }),
+              ...(status?.message && { message: status.message }),
+              ...(status?.recording_id && {
+                recording_id: status.recording_id,
+              }),
+            })
+            .eq("id", event.data.bot_id);
+
+          if (meetingBotError) {
+            logger.error("❌ Failed to update meeting bot status", {
+              error: meetingBotError,
+              event_id: event.data.bot_id,
+              status,
+            });
+            return;
+          }
+        } else {
           logger.error("❌ Failed to find meeting bot", {
             bot_id: event.data.bot_id,
           });
@@ -610,10 +631,12 @@ export function createBotStatusChangeService(
       meeting_bot_id: bot.id,
     } satisfies ApiVideoMetadataObject;
 
-    return Object.entries(metadataObject).map(([key, value]) => ({
-      key,
-      value,
-    }));
+    return Object.entries(metadataObject)
+      .filter(([, value]) => value !== undefined)
+      .map(([key, value]) => ({
+        key,
+        value,
+      }));
   }
 
   async function getApiVideoTitle(
