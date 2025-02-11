@@ -16,9 +16,6 @@ import { useProfile } from "~/hooks/use-profile";
 import { createClient } from "~/lib/supabase/client";
 import type { Tables, TablesInsert } from "~/lib/supabase/database.types";
 import { api } from "~/trpc/react";
-import type { RouterOutputs } from "~/trpc/react";
-import type { inferRouterOutputs } from "@trpc/server";
-import type { AppRouter } from "~/server/api/root";
 
 const ANIMATION_STAGGER_DELAY = 0.05;
 const LOADING_ANIMATION_DURATION = 0.5;
@@ -254,7 +251,7 @@ export default function GoalsPage() {
     >
       {hasGoals ? (
         <>
-          <div className="flex items-center gap-x-8 pb-2">
+          <div className="flex items-center gap-x-8 pb-6">
             <h1 className="text-2xl font-semibold tracking-tight">My Goals</h1>
             <div className="max-w-xl flex-1">
               <NewGoalForm onSubmit={handleAddGoal} />

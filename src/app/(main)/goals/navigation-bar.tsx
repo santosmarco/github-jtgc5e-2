@@ -54,32 +54,26 @@ export function NavigationBar() {
             className="inline-flex gap-1 rounded-lg bg-transparent"
           >
             <TabsList className="-ml-5 bg-transparent">
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
+              <div>
                 <TabsTrigger
                   value="goals"
                   className="group relative inline-flex items-center gap-2 rounded-md bg-transparent py-2 pl-6 pr-3 text-sm font-medium transition-all hover:text-primary data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
                   onClick={() => router.push("/goals")}
                 >
-                  <GoalIcon className="h-4 w-4 stroke-[2.5px] transition-transform group-hover:scale-110" />
+                  <GoalIcon className="h-4 w-4" />
                   Goals
                 </TabsTrigger>
-              </motion.div>
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
+              </div>
+              <div>
                 <TabsTrigger
                   value="reports"
                   className="group relative inline-flex items-center gap-2 rounded-md bg-transparent py-2 pl-3 pr-6 text-sm font-medium transition-all hover:text-primary data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
                   onClick={() => router.push("/goals/reports")}
                 >
-                  <BarChart3Icon className="h-4 w-4 stroke-[2.5px] transition-transform group-hover:scale-110" />
+                  <BarChart3Icon className="h-4 w-4" />
                   Reports
                 </TabsTrigger>
-              </motion.div>
+              </div>
             </TabsList>
           </Tabs>
         </motion.div>
