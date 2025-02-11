@@ -98,9 +98,7 @@ export function createBotStatusChangeService(
               error_code: event.data.error,
             })
             .eq("id", event.data.bot_id)
-            .select(
-              "*, profile:profiles!inner(*), event:calendar_events!inner(*)",
-            )
+            .select("*, profile:profiles!inner(*)")
             .maybeSingle());
 
           if (updateError) {
@@ -166,7 +164,7 @@ export function createBotStatusChangeService(
           })
           .eq("id", event.data.bot_id)
           .select(
-            "*, profile:profiles!inner(*), calendar:recall_calendars!inner(*), event:calendar_events!inner(*)",
+            "*, profile:profiles!inner(*), calendar:recall_calendars!inner(*)",
           )
           .maybeSingle());
 
