@@ -13,12 +13,10 @@ import {
   MoreVertical,
   Settings,
 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { z } from "zod";
-import { createClient } from "~/lib/supabase/client";
-import type { Tables } from "~/lib/supabase/database.types";
-import { useSearchParams } from "next/navigation";
 
 import {
   GoalCreationDrawer,
@@ -34,14 +32,16 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Textarea } from "~/components/ui/textarea";
-import { transformMoment } from "~/lib/db/moments";
-import { cn } from "~/lib/utils";
-import { api } from "~/trpc/react";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
+import { transformMoment } from "~/lib/db/moments";
+import { createClient } from "~/lib/supabase/client";
+import type { Tables } from "~/lib/supabase/database.types";
+import { cn } from "~/lib/utils";
+import { api } from "~/trpc/react";
 
 export default function ReportPage({
   params,
@@ -99,22 +99,28 @@ export default function ReportPage({
   };
 
   const handleGoalEdit = async (goal: Tables<"goals">) => {
-    // Set both states together to avoid multiple re-renders
-    setPendingGoal({
-      text: goal.text,
-      user_provided_context: goal.user_provided_context,
-      signals: [], // We'll load the actual signals in a moment
-    });
-    setIsEditingGoalId(goal.id);
+    try {
+      // Load the goal's signals first
+      const { data: signals, error } = await supabase
+        .from("goal_signals")
+        .select("*")
+        .eq("goal_id", goal.id);
 
-    // Load the goal's signals
-    const { data: signals } = await supabase
-      .from("goal_signals")
-      .select("*")
-      .eq("goal_id", goal.id);
+      if (error) {
+        toast.error("Failed to load goal signals");
+        return;
+      }
 
-    if (signals) {
-      setPendingGoal((prev) => (prev ? { ...prev, signals } : null));
+      // Set both states together to avoid multiple re-renders
+      setPendingGoal({
+        text: goal.text,
+        user_provided_context: goal.user_provided_context,
+        signals: signals ?? [], // Include the loaded signals
+      });
+      setIsEditingGoalId(goal.id);
+    } catch (error) {
+      toast.error("Failed to load goal data");
+      console.error(error);
     }
   };
 
@@ -246,12 +252,21 @@ export default function ReportPage({
   };
 
   useEffect(() => {
+    // Set first goal as expanded by default if no goalId in URL
+    if (!goalId && groupReports?.reports[0]?.report_goals[0]?.goal.id) {
+      setExpandedGoals((prev) => ({
+        ...prev,
+        [groupReports.reports[0]!.report_goals[0]!.goal.id]: true,
+      }));
+    }
+
+    // Set first section as selected if none selected
     if (selectedReportSectionId === null && groupReports) {
       setSelectedReportSectionId(
         groupReports.reports[0]?.report_sections[0]?.id ?? null,
       );
     }
-  }, [groupReports, selectedReportSectionId]);
+  }, [groupReports, selectedReportSectionId, goalId]);
 
   if (isLoading) {
     return (

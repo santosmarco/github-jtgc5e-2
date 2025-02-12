@@ -18,6 +18,9 @@ interface CollapsibleSectionProps {
   children: React.ReactNode;
   className?: string;
   defaultOpen?: boolean;
+  open?: boolean;
+  onOpenChange?: (isOpen: boolean) => void;
+  headerActions?: React.ReactNode;
 }
 
 export function CollapsibleSection({
@@ -28,8 +31,11 @@ export function CollapsibleSection({
   children,
   className,
   defaultOpen = false,
+  open,
+  onOpenChange,
+  headerActions,
 }: CollapsibleSectionProps) {
-  const [isOpen, setIsOpen] = React.useState(() => defaultOpen);
+  const [internalOpen, setInternalOpen] = React.useState(() => defaultOpen);
   const [initialWidth, setInitialWidth] = React.useState<number>();
   const ref = React.useRef<HTMLDivElement>(null);
 
@@ -39,10 +45,18 @@ export function CollapsibleSection({
     }
   }, [initialWidth]);
 
+  const isControlled = open !== undefined;
+  const isOpen = isControlled ? open : internalOpen;
+
   return (
     <Collapsible
       open={isOpen}
-      onOpenChange={setIsOpen}
+      onOpenChange={(newOpen) => {
+        if (!isControlled) {
+          setInternalOpen(newOpen);
+        }
+        onOpenChange?.(newOpen);
+      }}
       className={cn(
         "-mx-1 w-[calc(100%+8px)] overflow-hidden rounded-md border border-border/70 bg-background/50 data-[state=open]:border-border/50",
         className,
@@ -66,12 +80,15 @@ export function CollapsibleSection({
               )}
             </span>
           </div>
-          <ChevronDown
-            className={cn(
-              "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200",
-              isOpen && "rotate-180",
-            )}
-          />
+          <div className="flex items-center gap-2">
+            {headerActions}
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200",
+                isOpen && "rotate-180",
+              )}
+            />
+          </div>
         </Button>
       </CollapsibleTrigger>
       <CollapsibleContent>

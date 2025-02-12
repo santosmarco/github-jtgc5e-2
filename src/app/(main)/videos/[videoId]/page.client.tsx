@@ -5,7 +5,9 @@ import _ from "lodash";
 import { CameraIcon, ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
+import { memo } from "react";
 
+import { ActionItemList } from "~/components/action-items/action-item-list";
 import { DeleteMeetingButton } from "~/components/meetings/delete-meeting-button";
 import { PlayerProvider, usePlayer } from "~/components/player/provider";
 import { VideoPlayer } from "~/components/player/video";
@@ -157,6 +159,7 @@ export function VideoPageClient({ videoId }: VideoPageClientProps) {
           <div className="hidden space-y-3 lg:block">
             {summary && <MeetingSummary summary={summary} />}
             <VideoTags video={video} />
+            <ActionItemList videoId={videoId} />
             <InnerTranscriptView videoId={videoId} />
           </div>
         </div>
@@ -169,7 +172,9 @@ type InnerTranscriptViewProps = {
   videoId: string;
 };
 
-const InnerTranscriptView = ({ videoId }: InnerTranscriptViewProps) => {
+const InnerTranscriptView = memo(function InnerTranscriptView({
+  videoId,
+}: InnerTranscriptViewProps) {
   const { currentTime, seek } = usePlayer();
   const { data: transcript, error } = api.transcripts.getOne.useQuery({
     videoId,
@@ -182,4 +187,4 @@ const InnerTranscriptView = ({ videoId }: InnerTranscriptViewProps) => {
       onWordClick={seek}
     />
   );
-};
+});

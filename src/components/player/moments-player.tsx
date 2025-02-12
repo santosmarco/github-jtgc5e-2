@@ -5,6 +5,11 @@ import { ArrowDownRight, ArrowUpRight, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { memo, useEffect, useState } from "react";
 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
 import type { VideoMoment } from "~/lib/schemas/video-moment";
 import type { Tables } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
@@ -65,7 +70,7 @@ const ReportMomentCard = memo(function ReportMomentCard({
         }
       }}
     >
-      {isUpNext && <div className="absolute inset-0 z-50 bg-background/50" />}
+      {isUpNext && <div className="absolute inset-0 z-30 bg-background/50" />}
       {isAdmin && (
         <div className="absolute left-0 top-0 z-50 flex flex-col items-end gap-1 rounded rounded-tl-lg bg-background/80 px-2 py-1 text-right text-xs text-muted-foreground">
           <span>
@@ -94,34 +99,61 @@ const ReportMomentCard = memo(function ReportMomentCard({
         )}
       </div>
       <div className="flex h-full flex-col justify-center px-4">
-        <h3
-          className={cn(
-            "-mt-0.5 line-clamp-1 font-semibold",
-            isUpNext && "text-sm",
-          )}
-        >
-          {reportMoment.moment.title}
-        </h3>
-        <p className={cn("my-2 line-clamp-2 text-sm", isUpNext && "text-xs")}>
-          {reportMoment.report_section_reasoning}
-        </p>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <h3
+              className={cn(
+                "-mt-0.5 line-clamp-1 font-semibold",
+                isUpNext && "text-sm",
+              )}
+            >
+              {reportMoment.moment.title}
+            </h3>
+          </TooltipTrigger>
+          <TooltipContent align="start" className="max-w-[300px]">
+            {reportMoment.moment.title}
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <p
+              className={cn("my-2 line-clamp-2 text-sm", isUpNext && "text-xs")}
+            >
+              {reportMoment.report_section_reasoning}
+            </p>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" align="start" className="max-w-[300px]">
+            {reportMoment.report_section_reasoning}
+          </TooltipContent>
+        </Tooltip>
         <div className="flex items-center gap-x-1">
           {reportMoment.report_goal_signal.direction === "positive" ? (
             <ArrowUpRight className="h-4 w-4 shrink-0 text-emerald-500" />
           ) : (
             <ArrowDownRight className="h-4 w-4 shrink-0 text-rose-500" />
           )}
-          <div
-            className={cn(
-              "line-clamp-1 text-sm text-muted-foreground",
-              isUpNext && "text-xs",
-            )}
-          >
-            Related to{" "}
-            <span className="text-foreground">
-              &quot;{reportMoment.report_goal_signal.text}&quot;
-            </span>
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className={cn(
+                  "line-clamp-1 text-sm text-muted-foreground",
+                  isUpNext && "text-xs",
+                )}
+              >
+                Related to{" "}
+                <span className="text-foreground">
+                  &quot;{reportMoment.report_goal_signal.text}&quot;
+                </span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent
+              align="start"
+              side="bottom"
+              className="max-w-[300px]"
+            >
+              Related to &quot;{reportMoment.report_goal_signal.text}&quot;
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </div>

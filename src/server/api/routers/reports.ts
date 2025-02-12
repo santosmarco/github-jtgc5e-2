@@ -1,9 +1,10 @@
 import { TRPCError } from "@trpc/server";
-import { z } from "zod";
 import _ from "lodash";
+import { z } from "zod";
 
 import { createClient } from "~/lib/supabase/server";
-import { createTRPCRouter, publicProcedure, protectedProcedure } from "../trpc";
+
+import { createTRPCRouter, protectedProcedure,publicProcedure } from "../trpc";
 
 export const reportsRouter = createTRPCRouter({
   getOne: publicProcedure

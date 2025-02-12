@@ -1,7 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowUpRight, Check, Goal, Pencil, PlusCircle } from "lucide-react";
+import {
+  ArrowUpRight,
+  Check,
+  Goal,
+  Pencil,
+  PlusCircle,
+  Undo2,
+} from "lucide-react";
 import { useRef, useState } from "react";
 
 import { Button } from "~/components/ui/button";
@@ -11,16 +18,17 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
+import { createConfettiEmitter } from "~/lib/confetti";
 import type { Tables } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
-import { type RouterOutputs, api } from "~/trpc/react";
+import { api, type RouterOutputs } from "~/trpc/react";
 
-import { createConfettiEmitter } from "~/lib/confetti";
 import { GoalProgressCard } from "./goal-progress-card";
 
 export type GoalCardProps = {
   goal: RouterOutputs["goals"]["getGoals"][number];
   onGoalComplete?: (goalId: string) => Promise<void>;
+  onGoalUncomplete?: (goalId: string) => Promise<void>;
   onGoalEdit?: (
     goal: Tables<"goals"> & { signals: Tables<"goal_signals">[] },
   ) => Promise<void>;
@@ -67,10 +75,12 @@ const iconVariants = {
 export function GoalCard({
   goal,
   onGoalComplete,
+  onGoalUncomplete,
   onGoalEdit,
   className,
 }: GoalCardProps) {
   const [isCompleting, setIsCompleting] = useState(false);
+  const [isUncompleting, setIsUncompleting] = useState(false);
   const completeButtonRef = useRef<HTMLButtonElement>(null);
 
   const isCompleted = Boolean(goal.completed_at);
@@ -96,6 +106,16 @@ export function GoalCard({
     }
   };
 
+  const handleUncomplete = async () => {
+    setIsUncompleting(true);
+
+    try {
+      await onGoalUncomplete?.(goal.id);
+    } finally {
+      setIsUncompleting(false);
+    }
+  };
+
   const signalCounts = goal.signals.reduce(
     (acc, signal) => {
       if (signal.direction === "positive") acc.positive++;
@@ -118,7 +138,12 @@ export function GoalCard({
           className,
         )}
       >
-        <Card className="flex h-full flex-col overflow-visible border-none bg-transparent pb-6 pl-0 pr-6">
+        <Card
+          className={cn(
+            "flex h-full flex-col overflow-visible border-none bg-transparent pb-6 pl-0 pr-6",
+            isCompleted && "opacity-60",
+          )}
+        >
           <div className="flex h-full flex-col justify-between space-y-4 overflow-visible">
             <div className="space-y-4 overflow-visible">
               <motion.div
@@ -129,14 +154,17 @@ export function GoalCard({
                   <motion.div variants={iconVariants}>
                     <Goal
                       className={cn(
-                        "h-5 w-5 shrink-0 text-primary",
-                        isCompleted && "text-emerald-500",
+                        "h-5 w-5 shrink-0",
+                        isCompleted ? "text-muted-foreground" : "text-primary",
                       )}
                     />
                   </motion.div>
                   <motion.h3
                     variants={itemVariants}
-                    className="text-lg font-semibold"
+                    className={cn(
+                      "text-lg font-semibold",
+                      isCompleted && "text-muted-foreground",
+                    )}
                   >
                     {goal.text}
                   </motion.h3>
@@ -146,7 +174,12 @@ export function GoalCard({
               {goal.user_provided_context ? (
                 <motion.p
                   variants={itemVariants}
-                  className="text-sm text-muted-foreground"
+                  className={cn(
+                    "text-sm",
+                    isCompleted
+                      ? "text-muted-foreground/60"
+                      : "text-muted-foreground",
+                  )}
                 >
                   {goal.user_provided_context}
                 </motion.p>
@@ -230,13 +263,34 @@ export function GoalCard({
               </div>
 
               {isCompleted ? (
-                <motion.span
+                <motion.div
                   variants={itemVariants}
-                  className="text-sm text-muted-foreground"
+                  className="flex items-center gap-4"
                 >
-                  Completed at{" "}
-                  {new Date(goal.completed_at ?? "").toLocaleDateString()}
-                </motion.span>
+                  <motion.span
+                    variants={itemVariants}
+                    className="text-sm text-muted-foreground"
+                  >
+                    Completed at{" "}
+                    {new Date(goal.completed_at ?? "").toLocaleDateString()}
+                  </motion.span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        onClick={handleUncomplete}
+                        className={cn(
+                          "h-8 w-8 text-foreground",
+                          isUncompleting && "animate-pulse",
+                        )}
+                      >
+                        <Undo2 className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Undo completion</TooltipContent>
+                  </Tooltip>
+                </motion.div>
               ) : (
                 <motion.div
                   variants={itemVariants}

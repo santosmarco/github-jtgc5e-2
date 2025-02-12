@@ -30,6 +30,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import { FeedbackDialog } from "~/components/ui/feedback-dialog";
 import { useProfile } from "~/hooks/use-profile";
 import { createClient } from "~/lib/supabase/client";
 import type { Tables } from "~/lib/supabase/database.types";
@@ -38,7 +39,6 @@ import { api, type RouterOutputs } from "~/trpc/react";
 
 import { CoachBadge } from "../coach-badge";
 import { TaskList } from "../onboarding-task-list";
-import { FeedbackDialog } from "~/components/ui/feedback-dialog";
 
 export type SidebarContentProps = {
   user: RouterOutputs["auth"]["getUser"];

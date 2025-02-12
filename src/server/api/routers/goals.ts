@@ -2,6 +2,8 @@ import { openai } from "@ai-sdk/openai";
 import { TRPCError } from "@trpc/server";
 import { generateObject } from "ai";
 import { AxiosError } from "axios";
+import dayjs from "dayjs";
+import _ from "lodash";
 import dedent from "ts-dedent";
 import { z } from "zod";
 
@@ -12,8 +14,6 @@ import {
 } from "~/lib/goals/schemas";
 import { createClient } from "~/lib/supabase/server";
 
-import dayjs from "dayjs";
-import _ from "lodash";
 import { createTRPCRouter, publicProcedure } from "../trpc";
 
 export const goalsRouter = createTRPCRouter({

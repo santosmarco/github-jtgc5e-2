@@ -1,9 +1,9 @@
 "use client";
 
+import dayjs from "dayjs";
 import { motion, stagger } from "framer-motion";
 import { ArrowRight, Goal, Loader2, Trophy, XCircle } from "lucide-react";
 
-import dayjs from "dayjs";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -13,6 +13,7 @@ import {
 } from "~/components/ui/card";
 import { cn } from "~/lib/utils";
 import type { RouterOutputs } from "~/trpc/react";
+
 import { Link } from "../ui/link";
 import { Separator } from "../ui/separator";
 
@@ -64,17 +65,17 @@ export function GoalProgressCard({ goal }: GoalProgressCardProps) {
           <CardHeader>
             <motion.div className="flex flex-col items-center justify-center">
               <motion.div variants={iconVariants}>
-                <Trophy className="h-12 w-12 text-emerald-500" />
+                <Trophy className="h-12 w-12 text-emerald-800" />
               </motion.div>
               <motion.h3
                 variants={contentVariants}
-                className="mt-4 text-center text-lg font-semibold"
+                className="mt-4 text-center text-lg font-semibold text-muted-foreground/80"
               >
                 Goal Completed!
               </motion.h3>
               <motion.p
                 variants={contentVariants}
-                className="mt-2 text-center text-sm text-muted-foreground"
+                className="mt-2 text-center text-sm text-muted-foreground/60"
               >
                 Congratulations on achieving your goal on{" "}
                 {new Date(goal.completed_at).toLocaleDateString()}
@@ -219,8 +220,12 @@ export function GoalProgressCard({ goal }: GoalProgressCardProps) {
                   className={cn(
                     "h-2 w-2 rounded-full",
                     goalReportGoal.is_reviewed
-                      ? "bg-emerald-400"
-                      : "bg-orange-400",
+                      ? goal.completed_at
+                        ? "bg-emerald-500/40"
+                        : "bg-emerald-400"
+                      : goal.completed_at
+                        ? "bg-orange-400/30"
+                        : "bg-orange-400",
                   )}
                 />
                 <span className="text-sm text-muted-foreground">

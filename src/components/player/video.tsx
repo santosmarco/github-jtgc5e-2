@@ -307,7 +307,12 @@ export function VideoPlayer({
                 min={0}
                 max={timelineDuration}
                 value={[currentTime - (isTrimmed ? start_time : 0)]}
-                onValueChange={(value) => seek(value[0] ?? 0)}
+                onValueChange={(value) => {
+                  const seekTime = isTrimmed
+                    ? (value[0] ?? 0) + (start_time ?? 0)
+                    : (value[0] ?? 0);
+                  seek(seekTime);
+                }}
                 aria-label="Seek"
                 onMouseMove={(ev) => {
                   if (momentsShown) {

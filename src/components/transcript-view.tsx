@@ -1,9 +1,15 @@
 "use client";
 
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronsUpDownIcon } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 
 import { TranscriptHeader } from "./transcript/transcript-header";
 import { TranscriptSearch } from "./transcript/transcript-search";
@@ -11,12 +17,6 @@ import { TranscriptSlice } from "./transcript/transcript-slice";
 import type { Transcript } from "./transcript/types";
 import { Button } from "./ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
-
-type TranscriptViewProps = {
-  transcript: Transcript | null | undefined;
-  currentTime: number;
-  onWordClick: (time: number) => void;
-};
 
 const TIME_WINDOW = 0.5;
 const TIME_JUMP_THRESHOLD = 1;
@@ -75,9 +75,7 @@ const LoadingTranscript = () => {
             />
             <motion.div
               className="h-[1px] flex-1 bg-muted/50"
-              animate={{
-                opacity: [0.3, 0.5, 0.3],
-              }}
+              animate={{ opacity: [0.3, 0.5, 0.3] }}
               transition={{
                 duration: 2,
                 repeat: Number.POSITIVE_INFINITY,
@@ -85,17 +83,14 @@ const LoadingTranscript = () => {
               }}
             />
           </div>
+
           <div className="flex flex-wrap gap-1">
             {item.words.map((word) => (
               <motion.div
                 key={word.id}
                 className="h-4 rounded-sm bg-muted/50"
-                style={{
-                  width: `${word.width}px`,
-                }}
-                animate={{
-                  opacity: [0.3, 0.5, 0.3],
-                }}
+                style={{ width: `${word.width}px` }}
+                animate={{ opacity: [0.3, 0.5, 0.3] }}
                 transition={{
                   duration: 2,
                   delay: Math.random() * 0.5,
@@ -128,8 +123,12 @@ export function TranscriptView({
   transcript,
   currentTime,
   onWordClick,
-}: TranscriptViewProps) {
-  const viewportRef = useRef<HTMLDivElement>(null);
+}: {
+  transcript: Transcript | null | undefined;
+  currentTime: number;
+  onWordClick: (time: number) => void;
+}) {
+  const virtuosoRef = useRef<VirtuosoHandle>(null);
   const wordRefs = useRef<(HTMLSpanElement | null)[][]>([]);
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
   const lastTimeRef = useRef(currentTime);
@@ -143,7 +142,9 @@ export function TranscriptView({
   const speakerColorMap = useMemo(() => {
     if (!transcript?.length) return {};
 
-    const speakerCounts = transcript.reduce<[Record<string, number>, number]>(
+    const [speakerCounts, count] = transcript.reduce<
+      [Record<string, number>, number]
+    >(
       (acc, slice) => {
         const speaker = slice.speaker_name || "Speaker";
         if (typeof acc[0][speaker] === "number") return acc;
@@ -154,25 +155,16 @@ export function TranscriptView({
       [{}, 0],
     );
 
-    return Object.fromEntries<string | undefined>(
-      Object.entries(speakerCounts[0]).map(([speaker, count]) => [
+    return Object.fromEntries(
+      Object.entries(speakerCounts).map(([speaker, count]) => [
         speaker,
         SPEAKER_COLORS[count % SPEAKER_COLORS.length],
       ]),
     );
   }, [transcript]);
 
-  const rowVirtualizer = useVirtualizer({
-    count: transcript?.length ?? 0,
-    getScrollElement: () => viewportRef.current,
-    estimateSize: useCallback(() => 100, []),
-    overscan: 5,
-  });
-
   const isWordActive = useCallback(
-    (
-      word: NonNullable<typeof transcript>[number]["words"][number],
-    ): boolean => {
+    (word: NonNullable<Transcript[number]["words"][number]>): boolean => {
       if (!word.start_time || !word.end_time) return false;
       const midpoint = (word.start_time + word.end_time) / 2;
       return Math.abs(currentTime - midpoint) <= TIME_WINDOW;
@@ -180,13 +172,17 @@ export function TranscriptView({
     [currentTime],
   );
 
-  const getActiveWord = useCallback(() => {
+  const getActiveWordLocation = useCallback(() => {
     if (!transcript?.length) return null;
 
-    for (const slice of transcript) {
-      const activeWord = slice.words.find(isWordActive);
-      if (activeWord) {
-        return wordRefs.current[slice.index]?.[activeWord.index ?? 0];
+    for (let i = 0; i < transcript.length; i++) {
+      const slice = transcript[i];
+      if (!slice) continue;
+
+      const activeWordIndex = slice.words.findIndex(isWordActive);
+
+      if (activeWordIndex !== -1) {
+        return { sliceIndex: i, wordIndex: activeWordIndex };
       }
     }
     return null;
@@ -195,42 +191,24 @@ export function TranscriptView({
   useEffect(() => {
     if (!isAutoScrollEnabled || searchQuery) return;
 
-    const activeWord = getActiveWord();
-    const viewport = viewportRef.current;
-    if (!activeWord || !viewport) return;
+    const activeLocation = getActiveWordLocation();
+    if (!activeLocation) return;
 
-    viewport.scrollTo({
-      top: activeWord.offsetTop - 100,
+    virtuosoRef.current?.scrollToIndex({
+      index: activeLocation.sliceIndex,
+      align: "center",
       behavior: "smooth",
     });
-  }, [isAutoScrollEnabled, getActiveWord, searchQuery]);
-
-  useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-
-    const handleScroll = () => {
-      if (!userScrolledRef.current) {
-        userScrolledRef.current = true;
-        setIsAutoScrollEnabled(false);
-      }
-    };
-
-    viewport.addEventListener("wheel", handleScroll, { passive: true });
-    viewport.addEventListener("touchmove", handleScroll, { passive: true });
-
-    return () => {
-      viewport.removeEventListener("wheel", handleScroll);
-      viewport.removeEventListener("touchmove", handleScroll);
-    };
-  }, []);
+  }, [isAutoScrollEnabled, getActiveWordLocation, searchQuery]);
 
   useEffect(() => {
     const timeDiff = Math.abs(currentTime - lastTimeRef.current);
+
     if (timeDiff > TIME_JUMP_THRESHOLD) {
       setIsAutoScrollEnabled(true);
       userScrolledRef.current = false;
     }
+
     lastTimeRef.current = currentTime;
   }, [currentTime]);
 
@@ -238,6 +216,7 @@ export function TranscriptView({
     if (!transcript?.length) return { searchableText: "", wordMap: new Map() };
 
     let currentPosition = 0;
+
     const wordPositions = new Map<
       number,
       { sliceIndex: number; wordIndex: number }
@@ -295,14 +274,11 @@ export function TranscriptView({
           matchLength: query.length,
         });
       }
-
       startIndex = matchIndex + 1;
     }
 
     matches.sort((a, b) => {
-      if (a.sliceIndex !== b.sliceIndex) {
-        return a.sliceIndex - b.sliceIndex;
-      }
+      if (a.sliceIndex !== b.sliceIndex) return a.sliceIndex - b.sliceIndex;
       return a.wordIndex - b.wordIndex;
     });
 
@@ -319,16 +295,15 @@ export function TranscriptView({
     const match = matches[currentMatchIndex];
     if (!match) return;
 
-    const word = wordRefs.current[match.sliceIndex]?.[match.wordIndex];
-    if (!word) return;
-
     requestAnimationFrame(() => {
-      word.scrollIntoView({
+      virtuosoRef.current?.scrollToIndex({
+        index: match.sliceIndex,
+        align: "center",
         behavior: "smooth",
-        block: "center",
       });
 
       const wordData = transcript?.[match.sliceIndex]?.words[match.wordIndex];
+
       if (wordData?.start_time) {
         onWordClick(wordData.start_time);
       }
@@ -356,22 +331,46 @@ export function TranscriptView({
     }));
   }, [searchResult]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!searchQuery) return;
+  const handleUserScroll = useCallback(() => {
+    if (!userScrolledRef.current) {
+      userScrolledRef.current = true;
+      setIsAutoScrollEnabled(false);
+    }
+  }, []);
 
-      if (e.key === "Enter") {
-        if (e.shiftKey) {
-          handlePreviousMatch();
-        } else {
-          handleNextMatch();
-        }
-      }
-    };
+  const transcriptList = useMemo(() => {
+    if (!transcript?.length) return <LoadingTranscript />;
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [searchQuery, handleNextMatch, handlePreviousMatch]);
+    return (
+      <Virtuoso
+        ref={virtuosoRef}
+        data={transcript}
+        overscan={200}
+        itemContent={(_, slice) => (
+          <TranscriptSlice
+            slice={slice}
+            wordRefs={wordRefs}
+            speakerColorMap={speakerColorMap}
+            onWordClick={onWordClick}
+          />
+        )}
+        style={{ height: "600px" }}
+        components={{
+          Scroller: React.forwardRef<
+            HTMLDivElement,
+            React.HTMLAttributes<HTMLDivElement>
+          >((props, ref) => (
+            <div
+              ref={ref}
+              onWheel={handleUserScroll}
+              onTouchMove={handleUserScroll}
+              {...props}
+            />
+          )),
+        }}
+      />
+    );
+  }, [transcript, speakerColorMap, onWordClick, handleUserScroll]);
 
   return (
     <div className="-mx-1 w-[calc(100%+8px)] overflow-hidden rounded-md border border-border/70 bg-background/50 data-[state=open]:border-border/50">
@@ -391,59 +390,30 @@ export function TranscriptView({
         setSearchQuery={setSearchQuery}
       />
 
-      <div
-        ref={viewportRef}
-        className="relative h-[600px] max-h-screen overflow-y-auto border-b border-border py-4"
-      >
-        {transcript?.length ? (
-          <div
-            className="relative space-y-6 px-4 py-2 text-xs"
-            style={{
-              height: `${rowVirtualizer.getTotalSize()}px`,
-            }}
-          >
-            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-              const slice = transcript[virtualRow.index];
-              if (!slice) return null;
-              return (
-                <TranscriptSlice
-                  key={slice?.id}
-                  slice={slice}
-                  currentTime={currentTime}
-                  wordRefs={wordRefs}
-                  speakerColorMap={speakerColorMap}
-                  onWordClick={onWordClick}
-                />
-              );
-            })}
-          </div>
-        ) : (
-          <LoadingTranscript />
-        )}
+      {transcriptList}
 
-        {transcript?.length && !isAutoScrollEnabled && (
-          <div className="sticky bottom-4 right-4 flex w-full justify-end px-4">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  className="h-8 w-8 rounded-full border border-border bg-background ease-in-out animate-in fade-in-0 slide-in-from-bottom-1"
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => {
-                    setIsAutoScrollEnabled(true);
-                    userScrolledRef.current = false;
-                  }}
-                >
-                  <ChevronsUpDownIcon className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent align="end" alignOffset={-8}>
-                Reenable auto scrolling
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        )}
-      </div>
+      {transcript?.length && !isAutoScrollEnabled && (
+        <div className="sticky bottom-4 right-4 flex w-full justify-end px-4">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                className="h-8 w-8 rounded-full border border-border bg-background ease-in-out animate-in fade-in-0 slide-in-from-bottom-1"
+                size="icon"
+                variant="ghost"
+                onClick={() => {
+                  setIsAutoScrollEnabled(true);
+                  userScrolledRef.current = false;
+                }}
+              >
+                <ChevronsUpDownIcon className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent align="end" alignOffset={-8}>
+              Reenable auto scrolling
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      )}
     </div>
   );
 }

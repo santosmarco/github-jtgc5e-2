@@ -1,6 +1,8 @@
 import { ArrowDownRightIcon, ArrowUpRightIcon } from "lucide-react";
-import type { Tables } from "~/lib/supabase/database.types";
+
 import type { VideoMoment } from "~/lib/schemas/video-moment";
+import type { Tables } from "~/lib/supabase/database.types";
+
 import { ReportMomentList } from "./report-moment-list";
 
 type MomentWithSignal = Tables<"report_moments"> & { moment: VideoMoment };

@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 
 import { cn } from "~/lib/utils";
 
+import { usePlayer } from "../player/provider";
 import { TranscriptWord } from "./transcript-word";
 import type { TranscriptSlice as TranscriptSliceType } from "./types";
 import { formatTimestamp } from "./utils";
@@ -9,7 +10,6 @@ import { formatTimestamp } from "./utils";
 export type TranscriptSliceProps = {
   slice: TranscriptSliceType;
   wordRefs: React.MutableRefObject<(HTMLSpanElement | null)[][]>;
-  currentTime: number;
   speakerColorMap: Record<string, string | undefined>;
   onWordClick: (time: number) => void;
 };
@@ -17,10 +17,11 @@ export type TranscriptSliceProps = {
 export function TranscriptSlice({
   slice,
   wordRefs,
-  currentTime,
   speakerColorMap,
   onWordClick,
 }: TranscriptSliceProps) {
+  const { currentTime } = usePlayer();
+
   return (
     <motion.div
       key={slice.id}
@@ -28,7 +29,7 @@ export function TranscriptSlice({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="space-y-1"
+      className={cn("space-y-1 px-4 py-2 text-xs", slice.index === 0 && "pt-4")}
     >
       <motion.div
         initial={{ opacity: 0 }}

@@ -1,7 +1,7 @@
 import {
-  WebClient as SlackWebClient,
   type Block,
   type KnownBlock,
+  WebClient as SlackWebClient,
 } from "@slack/web-api";
 
 import { env } from "~/env";

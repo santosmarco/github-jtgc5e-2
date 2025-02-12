@@ -96,6 +96,32 @@ export default function GoalsPage() {
     [supabase, apiUtils.goals.getGoals],
   );
 
+  const handleGoalUncomplete = useCallback(
+    async (id: string): Promise<void> => {
+      const { error } = await supabase
+        .from("goals")
+        .update({
+          progress: 0,
+          completed_at: null,
+        })
+        .eq("id", id);
+
+      if (error) {
+        toast.error("Failed to uncomplete goal", {
+          description: error.message,
+        });
+        return;
+      }
+
+      toast.success("Goal marked as incomplete", {
+        description: "You can continue working towards this goal.",
+      });
+
+      await apiUtils.goals.getGoals.invalidate();
+    },
+    [supabase, apiUtils.goals.getGoals],
+  );
+
   const handleGoalEdit = useCallback(
     async (goal: Tables<"goals"> & { signals: Tables<"goal_signals">[] }) => {
       setIsEditingGoalId(goal.id);
@@ -264,6 +290,7 @@ export default function GoalsPage() {
                 key={goal.id}
                 goal={goal}
                 onGoalComplete={handleGoalComplete}
+                onGoalUncomplete={handleGoalUncomplete}
                 onGoalEdit={handleGoalEdit}
               />
             ))}
