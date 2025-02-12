@@ -73,13 +73,13 @@ export function createBotStatusChangeService(
         let { data: meetingBot } = await supabase
           .from("meeting_bots_v2")
           .select(
-            "*, profile:profiles!inner(*), calendar:recall_calendars_v2!inner(*), event:calendar_events_v2!inner(*)",
+            "*, profile:profiles(*), calendar:recall_calendars_v2(*), event:calendar_events_v2(*)",
           )
           .eq("id", event.data.bot_id)
           .maybeSingle();
 
         if (meetingBot) {
-          const { error: updateError } = await supabase
+          const { error: meetingBotUpdateError } = await supabase
             .from("meeting_bots_v2")
             .update({
               status: "fatal",
@@ -87,9 +87,9 @@ export function createBotStatusChangeService(
             })
             .eq("id", event.data.bot_id);
 
-          if (updateError) {
+          if (meetingBotUpdateError) {
             logger.error("❌ Failed to update meeting bot status", {
-              error: updateError,
+              error: meetingBotUpdateError,
               bot_id: event.data.bot_id,
             });
             return;
@@ -97,14 +97,12 @@ export function createBotStatusChangeService(
         } else {
           ({ data: meetingBot } = await supabase
             .from("meeting_bots")
-            .select(
-              "*, profile:profiles!inner(*), calendar:recall_calendars!inner(*)",
-            )
+            .select("*, profile:profiles(*), calendar:recall_calendars(*)")
             .eq("id", event.data.bot_id)
             .maybeSingle());
 
           if (meetingBot) {
-            const { error: updateError } = await supabase
+            const { error: meetingBotUpdateError } = await supabase
               .from("meeting_bots")
               .update({
                 status: "fatal",
@@ -112,9 +110,9 @@ export function createBotStatusChangeService(
               })
               .eq("id", event.data.bot_id);
 
-            if (updateError) {
+            if (meetingBotUpdateError) {
               logger.error("❌ Failed to update meeting bot status", {
-                error: updateError,
+                error: meetingBotUpdateError,
                 bot_id: event.data.bot_id,
               });
               return;
@@ -144,42 +142,15 @@ export function createBotStatusChangeService(
       let { data: meetingBot } = await supabase
         .from("meeting_bots_v2")
         .select(
-          "*, profile:profiles!inner(*), calendar:recall_calendars_v2!inner(*), event:calendar_events_v2!inner(*)",
+          "*, profile:profiles(*), calendar:recall_calendars_v2(*), event:calendar_events_v2(*)",
         )
         .eq("id", event.data.bot_id)
         .maybeSingle();
 
       if (meetingBot) {
-        const { error: meetingBotError } = await supabase
-          .from("meeting_bots_v2")
-          .update({
-            ...(status?.code && { status: status.code }),
-            ...(status?.sub_code && { sub_code: status.sub_code }),
-            ...(status?.message && { message: status.message }),
-            ...(status?.recording_id && { recording_id: status.recording_id }),
-          })
-          .eq("id", event.data.bot_id);
-
-        if (meetingBotError) {
-          logger.error("❌ Failed to update meeting bot status", {
-            error: meetingBotError,
-            event_id: event.data.bot_id,
-            status,
-          });
-          return;
-        }
-      } else {
-        ({ data: meetingBot } = await supabase
-          .from("meeting_bots")
-          .select(
-            "*, profile:profiles!inner(*), calendar:recall_calendars!inner(*)",
-          )
-          .eq("id", event.data.bot_id)
-          .maybeSingle());
-
-        if (meetingBot) {
-          const { error: meetingBotError } = await supabase
-            .from("meeting_bots")
+        if (Object.keys(status ?? {}).length > 0) {
+          const { error: meetingBotUpdateError } = await supabase
+            .from("meeting_bots_v2")
             .update({
               ...(status?.code && { status: status.code }),
               ...(status?.sub_code && { sub_code: status.sub_code }),
@@ -190,13 +161,44 @@ export function createBotStatusChangeService(
             })
             .eq("id", event.data.bot_id);
 
-          if (meetingBotError) {
+          if (meetingBotUpdateError) {
             logger.error("❌ Failed to update meeting bot status", {
-              error: meetingBotError,
+              error: meetingBotUpdateError,
               event_id: event.data.bot_id,
               status,
             });
             return;
+          }
+        }
+      } else {
+        ({ data: meetingBot } = await supabase
+          .from("meeting_bots")
+          .select("*, profile:profiles(*), calendar:recall_calendars(*)")
+          .eq("id", event.data.bot_id)
+          .maybeSingle());
+
+        if (meetingBot) {
+          if (Object.keys(status ?? {}).length > 0) {
+            const { error: meetingBotUpdateError } = await supabase
+              .from("meeting_bots")
+              .update({
+                ...(status?.code && { status: status.code }),
+                ...(status?.sub_code && { sub_code: status.sub_code }),
+                ...(status?.message && { message: status.message }),
+                ...(status?.recording_id && {
+                  recording_id: status.recording_id,
+                }),
+              })
+              .eq("id", event.data.bot_id);
+
+            if (meetingBotUpdateError) {
+              logger.error("❌ Failed to update meeting bot status", {
+                error: meetingBotUpdateError,
+                event_id: event.data.bot_id,
+                status,
+              });
+              return;
+            }
           }
         } else {
           logger.error("❌ Failed to find meeting bot", {
@@ -217,7 +219,7 @@ export function createBotStatusChangeService(
           params: { id: event.data.bot_id },
         })
         .catch((error: unknown) => {
-          logger.error("❌ Failed to fetch bot from Recall", {
+          logger.warn("⚠️ Failed to fetch bot from Recall", {
             error,
             bot_id: event.data.bot_id,
             profile_id: meetingBot.profile_id,
