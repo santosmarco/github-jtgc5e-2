@@ -1,5 +1,6 @@
 "use client";
 
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronsUpDownIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -160,6 +161,13 @@ export function TranscriptView({
       ]),
     );
   }, [transcript]);
+
+  const rowVirtualizer = useVirtualizer({
+    count: transcript?.length ?? 0,
+    getScrollElement: () => viewportRef.current,
+    estimateSize: useCallback(() => 100, []),
+    overscan: 5,
+  });
 
   const isWordActive = useCallback(
     (
@@ -388,17 +396,26 @@ export function TranscriptView({
         className="relative h-[600px] max-h-screen overflow-y-auto border-b border-border py-4"
       >
         {transcript?.length ? (
-          <div className="space-y-6 px-4 py-2 text-xs">
-            {transcript.map((slice) => (
-              <TranscriptSlice
-                key={slice.id}
-                slice={slice}
-                currentTime={currentTime}
-                wordRefs={wordRefs}
-                speakerColorMap={speakerColorMap}
-                onWordClick={onWordClick}
-              />
-            ))}
+          <div
+            className="relative space-y-6 px-4 py-2 text-xs"
+            style={{
+              height: `${rowVirtualizer.getTotalSize()}px`,
+            }}
+          >
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const slice = transcript[virtualRow.index];
+              if (!slice) return null;
+              return (
+                <TranscriptSlice
+                  key={slice?.id}
+                  slice={slice}
+                  currentTime={currentTime}
+                  wordRefs={wordRefs}
+                  speakerColorMap={speakerColorMap}
+                  onWordClick={onWordClick}
+                />
+              );
+            })}
           </div>
         ) : (
           <LoadingTranscript />

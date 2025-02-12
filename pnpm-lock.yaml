@@ -62,6 +62,7 @@ specifiers:
   '@tailwindcss/typography': ^0.5.15
   '@tanstack/react-query': ^5.59.16
   '@tanstack/react-table': ^8.20.6
+  '@tanstack/react-virtual': ^3.13.0
   '@tiptap/core': ^2.10.3
   '@tiptap/extension-placeholder': ^2.10.3
   '@tiptap/pm': ^2.9.1
@@ -236,6 +237,7 @@ dependencies:
   '@t3-oss/env-nextjs': 0.11.1_qreh574uzaktbjem2hrdv7ye4e
   '@tanstack/react-query': 5.66.0_react@18.3.1
   '@tanstack/react-table': 8.20.6_nnrd3gsncyragczmpvfhocinkq
+  '@tanstack/react-virtual': 3.13.0_nnrd3gsncyragczmpvfhocinkq
   '@tiptap/core': 2.11.5_@tiptap+pm@2.11.5
   '@tiptap/extension-placeholder': 2.11.5_h52mjltk7wjrkotaaflotku6sq
   '@tiptap/pm': 2.11.5
@@ -4709,9 +4711,24 @@ packages:
       react-dom: 18.3.1_react@18.3.1
     dev: false
 
+  /@tanstack/react-virtual/3.13.0_nnrd3gsncyragczmpvfhocinkq:
+    resolution: {integrity: sha512-CchF0NlLIowiM2GxtsoKBkXA4uqSnY2KvnXo+kyUFD4a4ll6+J0qzoRsUPMwXV/H26lRsxgJIr/YmjYum2oEjg==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+    dependencies:
+      '@tanstack/virtual-core': 3.13.0
+      react: 18.3.1
+      react-dom: 18.3.1_react@18.3.1
+    dev: false
+
   /@tanstack/table-core/8.20.5:
     resolution: {integrity: sha512-P9dF7XbibHph2PFRz8gfBKEXEY/HJPOhym8CHmjF8y3q5mWpKx9xtZapXQUWCgkqvsK0R46Azuz+VaxD4Xl+Tg==}
     engines: {node: '>=12'}
+    dev: false
+
+  /@tanstack/virtual-core/3.13.0:
+    resolution: {integrity: sha512-NBKJP3OIdmZY3COJdWkSonr50FMVIi+aj5ZJ7hI/DTpEKg2RMfo/KvP8A3B/zOSpMgIe52B5E2yn7rryULzA6g==}
     dev: false
 
   /@tiptap/core/2.11.5_@tiptap+pm@2.11.5:
