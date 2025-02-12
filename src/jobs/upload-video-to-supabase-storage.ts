@@ -14,7 +14,7 @@ export const uploadVideoToSupabaseStorage = schemaTask({
     fileName: z.string(),
   }),
   maxDuration: 60 * 10, // 10 minutes
-  machine: { preset: "small-2x" },
+  machine: { preset: "medium-1x" },
   run: async (payload) => {
     logger.info("🎥 Starting video upload to Supabase storage", {
       bot_id: payload.botId,
