@@ -417,6 +417,42 @@ export type Database = {
         }
         Relationships: []
       }
+      entities: {
+        Row: {
+          created_at: string
+          id: string
+          master_profile_id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          master_profile_id: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          master_profile_id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entities_master_profile_id_fkey"
+            columns: ["master_profile_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "entities_master_profile_id_fkey"
+            columns: ["master_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feedbacks: {
         Row: {
           created_at: string
@@ -700,14 +736,93 @@ export type Database = {
         }
         Relationships: []
       }
+      meeting_action_item_assignees: {
+        Row: {
+          assignee_id: string
+          meeting_action_item_id: string
+        }
+        Insert: {
+          assignee_id: string
+          meeting_action_item_id: string
+        }
+        Update: {
+          assignee_id?: string
+          meeting_action_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_action_item_assignees_assignee_id_fkey"
+            columns: ["assignee_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_action_item_assignees_meeting_action_item_id_fkey"
+            columns: ["meeting_action_item_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_action_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_action_items: {
+        Row: {
+          api_video_id: string
+          completed_at: string | null
+          created_at: string
+          deleted_at: string | null
+          due_date: string | null
+          id: string
+          text: string
+          vtt_end_segment_id: number | null
+          vtt_start_segment_id: number | null
+        }
+        Insert: {
+          api_video_id: string
+          completed_at?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          due_date?: string | null
+          id?: string
+          text: string
+          vtt_end_segment_id?: number | null
+          vtt_start_segment_id?: number | null
+        }
+        Update: {
+          api_video_id?: string
+          completed_at?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          due_date?: string | null
+          id?: string
+          text?: string
+          vtt_end_segment_id?: number | null
+          vtt_start_segment_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_action_items_api_video_id_fkey"
+            columns: ["api_video_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["video_api_id"]
+          },
+          {
+            foreignKeyName: "meeting_action_items_api_video_id_fkey"
+            columns: ["api_video_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["video_api_id"]
+          },
+        ]
+      }
       meeting_bots: {
         Row: {
           api_video_id: string | null
           created_at: string
           deduplication_key: string | null
-          error_code:
-            | Database["public"]["Enums"]["meeting_bot_error_code_type"]
-            | null
+          error_code: string | null
           event_id: string | null
           id: string
           message: string | null
@@ -720,16 +835,14 @@ export type Database = {
           recall_calendar_id: string | null
           recording_id: string | null
           speakers: string[] | null
-          status: Database["public"]["Enums"]["meeting_bot_status_type"] | null
+          status: string | null
           sub_code: string | null
         }
         Insert: {
           api_video_id?: string | null
           created_at?: string
           deduplication_key?: string | null
-          error_code?:
-            | Database["public"]["Enums"]["meeting_bot_error_code_type"]
-            | null
+          error_code?: string | null
           event_id?: string | null
           id: string
           message?: string | null
@@ -742,16 +855,14 @@ export type Database = {
           recall_calendar_id?: string | null
           recording_id?: string | null
           speakers?: string[] | null
-          status?: Database["public"]["Enums"]["meeting_bot_status_type"] | null
+          status?: string | null
           sub_code?: string | null
         }
         Update: {
           api_video_id?: string | null
           created_at?: string
           deduplication_key?: string | null
-          error_code?:
-            | Database["public"]["Enums"]["meeting_bot_error_code_type"]
-            | null
+          error_code?: string | null
           event_id?: string | null
           id?: string
           message?: string | null
@@ -764,7 +875,7 @@ export type Database = {
           recall_calendar_id?: string | null
           recording_id?: string | null
           speakers?: string[] | null
-          status?: Database["public"]["Enums"]["meeting_bot_status_type"] | null
+          status?: string | null
           sub_code?: string | null
         }
         Relationships: [
@@ -796,9 +907,7 @@ export type Database = {
           api_video_id: string | null
           created_at: string
           deduplication_key: string
-          error_code:
-            | Database["public"]["Enums"]["meeting_bot_error_code_type"]
-            | null
+          error_code: string | null
           event_id: string | null
           id: string
           is_removed: boolean
@@ -810,16 +919,14 @@ export type Database = {
           recall_calendar_id: string | null
           recording_id: string | null
           speakers: string[] | null
-          status: Database["public"]["Enums"]["meeting_bot_status_type"] | null
+          status: string | null
           sub_code: string | null
         }
         Insert: {
           api_video_id?: string | null
           created_at?: string
           deduplication_key: string
-          error_code?:
-            | Database["public"]["Enums"]["meeting_bot_error_code_type"]
-            | null
+          error_code?: string | null
           event_id?: string | null
           id: string
           is_removed?: boolean
@@ -831,16 +938,14 @@ export type Database = {
           recall_calendar_id?: string | null
           recording_id?: string | null
           speakers?: string[] | null
-          status?: Database["public"]["Enums"]["meeting_bot_status_type"] | null
+          status?: string | null
           sub_code?: string | null
         }
         Update: {
           api_video_id?: string | null
           created_at?: string
           deduplication_key?: string
-          error_code?:
-            | Database["public"]["Enums"]["meeting_bot_error_code_type"]
-            | null
+          error_code?: string | null
           event_id?: string | null
           id?: string
           is_removed?: boolean
@@ -852,7 +957,7 @@ export type Database = {
           recall_calendar_id?: string | null
           recording_id?: string | null
           speakers?: string[] | null
-          status?: Database["public"]["Enums"]["meeting_bot_status_type"] | null
+          status?: string | null
           sub_code?: string | null
         }
         Relationships: [
@@ -1770,6 +1875,7 @@ export type Database = {
           report_section_reasoning: string | null
           score: number | null
           updated_at: string | null
+          VTT: string | null
         }
         Insert: {
           created_at?: string
@@ -1785,6 +1891,7 @@ export type Database = {
           report_section_reasoning?: string | null
           score?: number | null
           updated_at?: string | null
+          VTT?: string | null
         }
         Update: {
           created_at?: string
@@ -1800,6 +1907,7 @@ export type Database = {
           report_section_reasoning?: string | null
           score?: number | null
           updated_at?: string | null
+          VTT?: string | null
         }
         Relationships: [
           {
