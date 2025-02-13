@@ -78,6 +78,46 @@ export const transcriptsRouter = createTRPCRouter({
         });
       }
 
-      return transcriptSlices;
+      // Filter out duplicate transcript slices based on word content
+      const uniqueTranscriptSlices = transcriptSlices.reduce<
+        typeof transcriptSlices
+      >((uniqueSlices, currentSlice) => {
+        // Extract and normalize the text content from slice words
+        const sliceText = currentSlice.words
+          .reduce<string[]>((words, word) => {
+            // Type guard to ensure word has content
+            if (!("content" in word) || typeof word.content !== "string") {
+              return words;
+            }
+            return words.concat(word.content.trim());
+          }, [])
+          .join(" ")
+          .trim();
+
+        // Skip empty slices
+        if (!sliceText) {
+          return uniqueSlices;
+        }
+
+        // Get the text of the last added slice
+        const lastSliceText = uniqueSlices[uniqueSlices.length - 1]?.words
+          .reduce<string[]>((words, word) => {
+            if (!("content" in word) || typeof word.content !== "string") {
+              return words;
+            }
+            return words.concat(word.content.trim());
+          }, [])
+          .join(" ")
+          .trim();
+
+        // Only add if content differs from previous slice
+        if (sliceText !== lastSliceText) {
+          uniqueSlices.push(currentSlice);
+        }
+
+        return uniqueSlices;
+      }, []);
+
+      return uniqueTranscriptSlices;
     }),
 });

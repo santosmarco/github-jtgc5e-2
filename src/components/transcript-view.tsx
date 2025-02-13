@@ -373,7 +373,7 @@ export function TranscriptView({
   }, [transcript, speakerColorMap, onWordClick, handleUserScroll]);
 
   return (
-    <div className="-mx-1 w-[calc(100%+8px)] overflow-hidden rounded-md border border-border/70 bg-background/50 data-[state=open]:border-border/50">
+    <div className="relative -mx-1 w-[calc(100%+8px)] overflow-hidden rounded-md border border-border/70 bg-background/50 data-[state=open]:border-border/50">
       <AnimatePresence>
         {searchQuery && (
           <TranscriptSearch
@@ -393,7 +393,7 @@ export function TranscriptView({
       {transcriptList}
 
       {transcript?.length && !isAutoScrollEnabled && (
-        <div className="sticky bottom-4 right-4 flex w-full justify-end px-4">
+        <div className="absolute bottom-4 right-4 flex w-full justify-end">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
