@@ -4,6 +4,7 @@ import { AppSidebar } from "~/components/app-sidebar";
 import OnboardingFlow from "~/components/onboarding-flow";
 import { OnboardingFlowStage2 } from "~/components/onboarding-flow-stage-2";
 import { ProfileWarning } from "~/components/profile-warning";
+import { FeedbackButton } from "~/components/ui/feedback-button";
 import { api } from "~/trpc/server";
 
 export default async function MainLayout({
@@ -36,6 +37,7 @@ export default async function MainLayout({
           {children}
         </main>
       </div>
+      <FeedbackButton />
     </>
   );
 }

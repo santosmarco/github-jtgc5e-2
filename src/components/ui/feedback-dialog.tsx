@@ -33,7 +33,7 @@ export function FeedbackDialog({
   const form = useValidatedForm(FeedbackInput, {
     defaultValues: {
       type: "suggestion",
-      criticality: "low",
+      criticality: "low", // @deprecated
       description: "",
       screenshot: "",
     },
@@ -73,7 +73,7 @@ export function FeedbackDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="fixed left-1/2 top-1/2 w-full max-w-[425px] -translate-x-1/2 -translate-y-1/2 transform rounded-lg bg-background p-6 shadow-md">
+      <DialogContent className="fixed left-1/2 top-1/2 w-full max-w-xl -translate-x-1/2 -translate-y-1/2 transform rounded-lg bg-background p-6 shadow-md">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-foreground">
             Share Your Thoughts
@@ -123,48 +123,6 @@ export function FeedbackDialog({
                 </FormItem>
               )}
             />
-
-            {/*
-            <FormField
-              control={form.control}
-              name="criticality"
-              render={({ field }) => (
-                <FormItem className="space-y-2">
-                  <FormLabel className="text-sm font-medium text-foreground">
-                    Criticality
-                  </FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      className="flex gap-4"
-                    >
-                      {[
-                        { value: "low", label: "Low" },
-                        { value: "medium", label: "Medium" },
-                        { value: "high", label: "High" },
-                      ].map(({ value, label }) => (
-                        <div key={value} className="relative">
-                          <RadioGroupItem
-                            value={value}
-                            id={value}
-                            className="peer absolute inset-0 opacity-0"
-                          />
-                          <Label
-                            htmlFor={value}
-                            className="flex cursor-pointer items-center rounded-md border px-3 py-1.5 text-sm transition-colors hover:bg-muted peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 peer-data-[state=checked]:text-primary"
-                          >
-                            {label}
-                          </Label>
-                        </div>
-                      ))}
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            */}
 
             <FormField
               control={form.control}
