@@ -103,18 +103,19 @@ export function CoachBadge({ userId, className }: CoachBadgeProps) {
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.3 }}
           className={cn(
-            "flex-1 text-left text-sm leading-none",
+            "flex h-9 flex-1 flex-col justify-center gap-[0.0625rem] text-left text-sm leading-none",
             !coach && "text-center font-medium text-primary",
           )}
         >
-          {coach?.nickname ?? "Get a Coach"}
-        </motion.div>
-
-        {coach && (
-          <span className="absolute -top-[0.4375rem] right-3 z-20 text-xs leading-none text-muted-foreground">
-            Your coach
+          {coach && (
+            <span className="text-[0.65rem] font-medium leading-none text-muted-foreground">
+              Your coach
+            </span>
+          )}
+          <span className="text-sm leading-none">
+            {coach?.nickname ?? "Get a Coach"}
           </span>
-        )}
+        </motion.div>
       </Button>
 
       <AnimatePresence>
