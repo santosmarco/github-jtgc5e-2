@@ -9,6 +9,7 @@ import { memo } from "react";
 
 import { ActionItemList } from "~/components/action-items/action-item-list";
 import { DeleteMeetingButton } from "~/components/meetings/delete-meeting-button";
+import { MeetingTopics } from "~/components/meetings/meeting-topics";
 import { PlayerProvider, usePlayer } from "~/components/player/provider";
 import { VideoPlayer } from "~/components/player/video";
 import { TranscriptView } from "~/components/transcript-view";
@@ -159,6 +160,7 @@ export function VideoPageClient({ videoId }: VideoPageClientProps) {
           <div className="hidden space-y-3 lg:block">
             {summary && <MeetingSummary summary={summary} />}
             <VideoTags video={video} />
+            <InnerMeetingTopics videoId={videoId} />
             <ActionItemList videoId={videoId} />
             <InnerTranscriptView videoId={videoId} />
           </div>
@@ -167,6 +169,30 @@ export function VideoPageClient({ videoId }: VideoPageClientProps) {
     </PlayerProvider>
   );
 }
+
+type InnerMeetingTopicsProps = {
+  videoId: string;
+};
+
+const InnerMeetingTopics = memo(function InnerMeetingTopics({
+  videoId,
+}: InnerMeetingTopicsProps) {
+  // const { seek } = usePlayer();
+  const { data: topics, error } = api.meetingTopics.getByVideoId.useQuery({
+    videoId,
+  });
+  if (error) return null;
+  return (
+    <MeetingTopics
+      topics={topics ?? []}
+      // onTopicClick={(topic) => {
+      //   if (topic.vtt_start_segment_id) {
+      //     seek(topic.vtt_start_segment_id);
+      //   }
+      // }}
+    />
+  );
+});
 
 type InnerTranscriptViewProps = {
   videoId: string;

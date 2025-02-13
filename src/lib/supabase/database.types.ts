@@ -1027,6 +1027,7 @@ export type Database = {
       }
       meeting_processing_status: {
         Row: {
+          action_items_status: string | null
           created_at: string | null
           embed_meeting_status: string | null
           embed_moments_status: string | null
@@ -1040,6 +1041,7 @@ export type Database = {
           video_id: string | null
         }
         Insert: {
+          action_items_status?: string | null
           created_at?: string | null
           embed_meeting_status?: string | null
           embed_moments_status?: string | null
@@ -1053,6 +1055,7 @@ export type Database = {
           video_id?: string | null
         }
         Update: {
+          action_items_status?: string | null
           created_at?: string | null
           embed_meeting_status?: string | null
           embed_moments_status?: string | null
@@ -1103,6 +1106,51 @@ export type Database = {
           {
             foreignKeyName: "meeting_tags_video_api_id_fkey"
             columns: ["video_api_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["video_api_id"]
+          },
+        ]
+      }
+      meeting_topics: {
+        Row: {
+          api_video_id: string
+          created_at: string
+          id: string
+          summary: string
+          title: string
+          vtt_end_segment_id: number | null
+          vtt_start_segment_id: number | null
+        }
+        Insert: {
+          api_video_id: string
+          created_at?: string
+          id?: string
+          summary: string
+          title: string
+          vtt_end_segment_id?: number | null
+          vtt_start_segment_id?: number | null
+        }
+        Update: {
+          api_video_id?: string
+          created_at?: string
+          id?: string
+          summary?: string
+          title?: string
+          vtt_end_segment_id?: number | null
+          vtt_start_segment_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_topics_api_video_id_fkey"
+            columns: ["api_video_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["video_api_id"]
+          },
+          {
+            foreignKeyName: "meeting_topics_api_video_id_fkey"
+            columns: ["api_video_id"]
             isOneToOne: false
             referencedRelation: "meetings_with_profile"
             referencedColumns: ["video_api_id"]

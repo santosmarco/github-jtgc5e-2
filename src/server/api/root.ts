@@ -16,6 +16,7 @@ import { settingsRouter } from "./routers/settings";
 import { transcriptsRouter } from "./routers/transcripts";
 import { userInvitesRouter } from "./routers/user-invites";
 import { videosRouter } from "./routers/videos";
+import { meetingTopicsRouter } from "./routers/meeting-topics";
 
 export const appRouter = createTRPCRouter({
   auth: authRouter,
@@ -34,6 +35,7 @@ export const appRouter = createTRPCRouter({
   feedbacks: feedbacksRouter,
   reports: reportsRouter,
   actionItems: actionItemsRouter,
+  meetingTopics: meetingTopicsRouter,
 });
 
 export type AppRouter = typeof appRouter;

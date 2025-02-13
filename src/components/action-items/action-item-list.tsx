@@ -209,7 +209,14 @@ export function ActionItemList({ videoId }: ActionItemListProps) {
       onOpenChange={setIsOpen}
       headerActions={headerActions}
     >
-      <div className="space-y-2">
+      <div
+        className={cn(
+          "space-y-2 pb-4",
+          ((allItemsCompleted && !showCompleted) ||
+            (activeItems.length === 0 && completedItems.length === 0)) &&
+            "pb-0",
+        )}
+      >
         {isLoading ? (
           <motion.div
             initial={{ opacity: 0 }}
