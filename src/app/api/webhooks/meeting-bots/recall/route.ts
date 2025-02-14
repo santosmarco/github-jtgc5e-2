@@ -1,18 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { processMeetingBot } from "~/jobs/process-meeting-bot";
 
 import { syncCalendars } from "~/jobs/sync-calendars";
 import { logger } from "~/lib/logging/server";
-import { meetingBaas } from "~/lib/meeting-baas/client";
-import { createBotStatusChangeService } from "~/lib/meeting-bots/bot-status-change/service";
 import {
   CalendarSyncEventQuery,
   MeetingBotsWebhookRequest,
 } from "~/lib/meeting-bots/schemas";
-import type { MeetingBotsServiceDependencies } from "~/lib/meeting-bots/types";
-import { createClient as createRecallClient } from "~/lib/recall/client";
 import { slack } from "~/lib/slack";
-import { __dangerouslyCreateAdminClient__ } from "~/lib/supabase/admin";
-import { apiVideo } from "~/server/api/services/api-video";
 
 export async function POST(request: NextRequest) {
   async function run() {
@@ -47,23 +42,12 @@ export async function POST(request: NextRequest) {
             : undefined,
       });
 
-      const deps = {
-        supabase: await __dangerouslyCreateAdminClient__(),
-        meetingBaas: meetingBaas,
-        recall: createRecallClient(),
-        apiVideo: apiVideo,
-        logger: logger,
-        slack: slack,
-      } satisfies MeetingBotsServiceDependencies;
-
-      const { handleBotStatusChange } = createBotStatusChangeService(deps);
-
       if (parsedBody.event === "bot.status_change") {
         logger.info("🤖 Processing bot status change event", {
           bot_id: parsedBody.data.bot_id,
           status: parsedBody.data.status,
         });
-        await handleBotStatusChange(parsedBody);
+        await processMeetingBot.trigger(parsedBody);
       } else if (parsedBody.event === "calendar.sync_events") {
         const query = CalendarSyncEventQuery.catch({
           full: "false",

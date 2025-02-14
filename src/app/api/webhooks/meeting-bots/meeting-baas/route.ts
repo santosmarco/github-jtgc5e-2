@@ -1,14 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { processMeetingBot } from "~/jobs/process-meeting-bot";
 
 import { logger } from "~/lib/logging/server";
-import { meetingBaas } from "~/lib/meeting-baas/client";
-import { createBotStatusChangeService } from "~/lib/meeting-bots/bot-status-change/service";
 import { MeetingBotsWebhookRequest } from "~/lib/meeting-bots/schemas";
-import type { MeetingBotsServiceDependencies } from "~/lib/meeting-bots/types";
-import { createClient as createRecallClient } from "~/lib/recall/client";
 import { slack } from "~/lib/slack";
-import { createClient as createSupabaseClient } from "~/lib/supabase/server";
-import { apiVideo } from "~/server/api/services/api-video";
 
 export async function POST(request: NextRequest) {
   async function run() {
@@ -43,17 +38,6 @@ export async function POST(request: NextRequest) {
             : undefined,
       });
 
-      const deps = {
-        supabase: await createSupabaseClient(),
-        meetingBaas: meetingBaas,
-        recall: createRecallClient(),
-        apiVideo: apiVideo,
-        logger: logger,
-        slack: slack,
-      } satisfies MeetingBotsServiceDependencies;
-
-      const { handleBotStatusChange } = createBotStatusChangeService(deps);
-
       if (
         parsedBody.event === "bot.status_change" ||
         parsedBody.event === "complete" ||
@@ -65,7 +49,7 @@ export async function POST(request: NextRequest) {
             status: parsedBody.data.status,
           }),
         });
-        await handleBotStatusChange(parsedBody);
+        await processMeetingBot.trigger(parsedBody);
       }
 
       logger.info("✨ Successfully processed webhook", {
