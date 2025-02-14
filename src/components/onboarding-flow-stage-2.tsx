@@ -74,6 +74,17 @@ export function OnboardingFlowStage2({ user }: OnboardingFlowStage2Props) {
   const [isComplete, setIsComplete] = React.useState(
     () => user.did_complete_post_ten_meeting_onboarding,
   );
+  const [isSmallScreen, setIsSmallScreen] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkScreenHeight = () => {
+      setIsSmallScreen(window.innerHeight < 800);
+    };
+
+    checkScreenHeight();
+    window.addEventListener("resize", checkScreenHeight);
+    return () => window.removeEventListener("resize", checkScreenHeight);
+  }, []);
 
   const apiUtils = api.useUtils();
   const { mutate: completePostTenMeetingOnboarding } =
@@ -111,13 +122,13 @@ export function OnboardingFlowStage2({ user }: OnboardingFlowStage2Props) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.3 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-background/80 backdrop-blur-sm"
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ type: "spring", duration: 0.6 }}
-            className="relative w-full max-w-4xl rounded-lg border border-border bg-card/50 p-6 shadow-lg backdrop-blur-3xl"
+            className="relative my-4 w-full max-w-4xl rounded-lg border border-border bg-card/50 p-6 shadow-lg backdrop-blur-3xl"
           >
             <div className="flex flex-col items-center gap-6 bg-background/50 text-center backdrop-blur-3xl">
               <motion.div
@@ -126,12 +137,14 @@ export function OnboardingFlowStage2({ user }: OnboardingFlowStage2Props) {
                 transition={{ type: "spring", delay: 0.2 }}
               >
                 {typeof user.user_metadata.avatar_url === "string" ? (
-                  <div className="-mt-20 h-20 w-20 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className={`${isSmallScreen ? "-mt-12 h-12 w-12" : "-mt-20 h-20 w-20"} overflow-hidden rounded-full bg-muted`}
+                  >
                     <Image
                       src={user.user_metadata.avatar_url}
                       alt="Profile"
-                      width={80}
-                      height={80}
+                      width={isSmallScreen ? 48 : 80}
+                      height={isSmallScreen ? 48 : 80}
                       className="object-cover"
                     />
                   </div>
@@ -151,7 +164,7 @@ export function OnboardingFlowStage2({ user }: OnboardingFlowStage2Props) {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
-                    className="mb-10 px-8 text-3xl font-bold"
+                    className={`mb-6 px-8 ${isSmallScreen ? "text-2xl" : "text-3xl"} font-bold`}
                   >
                     {currentStep.title}
                   </motion.h2>
@@ -185,8 +198,8 @@ export function OnboardingFlowStage2({ user }: OnboardingFlowStage2Props) {
                         <Image
                           src={currentStep.gifUrl}
                           alt={`Tutorial step ${currentStepIdx + 1}`}
-                          className="h-[420px] w-full object-contain"
-                          height={420}
+                          className={`w-full object-contain ${isSmallScreen ? "h-[280px]" : "h-[420px]"}`}
+                          height={isSmallScreen ? 280 : 420}
                           width={800}
                         />
                       </motion.div>
@@ -197,7 +210,7 @@ export function OnboardingFlowStage2({ user }: OnboardingFlowStage2Props) {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
-                    className="mb-10 flex min-h-[84px] flex-col items-center justify-center px-12 text-sm leading-loose text-muted-foreground"
+                    className={`mb-6 flex min-h-[${isSmallScreen ? "60px" : "84px"}] flex-col items-center justify-center px-12 text-sm leading-loose text-muted-foreground`}
                   >
                     {currentStep.description}
                   </motion.p>
@@ -206,7 +219,7 @@ export function OnboardingFlowStage2({ user }: OnboardingFlowStage2Props) {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.5 }}
-                    className="mb-8 flex gap-3"
+                    className="mb-6 flex gap-3"
                   >
                     {steps.map((step, index) => (
                       <motion.div
