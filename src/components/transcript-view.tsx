@@ -373,7 +373,7 @@ export function TranscriptView({
   }, [transcript, speakerColorMap, onWordClick, handleUserScroll]);
 
   return (
-    <div className="relative -mx-1 w-[calc(100%+8px)] overflow-hidden rounded-md border border-border/70 bg-background/50 data-[state=open]:border-border/50">
+    <div className="relative -mx-1 w-[calc(100%+8px)] overflow-hidden rounded-md border border-border/70 bg-background/50 pb-4 data-[state=open]:border-border/50">
       <AnimatePresence>
         {searchQuery && (
           <TranscriptSearch

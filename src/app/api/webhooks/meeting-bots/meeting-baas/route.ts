@@ -13,12 +13,13 @@ import { apiVideo } from "~/server/api/services/api-video";
 export async function POST(request: NextRequest) {
   async function run() {
     try {
+      const body = await request.json();
+
       logger.info("📥 Received webhook request", {
         url: request.url,
         method: request.method,
+        body,
       });
-
-      const body = (await request.json()) as unknown;
 
       const bodyParseResult = MeetingBotsWebhookRequest.safeParse(body);
 

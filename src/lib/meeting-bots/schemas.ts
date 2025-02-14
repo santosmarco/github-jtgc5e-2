@@ -16,26 +16,28 @@ export const MeetingPlatform = z.enum([
 ]);
 export type MeetingPlatform = z.infer<typeof MeetingPlatform>;
 
-export const BotStatusCode = z.enum([
-  // Recall
-  "analysis_done",
-  "analysis_failed",
-  "call_ended", // also MeetingBaas
-  "done",
-  "fatal",
-  "in_call_not_recording", // also MeetingBaas
-  "in_call_recording", // also MeetingBaas
-  "in_waiting_room", // also MeetingBaas
-  "joining_call", // also MeetingBaas
-  "media_expired",
-  "ready",
-  "recording_done",
-  "recording_permission_allowed",
-  "recording_permission_denied",
+export const BotStatusCode = z
+  .enum([
+    // Recall
+    "analysis_done",
+    "analysis_failed",
+    "call_ended", // also MeetingBaas
+    "done",
+    "fatal",
+    "in_call_not_recording", // also MeetingBaas
+    "in_call_recording", // also MeetingBaas
+    "in_waiting_room", // also MeetingBaas
+    "joining_call", // also MeetingBaas
+    "media_expired",
+    "ready",
+    "recording_done",
+    "recording_permission_allowed",
+    "recording_permission_denied",
 
-  // MeetingBaas
-  "in_waiting_for_host",
-]);
+    // MeetingBaas
+    "in_waiting_for_host",
+  ])
+  .or(z.string());
 export type BotStatusCode = z.infer<typeof BotStatusCode>;
 
 export const CalendarSyncEventData = z.object({
@@ -126,7 +128,8 @@ export const MeetingBaasFailedEventData = z.object({
         "InternalError",
         "InvalidMeetingUrl",
       ]),
-    ),
+    )
+    .or(z.string()),
 });
 export type MeetingBaasFailedEventData = z.infer<
   typeof MeetingBaasFailedEventData

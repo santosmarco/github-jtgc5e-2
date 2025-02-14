@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { FeedbackDialog } from "./feedback-dialog";
 
 const BUTTON_SIZE = 56;
-const BUTTON_PADDING = 16;
+const BUTTON_PADDING = 20;
 
 export function FeedbackButton() {
   const [isOpen, setIsOpen] = useState(false);
