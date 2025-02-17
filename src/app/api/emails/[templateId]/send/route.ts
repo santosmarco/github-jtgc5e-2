@@ -3,7 +3,7 @@ import { z } from "zod";
 import { safeParseAsync } from "zod-error";
 
 import { env } from "~/env";
-import { sendExploreUnlockedEmail } from "~/lib/email";
+import { sendExploreUnlockedEmail, sendMeetingRecapEmail } from "~/lib/email";
 import { logger } from "~/lib/logging/server";
 import {
   createClient as createSupabaseClient,
@@ -15,6 +15,12 @@ const RequestBody = z.discriminatedUnion("templateId", [
     templateId: z.literal("explore-unlocked"),
     variables: z.object({
       profile_id: z.string().min(1, "Required").uuid("Invalid profile ID"),
+    }),
+  }),
+  z.object({
+    templateId: z.literal("meeting-recap"),
+    variables: z.object({
+      meeting_id: z.string().min(1, "Required"),
     }),
   }),
 ]);
@@ -81,6 +87,60 @@ async function handleExploreUnlockedEmail(
   return createSuccessResponse(emailData.id);
 }
 
+async function handleMeetingRecapEmail(
+  supabase: SupabaseServerClient,
+  meetingId: string,
+): Promise<NextResponse<ResponseBody>> {
+  const { data: meeting, error: meetingError } = await supabase
+    .from("meetings")
+    .select(
+      "*, profile:profiles(*), topics:meeting_topics(*), actionItems:meeting_action_items(*, assignees:meeting_action_item_assignees(assignee:entities(*)))",
+    )
+    .eq("video_api_id", meetingId)
+    .single();
+
+  if (meetingError) {
+    logger.error("Failed to fetch meeting", { error: meetingError, meetingId });
+    return createErrorResponse(meetingError.message, 404);
+  }
+
+  if (!meeting) {
+    logger.error("Meeting not found", { meetingId });
+    return createErrorResponse("Meeting not found", 404);
+  }
+
+  if (!meeting.profile) {
+    logger.error("Meeting profile not found", { meetingId });
+    return createErrorResponse("Meeting profile not found", 404);
+  }
+
+  const { data: emailData, error: emailError } = await sendMeetingRecapEmail({
+    meeting: {
+      ...meeting,
+      profile: meeting.profile,
+    },
+  });
+
+  if (emailError) {
+    logger.error("Failed to send meeting recap email", {
+      error: emailError,
+      meetingId,
+    });
+    return createErrorResponse(emailError.message, 500);
+  }
+
+  if (!emailData) {
+    logger.error("Email data missing after send", { meetingId });
+    return createErrorResponse("Email not sent", 500);
+  }
+
+  logger.info("Successfully sent meeting recap email", {
+    meetingId,
+    messageId: emailData.id,
+  });
+  return createSuccessResponse(emailData.id);
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: { templateId: string } },
@@ -113,6 +173,10 @@ export async function POST(
         supabase,
         parsedBody.variables.profile_id,
       );
+    }
+
+    if (parsedBody.templateId === "meeting-recap") {
+      return handleMeetingRecapEmail(supabase, parsedBody.variables.meeting_id);
     }
 
     logger.warn("Invalid template ID received", {
