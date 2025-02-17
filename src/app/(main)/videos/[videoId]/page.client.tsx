@@ -68,7 +68,10 @@ export function VideoPageClient({ videoId }: VideoPageClientProps) {
   };
 
   const handleSkipToMoment = (moment: VideoMoment) => {
-    void setStartAt(moment.segment_start_timestamp_in_seconds);
+    void setStartAt(
+      moment.segment_ideal_timestamp_in_seconds ??
+        moment.segment_start_timestamp_in_seconds,
+    );
   };
 
   if (!video) {

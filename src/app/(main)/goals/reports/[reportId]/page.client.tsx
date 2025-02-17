@@ -109,6 +109,8 @@ export function ReportPageClient({ group, reports }: ReportPageClientProps) {
       reportMoment.moment.segment_start_timestamp_in_seconds ?? 0,
     segment_end_timestamp_in_seconds:
       reportMoment.moment.segment_end_timestamp_in_seconds ?? 0,
+    segment_ideal_timestamp_in_seconds:
+      reportMoment.moment.segment_start_timestamp_in_seconds_ideal,
     video_id: reportMoment.moment.video_api_id ?? "",
     activity_type: reportMoment.moment.activity_type ?? "",
     activity_reasoning: (reportMoment.moment.activity_reasoning ?? "").replace(

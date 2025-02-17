@@ -10,7 +10,7 @@ export type EmbedMomentPageClientProps = {
 export function EmbedMomentPageClient({ moment }: EmbedMomentPageClientProps) {
   const handleSkipToMoment = () => {
     void window.open(
-      `/videos/${moment.video_id}?startAt=${moment.segment_start_timestamp_in_seconds}`,
+      `/videos/${moment.video_id}?startAt=${moment.segment_ideal_timestamp_in_seconds ?? moment.segment_start_timestamp_in_seconds}`,
       "_blank",
     );
   };

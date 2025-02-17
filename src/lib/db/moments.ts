@@ -22,6 +22,8 @@ export function transformMoment(
       moment.segment_start_timestamp_in_seconds ?? 0,
     segment_end_timestamp_in_seconds:
       moment.segment_end_timestamp_in_seconds ?? 0,
+    segment_ideal_timestamp_in_seconds:
+      moment.segment_start_timestamp_in_seconds_ideal,
     video_id: moment.video_api_id ?? "",
     activity_type: moment.activity_type ?? "",
     activity_reasoning: (moment.activity_reasoning ?? "").replace(/^"|"$/g, ""),

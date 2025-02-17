@@ -11,11 +11,7 @@ export type VideoTagsProps = {
 
 export function VideoTags({ video }: VideoTagsProps) {
   return (
-    <CollapsibleSection
-      title="Meeting Participants"
-      icon={UsersIcon}
-      className="border-accent"
-    >
+    <CollapsibleSection title="Meeting Participants" icon={UsersIcon}>
       <div className="flex flex-wrap gap-2 px-2 pb-2">
         {video.tags
           ?.filter((tag) => !isUuid(tag))

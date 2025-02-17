@@ -42,6 +42,7 @@ export function emotionToMoment(
     segment_end_timestamp: end?.end ?? "",
     segment_start_timestamp_in_seconds: start?.startInSeconds ?? 0,
     segment_end_timestamp_in_seconds: end?.endInSeconds ?? 0,
+    segment_ideal_timestamp_in_seconds: start?.startInSeconds ?? null,
     video_id: video.videoId,
     activity_type: `${emotion.emotion_intensity}/10`,
     activity_reasoning: emotion.reasoning,

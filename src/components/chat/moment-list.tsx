@@ -57,7 +57,7 @@ export function ChatMomentList({ moments, className }: ChatMomentListProps) {
           variants={itemVariants}
           onClick={() => {
             window.open(
-              `/videos/${result.moment.video_id}?startAt=${result.moment.segment_start_timestamp_in_seconds}`,
+              `/videos/${result.moment.video_id}?startAt=${result.moment.segment_ideal_timestamp_in_seconds ?? result.moment.segment_start_timestamp_in_seconds}`,
               "_blank",
             );
           }}

@@ -192,6 +192,7 @@ const VideoPlayerSection = memo(function VideoPlayerSection({
         momentsShown={[currentMoment.moment]}
         start_time={currentMoment.moment.segment_start_timestamp_in_seconds}
         end_time={currentMoment.moment.segment_end_timestamp_in_seconds}
+        ideal_time={currentMoment.moment.segment_ideal_timestamp_in_seconds}
         onVideoEnd={onMomentEnd}
       />
     </PlayerProvider>

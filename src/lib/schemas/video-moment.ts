@@ -15,6 +15,10 @@ export const VideoMoment = z
     segment_end_timestamp: z.string(),
     segment_start_timestamp_in_seconds: z.coerce.number().nonnegative(),
     segment_end_timestamp_in_seconds: z.coerce.number().nonnegative(),
+    segment_ideal_timestamp_in_seconds: z.coerce
+      .number()
+      .nonnegative()
+      .nullable(),
     video_id: z.string(),
     activity_type: z.string(),
     activity_reasoning: z.string(),

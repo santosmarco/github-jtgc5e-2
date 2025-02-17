@@ -42,6 +42,7 @@ export type VideoPlayerProps = {
   onVideoEnd?: () => void;
   start_time?: number;
   end_time?: number;
+  ideal_time?: number | null;
 };
 
 const PLAYBACK_SPEEDS = [0.8, 1, 1.2, 1.5, 1.7, 2, 2.5];
@@ -53,6 +54,7 @@ export function VideoPlayer({
   onVideoEnd,
   start_time,
   end_time,
+  ideal_time,
 }: VideoPlayerProps) {
   const {
     videoRef,

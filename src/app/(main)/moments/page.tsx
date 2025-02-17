@@ -144,7 +144,7 @@ export default function MomentsPage() {
 
   const handleSkipToMoment = (moment: VideoMoment) => () => {
     void router.push(
-      `/videos/${moment.video_id}?startAt=${moment.segment_start_timestamp_in_seconds}`,
+      `/videos/${moment.video_id}?startAt=${moment.segment_ideal_timestamp_in_seconds ?? moment.segment_start_timestamp_in_seconds}`,
     );
   };
 
