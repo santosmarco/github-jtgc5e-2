@@ -20,7 +20,12 @@ export const VideoOptions = z.object({
 });
 export type VideoOptions = z.infer<typeof VideoOptions>;
 
-function transformMoment(moment: Tables<"moments">, idx: number) {
+function transformMoment(
+  moment: Tables<"moments"> & {
+    subtags: Tables<"moment_subtags">[];
+  },
+  idx: number,
+) {
   return {
     id: moment.id,
     index: `${moment.video_api_id}_${moment.activity}_${idx}`,
@@ -43,6 +48,7 @@ function transformMoment(moment: Tables<"moments">, idx: number) {
     activity: moment.activity ?? "",
     relevant: moment.relevant,
     reactions: [],
+    subtags: moment.subtags,
   } satisfies VideoMoment;
 }
 
@@ -55,7 +61,7 @@ async function fetchVideoData(
 
     let momentsQuery = supabase
       .from("moments")
-      .select("*")
+      .select("*, subtags:moment_subtags(*)")
       .eq("video_api_id", videoId);
 
     if (!videoOptions?.moments.includeDeprecated) {

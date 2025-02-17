@@ -1038,6 +1038,7 @@ export type Database = {
           moments_status: string | null
           observation_status: string | null
           segments_status: string | null
+          topics_status: string | null
           video_id: string | null
         }
         Insert: {
@@ -1052,6 +1053,7 @@ export type Database = {
           moments_status?: string | null
           observation_status?: string | null
           segments_status?: string | null
+          topics_status?: string | null
           video_id?: string | null
         }
         Update: {
@@ -1066,6 +1068,7 @@ export type Database = {
           moments_status?: string | null
           observation_status?: string | null
           segments_status?: string | null
+          topics_status?: string | null
           video_id?: string | null
         }
         Relationships: []
@@ -1332,6 +1335,48 @@ export type Database = {
           },
         ]
       }
+      moment_subtags: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          id: number
+          moment_id: string | null
+          reasoning: string | null
+          tag: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          id?: number
+          moment_id?: string | null
+          reasoning?: string | null
+          tag?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          id?: number
+          moment_id?: string | null
+          reasoning?: string | null
+          tag?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moment_subtags_moment_id_fkey"
+            columns: ["moment_id"]
+            isOneToOne: false
+            referencedRelation: "moments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moment_subtags_moment_id_fkey"
+            columns: ["moment_id"]
+            isOneToOne: false
+            referencedRelation: "moments_with_score"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       moment_types: {
         Row: {
           color: string | null
@@ -1373,8 +1418,10 @@ export type Database = {
           segment_end_timestamp_in_seconds: number | null
           segment_id_sequence_end: number | null
           segment_id_sequence_start: number | null
+          segment_id_sequence_start_ideal: number | null
           segment_start_timestamp: string | null
           segment_start_timestamp_in_seconds: number | null
+          segment_start_timestamp_in_seconds_ideal: number | null
           summary: string | null
           target_person_reasoning: string | null
           target_person_type: string | null
@@ -1399,8 +1446,10 @@ export type Database = {
           segment_end_timestamp_in_seconds?: number | null
           segment_id_sequence_end?: number | null
           segment_id_sequence_start?: number | null
+          segment_id_sequence_start_ideal?: number | null
           segment_start_timestamp?: string | null
           segment_start_timestamp_in_seconds?: number | null
+          segment_start_timestamp_in_seconds_ideal?: number | null
           summary?: string | null
           target_person_reasoning?: string | null
           target_person_type?: string | null
@@ -1425,8 +1474,10 @@ export type Database = {
           segment_end_timestamp_in_seconds?: number | null
           segment_id_sequence_end?: number | null
           segment_id_sequence_start?: number | null
+          segment_id_sequence_start_ideal?: number | null
           segment_start_timestamp?: string | null
           segment_start_timestamp_in_seconds?: number | null
+          segment_start_timestamp_in_seconds_ideal?: number | null
           summary?: string | null
           target_person_reasoning?: string | null
           target_person_type?: string | null

@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { createClient } from "~/lib/supabase/server";
 
-import { createTRPCRouter, protectedProcedure,publicProcedure } from "../trpc";
+import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
 
 export const reportsRouter = createTRPCRouter({
   getOne: publicProcedure
@@ -166,7 +166,7 @@ export const reportsRouter = createTRPCRouter({
             report_sections(*),
             report_goals(*, goal:goals!inner(*, signals:goal_signals(*))),
             report_goal_signals(*, goal_signal:goal_signals!inner(*)),
-            report_moments!inner(*, moment:moments!inner(*), report_goal_signal:report_goal_signals!inner(*)),
+            report_moments!inner(*, moment:moments!inner(*, subtags:moment_subtags(*)), report_goal_signal:report_goal_signals!inner(*)),
             report_comments(*, user:profiles!inner(*))
           `,
         )

@@ -120,6 +120,7 @@ export function ReportPageClient({ group, reports }: ReportPageClientProps) {
     activity: reportMoment.moment.activity ?? "",
     relevant: reportMoment.moment.relevant ?? false,
     reactions: [],
+    subtags: reportMoment.moment.subtags,
   });
 
   // Group moments by signal

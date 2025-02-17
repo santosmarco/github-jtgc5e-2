@@ -3,7 +3,9 @@ import type { Tables } from "~/lib/supabase/database.types";
 import { createClient } from "~/lib/supabase/server";
 
 export function transformMoment(
-  moment: Tables<"moments">,
+  moment: Tables<"moments"> & {
+    subtags: Tables<"moment_subtags">[];
+  },
   idx: number,
 ): VideoMoment {
   return {
@@ -28,6 +30,7 @@ export function transformMoment(
     activity: moment.activity ?? "",
     relevant: moment.relevant,
     reactions: [],
+    subtags: moment.subtags,
   };
 }
 
@@ -37,7 +40,7 @@ export async function fetchVideoMoments(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("moments")
-    .select("*")
+    .select("*, subtags:moment_subtags(*)")
     .eq("video_api_id", videoId)
     .eq("latest", true);
 
@@ -54,7 +57,7 @@ export async function fetchMomentByActivity(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("moments")
-    .select("*")
+    .select("*, subtags:moment_subtags(*)")
     .eq("video_api_id", videoId)
     .eq("activity", activity)
     .eq("latest", true)
@@ -76,7 +79,7 @@ export async function fetchPaginatedMoments(options: PaginatedMomentsOptions) {
 
   let query = supabase
     .from("moments")
-    .select("*")
+    .select("*, subtags:moment_subtags(*)")
     .eq("latest", true)
     .order("created_at", { ascending: false });
 

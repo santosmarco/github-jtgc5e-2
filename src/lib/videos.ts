@@ -50,6 +50,7 @@ export function emotionToMoment(
     activity: "Emotion",
     relevant: true,
     reactions: [],
+    subtags: [],
   };
 }
 

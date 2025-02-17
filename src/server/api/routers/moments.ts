@@ -19,7 +19,7 @@ export const momentsRouter = createTRPCRouter({
       const supabase = await createClient();
       const { data, error } = await supabase
         .from("moments")
-        .select("*")
+        .select("*, subtags:moment_subtags(*)")
         .eq("id", input.momentId);
 
       if (error) throw error;

@@ -26,6 +26,9 @@ export const VideoMoment = z
       .preprocess((arg) => arg, z.custom<Tables<"moment_reactions">>())
       .array()
       .default([]),
+    subtags: z
+      .preprocess((arg) => arg, z.custom<Tables<"moment_subtags">>())
+      .array(),
   })
   .transform(({ id, ...rest }) => ({ ...rest, id: id ?? rest.index }));
 export type VideoMoment = z.infer<typeof VideoMoment>;

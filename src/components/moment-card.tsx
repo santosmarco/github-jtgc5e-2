@@ -369,6 +369,26 @@ export function MomentCard({
           >
             {moment.activity_type}
           </Badge>
+          {user?.is_admin &&
+            moment.subtags &&
+            moment.subtags.length > 0 &&
+            moment.subtags.map((subtag) => (
+              <Tooltip key={subtag.id}>
+                <TooltipTrigger asChild>
+                  <Badge
+                    variant="outline"
+                    className="cursor-help rounded-full border-foreground/50"
+                  >
+                    {subtag.tag ?? "Unknown"}
+                    {subtag.confidence &&
+                      ` (${Math.round(subtag.confidence * 100)}%)`}
+                  </Badge>
+                </TooltipTrigger>
+                {subtag.reasoning && (
+                  <TooltipContent>{subtag.reasoning}</TooltipContent>
+                )}
+              </Tooltip>
+            ))}
         </div>
 
         {/* Summary and Jump To Button */}
