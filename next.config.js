@@ -13,7 +13,6 @@ const nextConfig = {
   reactStrictMode: true,
   experimental: {
     typedRoutes: true,
-    instrumentationHook: true,
   },
   images: {
     domains: ["vod.api.video", "lh3.googleusercontent.com"],
