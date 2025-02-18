@@ -419,22 +419,31 @@ export type Database = {
       }
       entities: {
         Row: {
+          attributes: Json | null
           created_at: string
           id: string
+          is_test: boolean
           master_profile_id: string
           name: string
+          type: string | null
         }
         Insert: {
+          attributes?: Json | null
           created_at?: string
           id?: string
+          is_test?: boolean
           master_profile_id: string
           name: string
+          type?: string | null
         }
         Update: {
+          attributes?: Json | null
           created_at?: string
           id?: string
+          is_test?: boolean
           master_profile_id?: string
           name?: string
+          type?: string | null
         }
         Relationships: [
           {
@@ -449,6 +458,80 @@ export type Database = {
             columns: ["master_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entity_observations: {
+        Row: {
+          created_at: string
+          entity_id: string
+          id: string
+          is_test: boolean
+          text: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          id?: string
+          is_test?: boolean
+          text: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          id?: string
+          is_test?: boolean
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_observations_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entity_relationships: {
+        Row: {
+          created_at: string
+          id: string
+          is_test: boolean
+          object_id: string
+          predicate: string
+          subject_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_test?: boolean
+          object_id: string
+          predicate: string
+          subject_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_test?: boolean
+          object_id?: string
+          predicate?: string
+          subject_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relationships_object_id_fkey"
+            columns: ["object_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relationships_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
             referencedColumns: ["id"]
           },
         ]
@@ -1354,7 +1437,7 @@ export type Database = {
         Row: {
           confidence: number | null
           created_at: string
-          id: number
+          id: string
           moment_id: string | null
           reasoning: string | null
           tag: string | null
@@ -1362,7 +1445,7 @@ export type Database = {
         Insert: {
           confidence?: number | null
           created_at?: string
-          id?: number
+          id?: string
           moment_id?: string | null
           reasoning?: string | null
           tag?: string | null
@@ -1370,7 +1453,7 @@ export type Database = {
         Update: {
           confidence?: number | null
           created_at?: string
-          id?: number
+          id?: string
           moment_id?: string | null
           reasoning?: string | null
           tag?: string | null
@@ -1828,6 +1911,35 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      relationship_observations: {
+        Row: {
+          created_at: string
+          id: string
+          relationship_id: string
+          text: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          relationship_id: string
+          text: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          relationship_id?: string
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relationship_observations_relationship_id_fkey"
+            columns: ["relationship_id"]
+            isOneToOne: false
+            referencedRelation: "entity_relationships"
             referencedColumns: ["id"]
           },
         ]
