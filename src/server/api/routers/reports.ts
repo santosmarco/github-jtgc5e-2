@@ -175,9 +175,7 @@ export const reportsRouter = createTRPCRouter({
           reportProcessingStatuses
             .map((r) => r.report_id)
             .filter((r): r is NonNullable<typeof r> => r !== null),
-        )
-        .not("report_moments.omission_reason", "eq", "duplicated")
-        .not("report_moments.omission_reason", "eq", "conflict");
+        );
 
       if (reportsError) {
         throw new TRPCError({

@@ -586,6 +586,8 @@ export type Database = {
       }
       goal_signals: {
         Row: {
+          activity: string | null
+          activity_type: string | null
           created_at: string
           direction: Database["public"]["Enums"]["goal_signal_direction_type"]
           goal_id: string
@@ -593,9 +595,13 @@ export type Database = {
           id: string
           is_current: boolean
           previous_goal_signal_id: string | null
+          tag: string | null
+          target_person_type: string | null
           text: string
         }
         Insert: {
+          activity?: string | null
+          activity_type?: string | null
           created_at?: string
           direction: Database["public"]["Enums"]["goal_signal_direction_type"]
           goal_id: string
@@ -603,9 +609,13 @@ export type Database = {
           id?: string
           is_current?: boolean
           previous_goal_signal_id?: string | null
+          tag?: string | null
+          target_person_type?: string | null
           text: string
         }
         Update: {
+          activity?: string | null
+          activity_type?: string | null
           created_at?: string
           direction?: Database["public"]["Enums"]["goal_signal_direction_type"]
           goal_id?: string
@@ -613,6 +623,8 @@ export type Database = {
           id?: string
           is_current?: boolean
           previous_goal_signal_id?: string | null
+          tag?: string | null
+          target_person_type?: string | null
           text?: string
         }
         Relationships: [
@@ -1439,6 +1451,7 @@ export type Database = {
           created_at: string
           id: string
           moment_id: string | null
+          profile_id: string | null
           reasoning: string | null
           tag: string | null
         }
@@ -1447,6 +1460,7 @@ export type Database = {
           created_at?: string
           id?: string
           moment_id?: string | null
+          profile_id?: string | null
           reasoning?: string | null
           tag?: string | null
         }
@@ -1455,6 +1469,7 @@ export type Database = {
           created_at?: string
           id?: string
           moment_id?: string | null
+          profile_id?: string | null
           reasoning?: string | null
           tag?: string | null
         }
@@ -1471,6 +1486,20 @@ export type Database = {
             columns: ["moment_id"]
             isOneToOne: false
             referencedRelation: "moments_with_score"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moment_subtags_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "moment_subtags_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1501,6 +1530,9 @@ export type Database = {
       }
       moments: {
         Row: {
+          _internal_comment: string | null
+          _internal_thumbs_down: number
+          _internal_thumbs_up: number
           activity: string | null
           activity_reasoning: string | null
           activity_type: string | null
@@ -1529,6 +1561,9 @@ export type Database = {
           video_api_id: string | null
         }
         Insert: {
+          _internal_comment?: string | null
+          _internal_thumbs_down?: number
+          _internal_thumbs_up?: number
           activity?: string | null
           activity_reasoning?: string | null
           activity_type?: string | null
@@ -1557,6 +1592,9 @@ export type Database = {
           video_api_id?: string | null
         }
         Update: {
+          _internal_comment?: string | null
+          _internal_thumbs_down?: number
+          _internal_thumbs_up?: number
           activity?: string | null
           activity_reasoning?: string | null
           activity_type?: string | null
@@ -1992,30 +2030,42 @@ export type Database = {
       }
       report_goal_signals: {
         Row: {
+          activity: string | null
+          activity_type: string | null
           created_at: string
           direction: Database["public"]["Enums"]["goal_signal_direction_type"]
           goal_signal_id: string
           hidden_text: string | null
           id: string
           report_id: string
+          tag: string | null
+          target_person_type: string | null
           text: string | null
         }
         Insert: {
+          activity?: string | null
+          activity_type?: string | null
           created_at?: string
           direction: Database["public"]["Enums"]["goal_signal_direction_type"]
           goal_signal_id: string
           hidden_text?: string | null
           id?: string
           report_id: string
+          tag?: string | null
+          target_person_type?: string | null
           text?: string | null
         }
         Update: {
+          activity?: string | null
+          activity_type?: string | null
           created_at?: string
           direction?: Database["public"]["Enums"]["goal_signal_direction_type"]
           goal_signal_id?: string
           hidden_text?: string | null
           id?: string
           report_id?: string
+          tag?: string | null
+          target_person_type?: string | null
           text?: string | null
         }
         Relationships: [
