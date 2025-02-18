@@ -5,6 +5,9 @@ import { logger } from "~/lib/logging/server";
 import { MeetingBotsWebhookRequest } from "~/lib/meeting-bots/schemas";
 import { slack } from "~/lib/slack";
 
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   async function run() {
     try {

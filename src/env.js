@@ -1,7 +1,7 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
-export const runtime = "node";
+export const runtime = "nodejs";
 
 export const env = createEnv({
   server: {
