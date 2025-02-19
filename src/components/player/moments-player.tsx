@@ -7,9 +7,12 @@ import {
   ArrowRight,
   ArrowUpRight,
   Loader2,
+  ThumbsDown,
+  ThumbsUp,
 } from "lucide-react";
 import Image from "next/image";
 import { memo, useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "~/components/ui/button";
 import {
@@ -206,6 +209,119 @@ const VideoPlayerSection = memo(function VideoPlayerSection({
   );
 });
 
+const ReactionControls = memo(function ReactionControls({
+  momentId,
+  className,
+}: {
+  momentId: string;
+  className?: string;
+}) {
+  const utils = api.useUtils();
+  const { data: user } = api.auth.getUser.useQuery();
+  const { data: reactions, isLoading: reactionsLoading } =
+    api.moments.getReactions.useQuery({
+      momentId,
+    });
+
+  const { mutate: addReaction } = api.moments.addReaction.useMutation({
+    onMutate: async ({ type }) => {
+      await utils.moments.getReactions.cancel({ momentId });
+
+      const previousReactions = utils.moments.getReactions.getData({
+        momentId,
+      });
+
+      utils.moments.getReactions.setData({ momentId }, (old): any => {
+        const filtered = old?.filter((r) => r.user_id !== user?.id) ?? [];
+        return [
+          ...filtered,
+          {
+            id: "temp-id",
+            moment_id: momentId,
+            user_id: user?.id ?? "",
+            reaction_type: type,
+            created_at: new Date().toISOString(),
+            user,
+          },
+        ];
+      });
+
+      return { previousReactions };
+    },
+    onError: (err, newReaction, context) => {
+      utils.moments.getReactions.setData(
+        { momentId },
+        context?.previousReactions,
+      );
+      toast.error("Failed to add reaction. Please try again.");
+    },
+  });
+
+  const handleReaction = (type: "thumbs_up" | "thumbs_down") => {
+    if (!user) {
+      toast.error("Please sign in to react to moments.");
+      return;
+    }
+    addReaction({ momentId, type });
+  };
+
+  const thumbsUpCount =
+    reactions?.filter((r) => r.reaction_type === "thumbs_up").length ?? 0;
+  const thumbsDownCount =
+    reactions?.filter((r) => r.reaction_type === "thumbs_down").length ?? 0;
+  const userReaction = reactions?.find(
+    (r) => r.user_id === user?.id,
+  )?.reaction_type;
+
+  if (reactionsLoading) {
+    return (
+      <div className={cn("flex items-center gap-2", className)}>
+        <Loader2 className="h-4 w-4 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn("flex items-center gap-2", className)}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "gap-2 text-foreground hover:text-primary hover:no-underline",
+              userReaction === "thumbs_up" && "text-primary",
+            )}
+            onClick={() => handleReaction("thumbs_up")}
+          >
+            <ThumbsUp className="h-4 w-4" />
+            <span className="text-xs">{thumbsUpCount}</span>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Like this moment</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "gap-2 text-foreground hover:text-destructive hover:no-underline",
+              userReaction === "thumbs_down" && "text-destructive",
+            )}
+            onClick={() => handleReaction("thumbs_down")}
+          >
+            <ThumbsDown className="h-4 w-4" />
+            <span className="text-xs">{thumbsDownCount}</span>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Dislike this moment</TooltipContent>
+      </Tooltip>
+    </div>
+  );
+});
+
 const NavigationControls = memo(function NavigationControls({
   onPrevious,
   onNext,
@@ -213,6 +329,7 @@ const NavigationControls = memo(function NavigationControls({
   canGoNext,
   currentIndex,
   totalMoments,
+  currentMoment,
 }: {
   onPrevious: () => void;
   onNext: () => void;
@@ -220,6 +337,7 @@ const NavigationControls = memo(function NavigationControls({
   canGoNext: boolean;
   currentIndex: number;
   totalMoments: number;
+  currentMoment: NonNullable<MomentsPlayerProps["reportMoments"][0]>;
 }) {
   // Add keyboard navigation
   useEffect(() => {
@@ -244,32 +362,40 @@ const NavigationControls = memo(function NavigationControls({
   }, [canGoPrevious, canGoNext, onPrevious, onNext]);
 
   return (
-    <div className="flex items-center justify-between border-t border-border bg-background px-4 py-2">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={onPrevious}
-        disabled={!canGoPrevious}
-        aria-label="Previous video"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        <span>Previous</span>
-      </Button>
-
-      <div className="text-sm text-muted-foreground">
-        {currentIndex + 1} of {totalMoments}
+    <div className="flex flex-col border-t border-border bg-background">
+      {/* Reactions */}
+      <div className="flex items-center justify-center border-b border-border px-4 py-2">
+        <ReactionControls momentId={currentMoment.moment.id} />
       </div>
 
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={onNext}
-        disabled={!canGoNext}
-        aria-label="Next video"
-      >
-        <span>Next</span>
-        <ArrowRight className="h-4 w-4" />
-      </Button>
+      {/* Navigation */}
+      <div className="flex items-center justify-between px-4 py-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onPrevious}
+          disabled={!canGoPrevious}
+          aria-label="Previous video"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span>Previous</span>
+        </Button>
+
+        <div className="text-sm text-muted-foreground">
+          {currentIndex + 1} of {totalMoments}
+        </div>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onNext}
+          disabled={!canGoNext}
+          aria-label="Next video"
+        >
+          <span>Next</span>
+          <ArrowRight className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 });
@@ -374,6 +500,7 @@ export function MomentsPlayer({
         canGoNext={currentMomentIndex < reportMoments.length - 1}
         currentIndex={currentMomentIndex}
         totalMoments={reportMoments.length}
+        currentMoment={currentMoment}
       />
 
       {/* Current Moment Info */}
