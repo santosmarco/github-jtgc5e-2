@@ -223,6 +223,7 @@ export function MomentsPlayer({
     currentMomentIndex + 1,
     currentMomentIndex + 3,
   );
+  const [hasJustClickedUpNext, setHasJustClickedUpNext] = useState(false);
 
   // Fetch video data for current moment
   const { data: video, isLoading: videoLoading } =
@@ -238,6 +239,13 @@ export function MomentsPlayer({
 
   // Handle moment completion
   const handleMomentEnd = () => {
+    if (hasJustClickedUpNext) {
+      setTimeout(() => {
+        setHasJustClickedUpNext(false);
+      }, 1000);
+      return;
+    }
+
     if (currentMomentIndex < reportMoments.length - 1) {
       setCurrentMomentIndex((prev) => prev + 1);
     } else {
@@ -306,9 +314,10 @@ export function MomentsPlayer({
                 <ReportMomentCard
                   reportMoment={moment}
                   isUpNext
-                  onClick={() =>
-                    setCurrentMomentIndex(currentMomentIndex + index + 1)
-                  }
+                  onClick={() => {
+                    setHasJustClickedUpNext(true);
+                    setCurrentMomentIndex(currentMomentIndex + index + 1);
+                  }}
                 />
               </motion.div>
             ))}
