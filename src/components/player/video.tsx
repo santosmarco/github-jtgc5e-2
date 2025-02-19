@@ -110,19 +110,17 @@ export function VideoPlayer({
   // Auto-play when video source changes
   useEffect(() => {
     if (videoRef.current) {
-      videoRef.current.play().catch(() => {
-        // Autoplay might be blocked by browser policy
-        console.log("Autoplay blocked by browser");
+      videoRef.current.play().catch((error) => {
+        console.log("Autoplay failed:", error);
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [video.videoSrc]);
+  }, [videoRef]);
 
-  useEffect(() => {
-    toggleMute(true);
-    play();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // useEffect(() => {
+  //   toggleMute(true);
+  //   play();
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, []);
 
   useEffect(() => {
     // If we are trimmed and the video is not at the start, seek to the start
@@ -200,6 +198,7 @@ export function VideoPlayer({
             <p className="text-sm text-muted-foreground">Loading video...</p>
           </div>
         )}
+
         <video
           ref={videoRef}
           // Pass our query parameters so the server can trim the file.
@@ -213,6 +212,7 @@ export function VideoPlayer({
           crossOrigin="anonymous"
           playsInline={true}
           preload="auto"
+          autoPlay
           onClick={togglePlay}
           onLoadedData={() => setIsVideoLoading(false)}
           onKeyDown={(e) => {
