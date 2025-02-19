@@ -1,10 +1,17 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowDownRight, ArrowUpRight, Loader2 } from "lucide-react";
+import {
+  ArrowDownRight,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUpRight,
+  Loader2,
+} from "lucide-react";
 import Image from "next/image";
 import { memo, useEffect, useState } from "react";
 
+import { Button } from "~/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
@@ -199,6 +206,74 @@ const VideoPlayerSection = memo(function VideoPlayerSection({
   );
 });
 
+const NavigationControls = memo(function NavigationControls({
+  onPrevious,
+  onNext,
+  canGoPrevious,
+  canGoNext,
+  currentIndex,
+  totalMoments,
+}: {
+  onPrevious: () => void;
+  onNext: () => void;
+  canGoPrevious: boolean;
+  canGoNext: boolean;
+  currentIndex: number;
+  totalMoments: number;
+}) {
+  // Add keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle if not in an input/textarea
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+
+      if (e.key === "ArrowLeft" && canGoPrevious) {
+        onPrevious();
+      } else if (e.key === "ArrowRight" && canGoNext) {
+        onNext();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [canGoPrevious, canGoNext, onPrevious, onNext]);
+
+  return (
+    <div className="flex items-center justify-between border-t border-border bg-background px-4 py-2">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onPrevious}
+        disabled={!canGoPrevious}
+        aria-label="Previous video"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        <span>Previous</span>
+      </Button>
+
+      <div className="text-sm text-muted-foreground">
+        {currentIndex + 1} of {totalMoments}
+      </div>
+
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onNext}
+        disabled={!canGoNext}
+        aria-label="Next video"
+      >
+        <span>Next</span>
+        <ArrowRight className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+});
+
 const listItemVariants = {
   hidden: { opacity: 0, y: 50 },
   visible: (i: number) => ({
@@ -218,12 +293,12 @@ export function MomentsPlayer({
   onMomentEnd,
 }: MomentsPlayerProps) {
   const [currentMomentIndex, setCurrentMomentIndex] = useState(0);
+  const [hasJustClickedUpNext, setHasJustClickedUpNext] = useState(false);
   const currentMoment = reportMoments[currentMomentIndex];
   const nextMoments = reportMoments.slice(
     currentMomentIndex + 1,
     currentMomentIndex + 3,
   );
-  const [hasJustClickedUpNext, setHasJustClickedUpNext] = useState(false);
 
   // Fetch video data for current moment
   const { data: video, isLoading: videoLoading } =
@@ -236,6 +311,23 @@ export function MomentsPlayer({
         refetchOnWindowFocus: false,
       },
     );
+
+  // Navigation handlers
+  const handlePrevious = () => {
+    if (currentMomentIndex > 0) {
+      setCurrentMomentIndex((prev) => prev - 1);
+      setHasJustClickedUpNext(true);
+    }
+  };
+
+  const handleNext = () => {
+    if (currentMomentIndex < reportMoments.length - 1) {
+      setCurrentMomentIndex((prev) => prev + 1);
+      setHasJustClickedUpNext(true);
+    } else {
+      onMomentEnd?.();
+    }
+  };
 
   // Handle moment completion
   const handleMomentEnd = () => {
@@ -272,6 +364,16 @@ export function MomentsPlayer({
         video={video}
         currentMoment={currentMoment}
         onMomentEnd={handleMomentEnd}
+      />
+
+      {/* Navigation Controls */}
+      <NavigationControls
+        onPrevious={handlePrevious}
+        onNext={handleNext}
+        canGoPrevious={currentMomentIndex > 0}
+        canGoNext={currentMomentIndex < reportMoments.length - 1}
+        currentIndex={currentMomentIndex}
+        totalMoments={reportMoments.length}
       />
 
       {/* Current Moment Info */}
