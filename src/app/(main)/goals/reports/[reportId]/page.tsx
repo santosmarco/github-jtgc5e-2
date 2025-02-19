@@ -58,7 +58,7 @@ export default function ReportPage({
   const [selectedReportSectionId, setSelectedReportSectionId] = useState<
     string | null
   >(null);
-  const [isCommentsVisible, setIsCommentsVisible] = useState(true);
+  const [isCommentsVisible, setIsCommentsVisible] = useState(false);
   const [commentContent, setCommentContent] = useState("");
   const [isEditingGoalId, setIsEditingGoalId] = useState<string | null>(null);
   const [pendingGoal, setPendingGoal] = useState<
@@ -260,11 +260,13 @@ export default function ReportPage({
       }));
     }
 
-    // Set first section as selected if none selected
+    // Set first positive section as selected if none selected
     if (selectedReportSectionId === null && groupReports) {
-      setSelectedReportSectionId(
-        groupReports.reports[0]?.report_sections[0]?.id ?? null,
-      );
+      const firstPositiveSection =
+        groupReports.reports[0]?.report_sections.find(
+          (section) => section.direction === "positive",
+        );
+      setSelectedReportSectionId(firstPositiveSection?.id ?? null);
     }
   }, [groupReports, selectedReportSectionId, goalId]);
 
@@ -510,15 +512,6 @@ export default function ReportPage({
                     .filter(
                       (rm) => rm.report_section_id === selectedReportSectionId,
                     )
-                    .filter((rm) => {
-                      if (user?.is_admin) return true;
-                      const sectionDirection = report.report_sections.find(
-                        (rs) => rs.id === rm.report_section_id,
-                      )?.direction;
-                      return (
-                        rm.report_goal_signal.direction === sectionDirection
-                      );
-                    })
                     .map((rm, idx) => ({
                       ...rm,
                       moment: transformMoment(rm.moment, idx),
