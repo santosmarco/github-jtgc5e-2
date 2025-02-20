@@ -43,6 +43,7 @@ export type VideoPlayerProps = {
   start_time?: number;
   end_time?: number;
   ideal_time?: number | null;
+  initialPlayTime?: number;
 };
 
 const PLAYBACK_SPEEDS = [0.8, 1, 1.2, 1.5, 1.7, 2, 2.5];
@@ -55,6 +56,7 @@ export function VideoPlayer({
   start_time,
   end_time,
   ideal_time,
+  initialPlayTime,
 }: VideoPlayerProps) {
   const {
     videoRef,
@@ -86,6 +88,7 @@ export function VideoPlayer({
   const [hoveredMoment, setHoveredMoment] = useState<VideoMoment | null>(null);
   const [isVideoLoading, setIsVideoLoading] = useState(true);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [hasInitialSeek, setHasInitialSeek] = useState(false);
 
   // Filter moments within the trimmed range (if any)
   const filteredMoments = momentsShown?.filter((moment) => {
@@ -96,25 +99,25 @@ export function VideoPlayer({
     );
   });
 
-  // Only seek on load if not trimmed (the trimmed video should start at 0)
+  // Only seek on load if we have an initial play time or start time
   useEffect(() => {
-    if (!isTrimmed && videoRef.current) {
-      if (start_time !== undefined) {
-        videoRef.current.currentTime = start_time;
-      } else if (startAt !== undefined) {
-        videoRef.current.currentTime = startAt;
-      }
+    if (!videoRef.current || hasInitialSeek) return;
+
+    const seekTime = initialPlayTime ?? start_time ?? startAt;
+    if (seekTime !== undefined) {
+      videoRef.current.currentTime = seekTime;
+      setHasInitialSeek(true);
     }
-  }, [start_time, startAt, videoRef, isTrimmed]);
+  }, [videoRef, initialPlayTime, start_time, startAt, hasInitialSeek]);
 
   // Auto-play when video source changes
   useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.play().catch((error) => {
-        console.log("Autoplay failed:", error);
-      });
-    }
-  }, [videoRef]);
+    if (!videoRef.current || !hasInitialSeek) return;
+
+    videoRef.current.play().catch((error) => {
+      console.log("Autoplay failed:", error);
+    });
+  }, [videoRef, hasInitialSeek]);
 
   // useEffect(() => {
   //   toggleMute(true);
@@ -201,9 +204,10 @@ export function VideoPlayer({
 
         <video
           ref={videoRef}
-          // Pass our query parameters so the server can trim the file.
           src={`${video.videoSrc}${
-            isTrimmed ? `?t=${start_time},${end_time}` : ""
+            start_time !== undefined && end_time !== undefined
+              ? `?t=${start_time},${end_time}`
+              : ""
           }`}
           className={cn(
             "aspect-video w-full cursor-pointer rounded-lg",
@@ -212,16 +216,28 @@ export function VideoPlayer({
           crossOrigin="anonymous"
           playsInline={true}
           preload="auto"
-          autoPlay
+          autoPlay={false}
           onClick={togglePlay}
-          onLoadedData={() => setIsVideoLoading(false)}
+          onLoadedData={() => {
+            setIsVideoLoading(false);
+            // Ensure we're at the right position after load
+            if (videoRef.current && !hasInitialSeek) {
+              const seekTime = initialPlayTime ?? start_time ?? startAt;
+              if (seekTime !== undefined) {
+                videoRef.current.currentTime = seekTime;
+                setHasInitialSeek(true);
+              }
+            }
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               togglePlay();
             }
           }}
           tabIndex={0}
-        />
+        >
+          <track kind="captions" />
+        </video>
 
         {isControlsVisible && (
           <div className="pointer-events-none absolute inset-0 rounded-lg bg-accent/50" />

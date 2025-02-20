@@ -45,6 +45,10 @@ type MomentsPlayerProps = {
 
 type ApiVideo = NonNullable<RouterOutputs["videos"]["getFromApiVideo"]>;
 
+// Add buffer constants for contextual playback
+const CONTEXT_BUFFER_BEFORE = 30; // 30 seconds before
+const CONTEXT_BUFFER_AFTER = 30; // 30 seconds after
+
 const ReportMomentCard = memo(function ReportMomentCard({
   reportMoment,
   isUpNext = false,
@@ -191,6 +195,9 @@ const VideoPlayerSection = memo(function VideoPlayerSection({
         // Small delay to ensure DOM is ready
         const videoElement = document.querySelector("video");
         if (videoElement) {
+          // Set initial time to the start of the core moment
+          videoElement.currentTime =
+            currentMoment.moment.segment_start_timestamp_in_seconds;
           videoElement.play().catch(() => {
             console.log("Autoplay blocked by browser");
           });
@@ -198,16 +205,29 @@ const VideoPlayerSection = memo(function VideoPlayerSection({
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [video.videoSrc]);
+  }, [video.videoSrc, currentMoment.moment.segment_start_timestamp_in_seconds]);
+
+  // Calculate buffered start and end times
+  const bufferedStartTime = Math.max(
+    0,
+    currentMoment.moment.segment_start_timestamp_in_seconds -
+      CONTEXT_BUFFER_BEFORE,
+  );
+  const bufferedEndTime =
+    currentMoment.moment.segment_end_timestamp_in_seconds +
+    CONTEXT_BUFFER_AFTER;
 
   return (
     <PlayerProvider>
       <VideoPlayer
         video={video}
         momentsShown={[currentMoment.moment]}
-        start_time={currentMoment.moment.segment_start_timestamp_in_seconds}
-        end_time={currentMoment.moment.segment_end_timestamp_in_seconds}
+        start_time={bufferedStartTime}
+        end_time={bufferedEndTime}
         ideal_time={currentMoment.moment.segment_ideal_timestamp_in_seconds}
+        initialPlayTime={
+          currentMoment.moment.segment_start_timestamp_in_seconds
+        }
         onVideoEnd={onMomentEnd}
       />
     </PlayerProvider>
