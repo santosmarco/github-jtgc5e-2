@@ -188,10 +188,16 @@ export function VideoPlayer({
   }, [playbackSpeed]);
 
   const formatTime = (time: number) => {
+    if (time < 0) return null;
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
+
+  // Calculate the display times
+  const currentDisplayTime = currentTime - (isTrimmed ? start_time : 0);
+  const formattedCurrentTime = formatTime(currentDisplayTime);
+  const formattedDuration = formatTime(timelineDuration);
 
   return (
     <TooltipProvider>
@@ -457,10 +463,11 @@ export function VideoPlayer({
                   aria-label="Volume"
                 />
               </div>
-              <span className="ml-2 text-xs">
-                {formatTime(currentTime - (isTrimmed ? start_time : 0))} /{" "}
-                {formatTime(timelineDuration)}
-              </span>
+              {formattedCurrentTime && formattedDuration && (
+                <span className="ml-2 text-xs">
+                  {formattedCurrentTime} / {formattedDuration}
+                </span>
+              )}
             </div>
             <div className="flex items-center space-x-2">
               <DropdownMenu>
