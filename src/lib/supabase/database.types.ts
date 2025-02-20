@@ -462,6 +462,54 @@ export type Database = {
           },
         ]
       }
+      entity_events: {
+        Row: {
+          attributes: Json | null
+          embedding: string | null
+          end_time: string
+          event_text: string
+          event_type: string
+          id: string
+          meeting_id: string
+          start_time: string
+        }
+        Insert: {
+          attributes?: Json | null
+          embedding?: string | null
+          end_time: string
+          event_text: string
+          event_type: string
+          id?: string
+          meeting_id: string
+          start_time: string
+        }
+        Update: {
+          attributes?: Json | null
+          embedding?: string | null
+          end_time?: string
+          event_text?: string
+          event_type?: string
+          id?: string
+          meeting_id?: string
+          start_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_events_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["video_api_id"]
+          },
+          {
+            foreignKeyName: "entity_events_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["video_api_id"]
+          },
+        ]
+      }
       entity_observations: {
         Row: {
           created_at: string
@@ -496,6 +544,7 @@ export type Database = {
       }
       entity_relationships: {
         Row: {
+          attributes: Json | null
           created_at: string
           id: string
           is_test: boolean
@@ -504,6 +553,7 @@ export type Database = {
           subject_id: string
         }
         Insert: {
+          attributes?: Json | null
           created_at?: string
           id?: string
           is_test?: boolean
@@ -512,6 +562,7 @@ export type Database = {
           subject_id: string
         }
         Update: {
+          attributes?: Json | null
           created_at?: string
           id?: string
           is_test?: boolean
@@ -652,6 +703,7 @@ export type Database = {
           hidden_text: string | null
           id: string
           is_current: boolean
+          is_default: boolean
           previous_goal_id: string | null
           profile_id: string
           progress: number
@@ -665,6 +717,7 @@ export type Database = {
           hidden_text?: string | null
           id?: string
           is_current: boolean
+          is_default?: boolean
           previous_goal_id?: string | null
           profile_id: string
           progress?: number
@@ -678,6 +731,7 @@ export type Database = {
           hidden_text?: string | null
           id?: string
           is_current?: boolean
+          is_default?: boolean
           previous_goal_id?: string | null
           profile_id?: string
           progress?: number
@@ -1167,48 +1221,6 @@ export type Database = {
           video_id?: string | null
         }
         Relationships: []
-      }
-      meeting_tags: {
-        Row: {
-          category: string | null
-          confidence: number | null
-          created_at: string
-          id: string
-          value: string
-          video_api_id: string
-        }
-        Insert: {
-          category?: string | null
-          confidence?: number | null
-          created_at?: string
-          id?: string
-          value: string
-          video_api_id?: string
-        }
-        Update: {
-          category?: string | null
-          confidence?: number | null
-          created_at?: string
-          id?: string
-          value?: string
-          video_api_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "meeting_tags_video_api_id_fkey"
-            columns: ["video_api_id"]
-            isOneToOne: false
-            referencedRelation: "meetings"
-            referencedColumns: ["video_api_id"]
-          },
-          {
-            foreignKeyName: "meeting_tags_video_api_id_fkey"
-            columns: ["video_api_id"]
-            isOneToOne: false
-            referencedRelation: "meetings_with_profile"
-            referencedColumns: ["video_api_id"]
-          },
-        ]
       }
       meeting_topics: {
         Row: {
@@ -2939,6 +2951,19 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      binary_quantize:
+        | {
+            Args: {
+              "": string
+            }
+            Returns: unknown
+          }
+        | {
+            Args: {
+              "": unknown
+            }
+            Returns: unknown
+          }
       check_user_permissions: {
         Args: {
           user_id: string
@@ -2956,12 +2981,110 @@ export type Database = {
           comments: Database["public"]["CompositeTypes"]["moment_comment_with_user"][]
         }[]
       }
+      halfvec_avg: {
+        Args: {
+          "": number[]
+        }
+        Returns: unknown
+      }
+      halfvec_out: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      halfvec_send: {
+        Args: {
+          "": unknown
+        }
+        Returns: string
+      }
+      halfvec_typmod_in: {
+        Args: {
+          "": unknown[]
+        }
+        Returns: number
+      }
+      hnsw_bit_support: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      hnsw_halfvec_support: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      hnsw_sparsevec_support: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      hnswhandler: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
       is_admin_user: {
         Args: {
           user_id: string
         }
         Returns: boolean
       }
+      ivfflat_bit_support: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      ivfflat_halfvec_support: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      ivfflathandler: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      l2_norm:
+        | {
+            Args: {
+              "": unknown
+            }
+            Returns: number
+          }
+        | {
+            Args: {
+              "": unknown
+            }
+            Returns: number
+          }
+      l2_normalize:
+        | {
+            Args: {
+              "": string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              "": unknown
+            }
+            Returns: unknown
+          }
+        | {
+            Args: {
+              "": unknown
+            }
+            Returns: unknown
+          }
       parse_search_query: {
         Args: {
           search_input: string
@@ -3003,9 +3126,70 @@ export type Database = {
           rank: number
         }[]
       }
+      sparsevec_out: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      sparsevec_send: {
+        Args: {
+          "": unknown
+        }
+        Returns: string
+      }
+      sparsevec_typmod_in: {
+        Args: {
+          "": unknown[]
+        }
+        Returns: number
+      }
       update_profile_id_on_moments: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      vector_avg: {
+        Args: {
+          "": number[]
+        }
+        Returns: string
+      }
+      vector_dims:
+        | {
+            Args: {
+              "": string
+            }
+            Returns: number
+          }
+        | {
+            Args: {
+              "": unknown
+            }
+            Returns: number
+          }
+      vector_norm: {
+        Args: {
+          "": string
+        }
+        Returns: number
+      }
+      vector_out: {
+        Args: {
+          "": string
+        }
+        Returns: unknown
+      }
+      vector_send: {
+        Args: {
+          "": string
+        }
+        Returns: string
+      }
+      vector_typmod_in: {
+        Args: {
+          "": unknown[]
+        }
+        Returns: number
       }
     }
     Enums: {

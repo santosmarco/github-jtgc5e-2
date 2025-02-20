@@ -7,15 +7,25 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "~/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
 import { useProfile } from "~/hooks/use-profile";
 import type { Tables } from "~/lib/supabase/database.types";
 import { api } from "~/trpc/react";
 
 type GenerateReportButtonProps = {
   goals: Tables<"goals">[];
+  isEnabled?: boolean;
 };
 
-export function GenerateReportButton({ goals }: GenerateReportButtonProps) {
+export function GenerateReportButton({
+  goals,
+  isEnabled = false,
+}: GenerateReportButtonProps) {
   const router = useRouter();
   const apiUtils = api.useUtils();
   const { profile } = useProfile();
@@ -108,74 +118,107 @@ export function GenerateReportButton({ goals }: GenerateReportButtonProps) {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: 0.2 }}
-    >
-      <Button
-        onClick={handleGenerateReport}
-        disabled={isGeneratingReport}
-        className="relative"
-        size="sm"
-        variant="secondary"
-      >
-        <AnimatePresence mode="wait">
-          {isGeneratingReport && !reportStatus ? (
-            <motion.div
-              key="loading"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="flex items-center gap-2"
+    <TooltipProvider>
+      <Tooltip delayDuration={100}>
+        <TooltipTrigger asChild>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2 }}
+            className="relative"
+          >
+            <Button
+              onClick={handleGenerateReport}
+              disabled={!isEnabled || isGeneratingReport}
+              className="relative"
+              size="sm"
+              variant="secondary"
             >
-              <Loader2Icon className="h-4 w-4 animate-spin" />
-              Initiating...
-            </motion.div>
-          ) : reportStatus === "processing" ? (
-            <motion.div
-              key="processing"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="flex items-center gap-2"
-            >
-              <Loader2Icon className="h-4 w-4 animate-spin" />
-              Processing...
-            </motion.div>
-          ) : reportSuccess ? (
-            <motion.div
-              key="success"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="flex items-center gap-2 text-green-500"
-            >
-              <motion.div
-                animate={{
-                  scale: [1, 1.2, 1],
-                  rotate: [0, 10, -10, 0],
-                }}
-                transition={{ duration: 0.5 }}
-              >
-                <SparklesIcon className="h-4 w-4" />
-              </motion.div>
-              Generated!
-            </motion.div>
-          ) : (
-            <motion.div
-              key="default"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="flex items-center gap-2"
-            >
-              <SparklesIcon className="h-4 w-4" />
-              Generate Report
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </Button>
-    </motion.div>
+              <AnimatePresence mode="wait">
+                {!isEnabled ? (
+                  <motion.div
+                    key="disabled"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className="flex items-center gap-2 text-muted-foreground"
+                  >
+                    <SparklesIcon className="h-4 w-4 opacity-50" />
+                    Generate Report
+                  </motion.div>
+                ) : isGeneratingReport && !reportStatus ? (
+                  <motion.div
+                    key="loading"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className="flex items-center gap-2"
+                  >
+                    <Loader2Icon className="h-4 w-4 animate-spin" />
+                    Initiating...
+                  </motion.div>
+                ) : reportStatus === "processing" ? (
+                  <motion.div
+                    key="processing"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className="flex items-center gap-2"
+                  >
+                    <Loader2Icon className="h-4 w-4 animate-spin" />
+                    Processing...
+                  </motion.div>
+                ) : reportSuccess ? (
+                  <motion.div
+                    key="success"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className="flex items-center gap-2 text-green-500"
+                  >
+                    <motion.div
+                      animate={{
+                        scale: [1, 1.2, 1],
+                        rotate: [0, 10, -10, 0],
+                      }}
+                      transition={{ duration: 0.5 }}
+                    >
+                      <SparklesIcon className="h-4 w-4" />
+                    </motion.div>
+                    Generated!
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="default"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className="flex items-center gap-2"
+                  >
+                    <SparklesIcon className="h-4 w-4" />
+                    Generate Report
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </Button>
+          </motion.div>
+        </TooltipTrigger>
+        {!isEnabled && (
+          <TooltipContent
+            side="bottom"
+            align="end"
+            className="max-w-[280px] bg-accent p-2"
+          >
+            <div>
+              <p className="font-medium">Keep the momentum going! 🚀</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Complete more meetings to unlock detailed progress reports and
+                personalized recommendations for achieving your goals.
+              </p>
+            </div>
+          </TooltipContent>
+        )}
+      </Tooltip>
+    </TooltipProvider>
   );
 }
