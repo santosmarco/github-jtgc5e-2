@@ -49,7 +49,13 @@ export async function POST(request: NextRequest) {
           bot_id: parsedBody.data.bot_id,
           status: parsedBody.data.status,
         });
-        await processMeetingBot.trigger(parsedBody);
+        void processMeetingBot.trigger(parsedBody, {
+          tags: [
+            parsedBody.event,
+            parsedBody.data.status.code,
+            parsedBody.data.bot_id,
+          ],
+        });
       } else if (parsedBody.event === "calendar.sync_events") {
         const query = CalendarSyncEventQuery.catch({
           full: "false",

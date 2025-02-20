@@ -51,7 +51,15 @@ export async function POST(request: NextRequest) {
             status: parsedBody.data.status,
           }),
         });
-        await processMeetingBot.trigger(parsedBody);
+        void processMeetingBot.trigger(parsedBody, {
+          tags: [
+            parsedBody.event,
+            ...("status" in parsedBody.data
+              ? [parsedBody.data.status.code]
+              : []),
+            parsedBody.data.bot_id,
+          ],
+        });
       }
 
       logger.info("✨ Successfully processed webhook", {
