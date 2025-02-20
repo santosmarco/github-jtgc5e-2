@@ -9,6 +9,8 @@ import {
 } from "~/lib/meeting-bots/schemas";
 import { slack } from "~/lib/slack";
 
+export const dynamic = "force-static";
+
 export async function POST(request: NextRequest) {
   async function run() {
     try {

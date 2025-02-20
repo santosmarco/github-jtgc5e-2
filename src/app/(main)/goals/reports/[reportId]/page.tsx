@@ -68,6 +68,7 @@ export default function ReportPage({
       })
     | null
   >(null);
+  const [currentMomentIndex, setCurrentMomentIndex] = useState(0);
 
   const utils = api.useUtils();
   const { data: user } = api.auth.getUser.useQuery();
@@ -377,12 +378,7 @@ export default function ReportPage({
 
             {isExpanded && (
               <div
-                className={cn(
-                  "grid h-full gap-6",
-                  isCommentsVisible
-                    ? "grid-cols-[1fr,1fr,300px]"
-                    : "grid-cols-[1fr,1.5fr,0px]",
-                )}
+                className={cn("grid h-full grid-cols-[1fr,1.5fr,0px] gap-6")}
               >
                 <div className="space-y-6">
                   <Tabs
@@ -397,6 +393,7 @@ export default function ReportPage({
                       if (firstSection) {
                         setSelectedReportSectionId(firstSection.id);
                       }
+                      setCurrentMomentIndex(0);
                     }}
                   >
                     <TabsList className="flex w-full justify-between gap-2 bg-transparent px-0">
@@ -434,12 +431,14 @@ export default function ReportPage({
                               delay: index * 0.1,
                               ease: "easeOut",
                             }}
-                            onClick={() =>
-                              setSelectedReportSectionId(section.id)
-                            }
+                            onClick={() => {
+                              setSelectedReportSectionId(section.id);
+                              setCurrentMomentIndex(0);
+                            }}
                             onKeyDown={(e) => {
                               if (e.key === "Enter" || e.key === " ") {
                                 setSelectedReportSectionId(section.id);
+                                setCurrentMomentIndex(0);
                               }
                             }}
                             tabIndex={0}
@@ -452,7 +451,7 @@ export default function ReportPage({
                           >
                             <Tooltip open={user?.is_admin ? undefined : false}>
                               <TooltipTrigger>
-                                <h3 className="font-semibold">
+                                <h3 className="text-left font-semibold">
                                   {section.title}
                                 </h3>
                               </TooltipTrigger>
@@ -485,12 +484,14 @@ export default function ReportPage({
                               delay: index * 0.1,
                               ease: "easeOut",
                             }}
-                            onClick={() =>
-                              setSelectedReportSectionId(section.id)
-                            }
+                            onClick={() => {
+                              setSelectedReportSectionId(section.id);
+                              setCurrentMomentIndex(0);
+                            }}
                             onKeyDown={(e) => {
                               if (e.key === "Enter" || e.key === " ") {
                                 setSelectedReportSectionId(section.id);
+                                setCurrentMomentIndex(0);
                               }
                             }}
                             tabIndex={0}
@@ -503,7 +504,7 @@ export default function ReportPage({
                           >
                             <Tooltip open={user?.is_admin ? undefined : false}>
                               <TooltipTrigger>
-                                <h3 className="font-semibold">
+                                <h3 className="text-left font-semibold">
                                   {section.title}
                                 </h3>
                               </TooltipTrigger>
@@ -529,6 +530,8 @@ export default function ReportPage({
                       ...rm,
                       moment: transformMoment(rm.moment, idx),
                     }))}
+                  currentMomentIndex={currentMomentIndex}
+                  setCurrentMomentIndex={setCurrentMomentIndex}
                 />
 
                 <div className="relative">
@@ -544,7 +547,7 @@ export default function ReportPage({
                           stiffness: 400,
                           damping: 40,
                         }}
-                        className="absolute right-0 top-0 h-full w-[300px] rounded-lg border bg-background shadow-lg"
+                        className="absolute right-0 top-0 z-30 h-full w-[300px] rounded-sm border bg-background shadow-lg"
                       >
                         <div className="flex h-12 items-center justify-between border-b px-4">
                           <div className="flex items-center gap-2">
@@ -559,14 +562,14 @@ export default function ReportPage({
                             variant="ghost"
                             size="icon"
                             onClick={() => setIsCommentsVisible(false)}
-                            className="h-8 w-8 rounded-full hover:bg-muted"
+                            className="-mr-2 h-full w-8 text-foreground hover:bg-transparent hover:text-muted-foreground"
                           >
                             <ChevronUp className="h-4 w-4 rotate-90" />
                           </Button>
                         </div>
 
                         <div className="flex h-[calc(100%-6rem)] flex-col justify-between py-4">
-                          <div className="scrollbar-thin scrollbar-thumb-accent scrollbar-track-transparent -mr-2 flex-1 space-y-4 overflow-y-auto pr-2">
+                          <div className="scrollbar-thin scrollbar-thumb-accent scrollbar-track-transparent -mr-2 flex-1 space-y-4 overflow-y-auto px-4 pr-6">
                             {report.report_comments.map((comment, index) => (
                               <motion.div
                                 key={comment.id}
@@ -619,7 +622,7 @@ export default function ReportPage({
                                   }
                                 }}
                                 rows={3}
-                                className="resize-none rounded-lg border-none bg-muted/50 focus-visible:ring-0"
+                                className="resize-none rounded-lg border-none bg-muted/50 placeholder:text-muted-foreground/50 focus-visible:ring-0"
                                 disabled={createComment.isPending}
                               />
                               <button type="submit" className="sr-only">
@@ -632,7 +635,7 @@ export default function ReportPage({
                     ) : (
                       <motion.div
                         key="toggle"
-                        className="absolute -right-14 -top-2 h-full"
+                        className="absolute -right-14 -top-2 h-8"
                       >
                         <Button
                           variant="outline"

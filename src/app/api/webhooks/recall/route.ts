@@ -27,6 +27,8 @@ const log = logger.with({
   provider: "recall",
 });
 
+export const dynamic = "force-static";
+
 const WAITING_ROOM_TIMEOUT = 60 * 60;
 const NOONE_JOINED_TIMEOUT = 60 * 60;
 

@@ -9,6 +9,7 @@ import {
   Loader2,
   ThumbsDown,
   ThumbsUp,
+  VideoOff,
 } from "lucide-react";
 import Image from "next/image";
 import { memo, useEffect, useState } from "react";
@@ -34,6 +35,8 @@ type MomentsPlayerProps = {
     moment: VideoMoment;
     report_goal_signal: Tables<"report_goal_signals">;
   })[];
+  currentMomentIndex: number;
+  setCurrentMomentIndex: (index: number | ((prev: number) => number)) => void;
   className?: string;
   onMomentEnd?: () => void;
 };
@@ -362,26 +365,27 @@ const NavigationControls = memo(function NavigationControls({
   }, [canGoPrevious, canGoNext, onPrevious, onNext]);
 
   return (
-    <div className="flex flex-col border-t border-border bg-background">
+    <div className="grid grid-cols-3 border-t border-border bg-background">
       {/* Reactions */}
-      <div className="flex items-center justify-center border-b border-border px-4 py-2">
+      <div className="col-span-3 flex items-center justify-center border-b border-border px-4 py-2">
         <ReactionControls momentId={currentMoment.moment.id} />
       </div>
 
       {/* Navigation */}
-      <div className="flex items-center justify-between px-4 py-2">
+      <div className="col-span-3 grid grid-cols-3 items-center gap-4 px-4 py-2">
         <Button
           variant="ghost"
           size="sm"
           onClick={onPrevious}
           disabled={!canGoPrevious}
           aria-label="Previous video"
+          className="justify-self-start"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>Previous</span>
         </Button>
 
-        <div className="text-sm text-muted-foreground">
+        <div className="justify-self-center text-sm text-muted-foreground">
           {currentIndex + 1} of {totalMoments}
         </div>
 
@@ -391,6 +395,7 @@ const NavigationControls = memo(function NavigationControls({
           onClick={onNext}
           disabled={!canGoNext}
           aria-label="Next video"
+          className="justify-self-end"
         >
           <span>Next</span>
           <ArrowRight className="h-4 w-4" />
@@ -405,20 +410,16 @@ const listItemVariants = {
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: {
-      delay: i * 0.1,
-      duration: 0.5,
-      ease: "easeOut",
-    },
   }),
 };
 
 export function MomentsPlayer({
   reportMoments,
+  currentMomentIndex,
+  setCurrentMomentIndex,
   className,
   onMomentEnd,
 }: MomentsPlayerProps) {
-  const [currentMomentIndex, setCurrentMomentIndex] = useState(0);
   const [hasJustClickedUpNext, setHasJustClickedUpNext] = useState(false);
   const currentMoment = reportMoments[currentMomentIndex];
   const nextMoments = reportMoments.slice(
@@ -480,7 +481,35 @@ export function MomentsPlayer({
   }
 
   if (!video || !currentMoment) {
-    return null;
+    return (
+      <motion.div
+        className="flex min-h-[400px] w-full flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-muted-foreground/25 bg-muted/10 p-8 text-center"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+      >
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.4 }}
+        >
+          <VideoOff className="h-12 w-12 text-muted-foreground/50" />
+        </motion.div>
+        <motion.div
+          initial={{ y: 10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.3, duration: 0.4 }}
+        >
+          <h3 className="text-lg font-medium text-foreground">
+            No Moments Found
+          </h3>
+          <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+            We weren&apos;t able to find any moments for the section you
+            selected.
+          </p>
+        </motion.div>
+      </motion.div>
+    );
   }
 
   return (

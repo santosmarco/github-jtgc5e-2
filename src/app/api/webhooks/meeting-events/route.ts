@@ -16,6 +16,8 @@ import { createClient, type SupabaseServerClient } from "~/lib/supabase/server";
 import { isTruthy } from "~/lib/utils";
 import { apiVideo } from "~/server/api/services/api-video";
 
+export const dynamic = "force-static";
+
 const log = logger.with({
   service: "meeting-events",
   provider: "meeting_baas",
