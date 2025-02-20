@@ -39,6 +39,8 @@ type MomentsPlayerProps = {
   setCurrentMomentIndex: (index: number | ((prev: number) => number)) => void;
   className?: string;
   onMomentEnd?: () => void;
+  hasJustUpdatedCurrentMomentIndex: boolean;
+  setHasJustUpdatedCurrentMomentIndex: (value: boolean) => void;
 };
 
 type ApiVideo = NonNullable<RouterOutputs["videos"]["getFromApiVideo"]>;
@@ -419,8 +421,9 @@ export function MomentsPlayer({
   setCurrentMomentIndex,
   className,
   onMomentEnd,
+  hasJustUpdatedCurrentMomentIndex,
+  setHasJustUpdatedCurrentMomentIndex,
 }: MomentsPlayerProps) {
-  const [hasJustClickedUpNext, setHasJustClickedUpNext] = useState(false);
   const currentMoment = reportMoments[currentMomentIndex];
   const nextMoments = reportMoments.slice(
     currentMomentIndex + 1,
@@ -443,14 +446,14 @@ export function MomentsPlayer({
   const handlePrevious = () => {
     if (currentMomentIndex > 0) {
       setCurrentMomentIndex((prev) => prev - 1);
-      setHasJustClickedUpNext(true);
+      setHasJustUpdatedCurrentMomentIndex(true);
     }
   };
 
   const handleNext = () => {
     if (currentMomentIndex < reportMoments.length - 1) {
       setCurrentMomentIndex((prev) => prev + 1);
-      setHasJustClickedUpNext(true);
+      setHasJustUpdatedCurrentMomentIndex(true);
     } else {
       onMomentEnd?.();
     }
@@ -458,9 +461,9 @@ export function MomentsPlayer({
 
   // Handle moment completion
   const handleMomentEnd = () => {
-    if (hasJustClickedUpNext) {
+    if (hasJustUpdatedCurrentMomentIndex) {
       setTimeout(() => {
-        setHasJustClickedUpNext(false);
+        setHasJustUpdatedCurrentMomentIndex(false);
       }, 1000);
       return;
     }
@@ -573,7 +576,7 @@ export function MomentsPlayer({
                   reportMoment={moment}
                   isUpNext
                   onClick={() => {
-                    setHasJustClickedUpNext(true);
+                    setHasJustUpdatedCurrentMomentIndex(true);
                     setCurrentMomentIndex(currentMomentIndex + index + 1);
                   }}
                 />

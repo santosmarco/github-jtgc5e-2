@@ -24,6 +24,7 @@ import {
   type GoalFormValues,
 } from "~/components/goals/goal-creation-drawer";
 import { MomentsPlayer } from "~/components/player/moments-player";
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
   DropdownMenu,
@@ -69,6 +70,10 @@ export default function ReportPage({
     | null
   >(null);
   const [currentMomentIndex, setCurrentMomentIndex] = useState(0);
+  const [
+    hasJustUpdatedCurrentMomentIndex,
+    setHasJustUpdatedCurrentMomentIndex,
+  ] = useState(false);
 
   const utils = api.useUtils();
   const { data: user } = api.auth.getUser.useQuery();
@@ -264,13 +269,78 @@ export default function ReportPage({
 
     // Set first positive section as selected if none selected
     if (selectedReportSectionId === null && groupReports) {
-      const firstPositiveSection =
-        groupReports.reports[0]?.report_sections.find(
-          (section) => section.direction === "positive",
+      const report = groupReports.reports[0];
+      if (report) {
+        // Calculate section scores for initial selection
+        const sectionScores = report.report_sections.map((section) => {
+          const sectionMoments = report.report_moments.filter(
+            (rm) =>
+              rm.report_section_id === section.id &&
+              (!rm.moment._internal_thumbs_down ||
+                rm.moment._internal_thumbs_down <= 0),
+          );
+          const totalScore = sectionMoments.reduce(
+            (sum, rm) => sum + (rm.score ?? 0),
+            0,
+          );
+          return {
+            ...section,
+            totalScore,
+          };
+        });
+
+        // Get highest scoring positive section
+        const sortedPositiveSections = _.orderBy(
+          sectionScores.filter((s) => s.direction === "positive"),
+          ["totalScore"],
+          ["desc"],
         );
-      setSelectedReportSectionId(firstPositiveSection?.id ?? null);
+
+        const firstPositiveSection = sortedPositiveSections[0];
+        setSelectedReportSectionId(firstPositiveSection?.id ?? null);
+      }
     }
   }, [groupReports, selectedReportSectionId, goalId]);
+
+  // Update section selection when tab changes
+  const handleTabChange = (
+    value: string,
+    report: (typeof groupReports.reports)[0],
+  ) => {
+    const direction = value === "positive" ? "positive" : "negative";
+
+    // Calculate section scores
+    const sectionScores = report.report_sections.map((section) => {
+      const sectionMoments = report.report_moments.filter(
+        (rm) =>
+          rm.report_section_id === section.id &&
+          (!rm.moment._internal_thumbs_down ||
+            rm.moment._internal_thumbs_down <= 0),
+      );
+      const totalScore = sectionMoments.reduce(
+        (sum, rm) => sum + (rm.score ?? 0),
+        0,
+      );
+      return {
+        ...section,
+        totalScore,
+      };
+    });
+
+    // Get highest scoring section for the selected direction
+    const sortedSections = _.orderBy(
+      sectionScores.filter((s) => s.direction === direction),
+      ["totalScore"],
+      ["desc"],
+    );
+
+    const firstSection = sortedSections[0];
+    if (firstSection) {
+      setSelectedReportSectionId(firstSection.id);
+      setCurrentMomentIndex(0);
+      setHasJustUpdatedCurrentMomentIndex(true);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -304,12 +374,18 @@ export default function ReportPage({
     );
   }
 
+  console.log(currentMomentIndex);
+
   return (
     <>
       {groupReports.reports.map((report) => {
         const unsortedReportMoments = report.report_moments;
         const reportMoments = _.orderBy(
-          unsortedReportMoments,
+          unsortedReportMoments.filter(
+            (rm) =>
+              !rm.moment._internal_thumbs_down ||
+              rm.moment._internal_thumbs_down <= 0,
+          ),
           [(rm) => rm.report_section_confidence, (rm) => rm.score],
           ["desc", "desc"],
         );
@@ -319,6 +395,34 @@ export default function ReportPage({
         );
         const goal = report.report_goals[0]?.goal;
         const isExpanded = goal ? expandedGoals[goal.id] : false;
+
+        // Calculate section scores
+        const sectionScores = report.report_sections.map((section) => {
+          const sectionMoments = reportMoments.filter(
+            (rm) => rm.report_section_id === section.id,
+          );
+          const totalScore = sectionMoments.reduce(
+            (sum, rm) => sum + (rm.score ?? 0),
+            0,
+          );
+          return {
+            ...section,
+            totalScore,
+          };
+        });
+
+        // Sort sections by total score
+        const sortedPositiveSections = _.orderBy(
+          sectionScores.filter((s) => s.direction === "positive"),
+          ["totalScore"],
+          ["desc"],
+        );
+
+        const sortedNegativeSections = _.orderBy(
+          sectionScores.filter((s) => s.direction === "negative"),
+          ["totalScore"],
+          ["desc"],
+        );
 
         return (
           <div
@@ -384,17 +488,7 @@ export default function ReportPage({
                   <Tabs
                     defaultValue="positive"
                     className="w-full"
-                    onValueChange={(value) => {
-                      const direction =
-                        value === "positive" ? "positive" : "negative";
-                      const firstSection = report.report_sections.find(
-                        (section) => section.direction === direction,
-                      );
-                      if (firstSection) {
-                        setSelectedReportSectionId(firstSection.id);
-                      }
-                      setCurrentMomentIndex(0);
-                    }}
+                    onValueChange={(value) => handleTabChange(value, report)}
                   >
                     <TabsList className="flex w-full justify-between gap-2 bg-transparent px-0">
                       <TabsTrigger
@@ -413,16 +507,17 @@ export default function ReportPage({
                       </TabsTrigger>
                     </TabsList>
                     <TabsContent value="positive" className="mt-6 space-y-4">
-                      {report.report_sections
-                        .filter((section) => section.direction === "positive")
-                        .filter((section) => {
-                          const sectionMoments = reportMoments.filter(
-                            (rm) => rm.report_section_id === section.id,
-                          );
-                          return user?.is_admin || sectionMoments.length > 0;
-                        })
-                        .map((section, index) => (
-                          <motion.div
+                      {sortedPositiveSections.map((section, index) => {
+                        const sectionMoments = reportMoments.filter(
+                          (rm) => rm.report_section_id === section.id,
+                        );
+                        const shouldShow =
+                          user?.is_admin || sectionMoments.length > 0;
+
+                        if (!shouldShow) return null;
+
+                        return (
+                          <motion.button
                             key={section.id}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -434,21 +529,29 @@ export default function ReportPage({
                             onClick={() => {
                               setSelectedReportSectionId(section.id);
                               setCurrentMomentIndex(0);
+                              setHasJustUpdatedCurrentMomentIndex(true);
                             }}
                             onKeyDown={(e) => {
                               if (e.key === "Enter" || e.key === " ") {
                                 setSelectedReportSectionId(section.id);
                                 setCurrentMomentIndex(0);
+                                setHasJustUpdatedCurrentMomentIndex(true);
                               }
                             }}
-                            tabIndex={0}
-                            role="button"
                             className={cn(
-                              "cursor-pointer rounded-lg border p-4 hover:border-emerald-500/50",
+                              "relative w-full cursor-pointer rounded-lg border p-4 text-left hover:border-emerald-500/50",
                               selectedReportSectionId === section.id &&
                                 "border-emerald-500/50 bg-emerald-500/5",
                             )}
                           >
+                            {user?.is_admin && sectionMoments.length === 0 && (
+                              <Badge
+                                className="absolute right-2 top-2"
+                                variant="secondary"
+                              >
+                                Hidden for the user
+                              </Badge>
+                            )}
                             <Tooltip open={user?.is_admin ? undefined : false}>
                               <TooltipTrigger>
                                 <h3 className="text-left font-semibold">
@@ -462,20 +565,22 @@ export default function ReportPage({
                             <p className="mt-1 text-sm text-muted-foreground">
                               {section.summary}
                             </p>
-                          </motion.div>
-                        ))}
+                          </motion.button>
+                        );
+                      })}
                     </TabsContent>
                     <TabsContent value="negative" className="mt-6 space-y-4">
-                      {report.report_sections
-                        .filter((section) => section.direction === "negative")
-                        .filter((section) => {
-                          const sectionMoments = reportMoments.filter(
-                            (rm) => rm.report_section_id === section.id,
-                          );
-                          return user?.is_admin || sectionMoments.length > 0;
-                        })
-                        .map((section, index) => (
-                          <motion.div
+                      {sortedNegativeSections.map((section, index) => {
+                        const sectionMoments = reportMoments.filter(
+                          (rm) => rm.report_section_id === section.id,
+                        );
+                        const shouldShow =
+                          user?.is_admin || sectionMoments.length > 0;
+
+                        if (!shouldShow) return null;
+
+                        return (
+                          <motion.button
                             key={section.id}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -487,21 +592,29 @@ export default function ReportPage({
                             onClick={() => {
                               setSelectedReportSectionId(section.id);
                               setCurrentMomentIndex(0);
+                              setHasJustUpdatedCurrentMomentIndex(true);
                             }}
                             onKeyDown={(e) => {
                               if (e.key === "Enter" || e.key === " ") {
                                 setSelectedReportSectionId(section.id);
                                 setCurrentMomentIndex(0);
+                                setHasJustUpdatedCurrentMomentIndex(true);
                               }
                             }}
-                            tabIndex={0}
-                            role="button"
                             className={cn(
-                              "cursor-pointer rounded-lg border p-4 hover:border-amber-500/50",
+                              "relative w-full cursor-pointer rounded-lg border p-4 text-left hover:border-amber-500/50",
                               selectedReportSectionId === section.id &&
                                 "border-amber-500/50 bg-amber-500/5",
                             )}
                           >
+                            {user?.is_admin && sectionMoments.length === 0 && (
+                              <Badge
+                                className="absolute right-2 top-2"
+                                variant="secondary"
+                              >
+                                Hidden for the user
+                              </Badge>
+                            )}
                             <Tooltip open={user?.is_admin ? undefined : false}>
                               <TooltipTrigger>
                                 <h3 className="text-left font-semibold">
@@ -515,8 +628,9 @@ export default function ReportPage({
                             <p className="mt-1 text-sm text-muted-foreground">
                               {section.summary}
                             </p>
-                          </motion.div>
-                        ))}
+                          </motion.button>
+                        );
+                      })}
                     </TabsContent>
                   </Tabs>
                 </div>
@@ -532,6 +646,12 @@ export default function ReportPage({
                     }))}
                   currentMomentIndex={currentMomentIndex}
                   setCurrentMomentIndex={setCurrentMomentIndex}
+                  hasJustUpdatedCurrentMomentIndex={
+                    hasJustUpdatedCurrentMomentIndex
+                  }
+                  setHasJustUpdatedCurrentMomentIndex={
+                    setHasJustUpdatedCurrentMomentIndex
+                  }
                 />
 
                 <div className="relative">

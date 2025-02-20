@@ -84,7 +84,7 @@ export function NavigationBar() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3, delay: 0.4 }}
           >
-            <GenerateReportButton goals={goals} />
+            <GenerateReportButton goals={goals} isEnabled={false} />
           </motion.div>
         )}
       </div>
