@@ -305,7 +305,7 @@ export default function ReportPage({
   // Update section selection when tab changes
   const handleTabChange = (
     value: string,
-    report: (typeof groupReports.reports)[0],
+    report: NonNullable<typeof groupReports>["reports"][number],
   ) => {
     const direction = value === "positive" ? "positive" : "negative";
 
