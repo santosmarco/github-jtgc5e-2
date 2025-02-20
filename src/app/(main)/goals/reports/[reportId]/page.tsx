@@ -6,6 +6,7 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   ChevronDown,
+  ChevronLeft,
   ChevronUp,
   FileX2Icon,
   GoalIcon,
@@ -380,7 +381,7 @@ export default function ReportPage({
                   "grid h-full gap-6",
                   isCommentsVisible
                     ? "grid-cols-[1fr,1fr,300px]"
-                    : "grid-cols-[1fr,1.5fr,40px]",
+                    : "grid-cols-[1fr,1.5fr,0px]",
                 )}
               >
                 <div className="space-y-6">
@@ -417,6 +418,12 @@ export default function ReportPage({
                     <TabsContent value="positive" className="mt-6 space-y-4">
                       {report.report_sections
                         .filter((section) => section.direction === "positive")
+                        .filter((section) => {
+                          const sectionMoments = reportMoments.filter(
+                            (rm) => rm.report_section_id === section.id,
+                          );
+                          return user?.is_admin || sectionMoments.length > 0;
+                        })
                         .map((section, index) => (
                           <motion.div
                             key={section.id}
@@ -462,6 +469,12 @@ export default function ReportPage({
                     <TabsContent value="negative" className="mt-6 space-y-4">
                       {report.report_sections
                         .filter((section) => section.direction === "negative")
+                        .filter((section) => {
+                          const sectionMoments = reportMoments.filter(
+                            (rm) => rm.report_section_id === section.id,
+                          );
+                          return user?.is_admin || sectionMoments.length > 0;
+                        })
                         .map((section, index) => (
                           <motion.div
                             key={section.id}
@@ -523,52 +536,43 @@ export default function ReportPage({
                     {isCommentsVisible ? (
                       <motion.div
                         key="comments"
-                        initial={{ width: 40, opacity: 0 }}
-                        animate={{ width: "300px", opacity: 1 }}
-                        exit={{ width: 40, opacity: 0 }}
+                        initial={{ x: "100%" }}
+                        animate={{ x: 0 }}
+                        exit={{ x: "100%" }}
                         transition={{
-                          duration: 0.3,
-                          ease: "easeInOut",
+                          type: "spring",
+                          stiffness: 400,
+                          damping: 40,
                         }}
-                        className="absolute right-0 top-0 h-full space-y-4 overflow-hidden rounded-lg border bg-background p-4"
+                        className="absolute right-0 top-0 h-full w-[300px] rounded-lg border bg-background shadow-lg"
                       >
-                        <div className="flex items-center justify-between">
-                          <motion.h2
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.1 }}
-                            className="font-semibold"
-                          >
-                            Comments
-                          </motion.h2>
+                        <div className="flex h-12 items-center justify-between border-b px-4">
+                          <div className="flex items-center gap-2">
+                            <h2 className="text-sm font-medium">Comments</h2>
+                            {report.report_comments.length > 0 && (
+                              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary/10 px-1.5 text-xs font-medium text-primary">
+                                {report.report_comments.length}
+                              </span>
+                            )}
+                          </div>
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => setIsCommentsVisible(false)}
-                            className="h-8 w-8"
+                            className="h-8 w-8 rounded-full hover:bg-muted"
                           >
-                            <motion.div
-                              initial={{ rotate: 0 }}
-                              animate={{ rotate: 90 }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              <ChevronUp className="h-4 w-4" />
-                            </motion.div>
+                            <ChevronUp className="h-4 w-4 rotate-90" />
                           </Button>
                         </div>
-                        <motion.div
-                          initial={{ opacity: 0, x: 20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.2, duration: 0.2 }}
-                          className="w-full space-y-4"
-                        >
-                          <div className="scrollbar-thin scrollbar-thumb-accent scrollbar-track-transparent max-h-[400px] flex-1 space-y-4 overflow-y-auto pr-2">
+
+                        <div className="flex h-[calc(100%-6rem)] flex-col justify-between py-4">
+                          <div className="scrollbar-thin scrollbar-thumb-accent scrollbar-track-transparent -mr-2 flex-1 space-y-4 overflow-y-auto pr-2">
                             {report.report_comments.map((comment, index) => (
                               <motion.div
                                 key={comment.id}
-                                initial={{ opacity: 0, x: -20 }}
+                                initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.1 }}
+                                transition={{ delay: index * 0.05 }}
                                 className="group relative flex gap-2 rounded-lg"
                               >
                                 <div className="w-full min-w-0">
@@ -594,56 +598,56 @@ export default function ReportPage({
                               </motion.div>
                             ))}
                           </div>
-                        </motion.div>
 
-                        <div className="absolute inset-x-0 bottom-0 overflow-hidden border-t bg-background pt-2">
-                          <form
-                            onSubmit={(e) => handleSubmitComment(report.id, e)}
-                            className="space-y-2 overflow-hidden"
-                          >
-                            <Textarea
-                              placeholder="Write a comment... (Press Enter to submit)"
-                              value={commentContent}
-                              onChange={(e) =>
-                                setCommentContent(e.target.value)
+                          <div className="absolute inset-x-0 bottom-0 rounded-b-lg border-t bg-background">
+                            <form
+                              onSubmit={(e) =>
+                                handleSubmitComment(report.id, e)
                               }
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" && !e.shiftKey) {
-                                  e.preventDefault();
-                                  handleSubmitComment(report.id);
+                              className="space-y-2"
+                            >
+                              <Textarea
+                                placeholder="Write a comment... (Press Enter to submit)"
+                                value={commentContent}
+                                onChange={(e) =>
+                                  setCommentContent(e.target.value)
                                 }
-                              }}
-                              rows={3}
-                              className="resize-none rounded-lg border-none focus-visible:ring-0"
-                              disabled={createComment.isPending}
-                            />
-                            <button type="submit" className="sr-only">
-                              Submit comment
-                            </button>
-                          </form>
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSubmitComment(report.id);
+                                  }
+                                }}
+                                rows={3}
+                                className="resize-none rounded-lg border-none bg-muted/50 focus-visible:ring-0"
+                                disabled={createComment.isPending}
+                              />
+                              <button type="submit" className="sr-only">
+                                Submit comment
+                              </button>
+                            </form>
+                          </div>
                         </div>
                       </motion.div>
                     ) : (
                       <motion.div
                         key="toggle"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute right-0 top-0 h-full"
+                        className="absolute -right-14 -top-2 h-full"
                       >
                         <Button
-                          variant="ghost"
-                          size="icon"
+                          variant="outline"
+                          size="sm"
                           onClick={() => setIsCommentsVisible(true)}
-                          className="h-8 w-8"
+                          className="group relative flex h-8 items-center gap-1 rounded-l-full rounded-r-none border-r px-0 pr-2 shadow-sm"
                         >
-                          <motion.div
-                            initial={{ rotate: 90 }}
-                            animate={{ rotate: -90 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </motion.div>
+                          <div className="relative flex h-8 w-8 items-center justify-center rounded-full">
+                            <ChevronLeft className="ml-1 h-3 w-3 transition-transform group-hover:-translate-x-0.5" />
+                          </div>
+                          <span className="pr-4 text-xs font-medium">
+                            {report.report_comments.length > 0
+                              ? `${report.report_comments.length} Comments`
+                              : "Comments"}
+                          </span>
                         </Button>
                       </motion.div>
                     )}
