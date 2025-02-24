@@ -667,7 +667,7 @@ export default function ReportPage({
                           stiffness: 400,
                           damping: 40,
                         }}
-                        className="absolute right-0 top-0 z-30 h-full w-[300px] rounded-sm border bg-background shadow-lg"
+                        className="absolute -top-2 right-0 z-30 h-[calc(100vh-12rem)] w-[300px] rounded-sm border bg-background shadow-lg"
                       >
                         <div className="flex h-12 items-center justify-between border-b px-4">
                           <div className="flex items-center gap-2">
@@ -766,7 +766,7 @@ export default function ReportPage({
                           <div className="relative flex h-8 w-8 items-center justify-center rounded-full">
                             <ChevronLeft className="ml-1 h-3 w-3 transition-transform group-hover:-translate-x-0.5" />
                           </div>
-                          <span className="pr-4 text-xs font-medium">
+                          <span className="pr-4 text-xs font-medium leading-none">
                             {report.report_comments.length > 0
                               ? `${report.report_comments.length} Comments`
                               : "Comments"}
