@@ -124,7 +124,13 @@ export function VideoPlayer({
     videoRef.current.play().catch((error) => {
       console.log("Autoplay failed:", error);
     });
-  }, [videoRef, hasInitialSeek]);
+
+    // Reset playback speed to default when video source changes
+    setPlaybackSpeed(1);
+    if (videoRef.current) {
+      videoRef.current.playbackRate = 1;
+    }
+  }, [videoRef, hasInitialSeek, video.videoSrc]);
 
   // useEffect(() => {
   //   toggleMute(true);
