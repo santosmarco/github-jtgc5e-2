@@ -197,6 +197,7 @@ const VideoPlayerSection = memo(function VideoPlayerSection({
         if (videoElement) {
           // Set initial time to the start of the core moment
           videoElement.currentTime =
+            currentMoment.moment.segment_ideal_timestamp_in_seconds ??
             currentMoment.moment.segment_start_timestamp_in_seconds;
           videoElement.play().catch(() => {
             console.log("Autoplay blocked by browser");
@@ -205,7 +206,11 @@ const VideoPlayerSection = memo(function VideoPlayerSection({
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [video.videoSrc, currentMoment.moment.segment_start_timestamp_in_seconds]);
+  }, [
+    video.videoSrc,
+    currentMoment.moment.segment_ideal_timestamp_in_seconds,
+    currentMoment.moment.segment_start_timestamp_in_seconds,
+  ]);
 
   // Calculate buffered start and end times
   const bufferedStartTime = Math.max(

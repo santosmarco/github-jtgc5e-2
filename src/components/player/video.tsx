@@ -103,12 +103,19 @@ export function VideoPlayer({
   useEffect(() => {
     if (!videoRef.current || hasInitialSeek) return;
 
-    const seekTime = initialPlayTime ?? start_time ?? startAt;
+    const seekTime = ideal_time ?? initialPlayTime ?? start_time ?? startAt;
     if (seekTime !== undefined) {
       videoRef.current.currentTime = seekTime;
       setHasInitialSeek(true);
     }
-  }, [videoRef, initialPlayTime, start_time, startAt, hasInitialSeek]);
+  }, [
+    videoRef,
+    initialPlayTime,
+    ideal_time,
+    start_time,
+    startAt,
+    hasInitialSeek,
+  ]);
 
   // Auto-play when video source changes
   useEffect(() => {
@@ -133,7 +140,7 @@ export function VideoPlayer({
       currentTime < start_time &&
       videoRef.current
     ) {
-      videoRef.current.currentTime = start_time;
+      videoRef.current.currentTime = ideal_time ?? start_time;
     }
 
     // Check if we need to end the video playback
@@ -178,6 +185,7 @@ export function VideoPlayer({
     isTrimmed,
     start_time,
     timelineDuration,
+    ideal_time,
   ]);
 
   useEffect(() => {
@@ -210,11 +218,7 @@ export function VideoPlayer({
 
         <video
           ref={videoRef}
-          src={`${video.videoSrc}${
-            start_time !== undefined && end_time !== undefined
-              ? `?t=${start_time},${end_time}`
-              : ""
-          }`}
+          src={video.videoSrc}
           className={cn(
             "aspect-video w-full cursor-pointer rounded-lg",
             isVideoLoading && "invisible",
@@ -228,7 +232,8 @@ export function VideoPlayer({
             setIsVideoLoading(false);
             // Ensure we're at the right position after load
             if (videoRef.current && !hasInitialSeek) {
-              const seekTime = initialPlayTime ?? start_time ?? startAt;
+              const seekTime =
+                ideal_time ?? initialPlayTime ?? start_time ?? startAt;
               if (seekTime !== undefined) {
                 videoRef.current.currentTime = seekTime;
                 setHasInitialSeek(true);
