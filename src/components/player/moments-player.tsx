@@ -496,6 +496,7 @@ export function MomentsPlayer({
 
     if (currentMomentIndex < reportMoments.length - 1) {
       setCurrentMomentIndex((prev) => prev + 1);
+      setHasJustUpdatedCurrentMomentIndex(true);
     } else {
       onMomentEnd?.();
     }
