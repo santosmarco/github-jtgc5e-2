@@ -329,7 +329,7 @@ const ReactionControls = memo(function ReactionControls({
             <span className="text-xs">{thumbsUpCount}</span>
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Like this moment</TooltipContent>
+        <TooltipContent>Relevant</TooltipContent>
       </Tooltip>
 
       <Tooltip>
@@ -347,7 +347,7 @@ const ReactionControls = memo(function ReactionControls({
             <span className="text-xs">{thumbsDownCount}</span>
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Dislike this moment</TooltipContent>
+        <TooltipContent>Not Relevant</TooltipContent>
       </Tooltip>
     </div>
   );
