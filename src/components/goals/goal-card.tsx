@@ -137,12 +137,7 @@ export const GoalCard = React.forwardRef<HTMLDivElement, GoalCardProps>(
             className,
           )}
         >
-          <Card
-            className={cn(
-              "flex h-full flex-col overflow-visible border-none bg-transparent pb-6 pl-0 pr-6",
-              isCompleted && "opacity-60",
-            )}
-          >
+          <Card className="flex h-full flex-col overflow-visible border-none bg-transparent pb-6 pl-0 pr-6">
             <div className="flex h-full flex-col justify-between space-y-4 overflow-visible">
               <div className="space-y-4 overflow-visible">
                 <motion.div
@@ -155,7 +150,7 @@ export const GoalCard = React.forwardRef<HTMLDivElement, GoalCardProps>(
                         className={cn(
                           "h-5 w-5 shrink-0",
                           isCompleted
-                            ? "text-muted-foreground"
+                            ? "text-muted-foreground/60"
                             : "text-primary",
                         )}
                       />
@@ -163,8 +158,8 @@ export const GoalCard = React.forwardRef<HTMLDivElement, GoalCardProps>(
                     <motion.h3
                       variants={itemVariants}
                       className={cn(
-                        "text-lg font-semibold",
-                        isCompleted && "text-muted-foreground",
+                        "-mb-[0.1875rem] text-lg font-semibold",
+                        isCompleted && "text-muted-foreground/60",
                       )}
                     >
                       {goal.text}
@@ -239,12 +234,27 @@ export const GoalCard = React.forwardRef<HTMLDivElement, GoalCardProps>(
                     className="flex items-center gap-1.5 text-sm"
                   >
                     <div className="flex items-center gap-0.5">
-                      <ArrowUpRight className="-mb-0.5 h-4 w-4 text-emerald-500" />
-                      <span className="font-medium text-emerald-500">
+                      <ArrowUpRight
+                        className={cn(
+                          "-mb-0.5 h-4 w-4 text-emerald-500",
+                          isCompleted && "text-emerald-500/60",
+                        )}
+                      />
+                      <span
+                        className={cn(
+                          "font-medium text-emerald-500",
+                          isCompleted && "text-emerald-500/60",
+                        )}
+                      >
                         {signalCounts.positive}
                       </span>
                     </div>
-                    <span className="text-muted-foreground">
+                    <span
+                      className={cn(
+                        "text-muted-foreground",
+                        isCompleted && "text-muted-foreground/60",
+                      )}
+                    >
                       positive signal{signalCounts.positive === 1 ? "" : "s"}
                     </span>
                   </motion.div>
@@ -253,12 +263,27 @@ export const GoalCard = React.forwardRef<HTMLDivElement, GoalCardProps>(
                     className="flex items-center gap-1.5 text-sm"
                   >
                     <div className="flex items-center gap-0.5">
-                      <ArrowUpRight className="-mb-0.5 h-4 w-4 rotate-90 text-red-500" />
-                      <span className="font-medium text-red-500">
+                      <ArrowUpRight
+                        className={cn(
+                          "-mb-0.5 h-4 w-4 rotate-90 text-red-500",
+                          isCompleted && "text-red-500/60",
+                        )}
+                      />
+                      <span
+                        className={cn(
+                          "font-medium text-red-500",
+                          isCompleted && "text-red-500/60",
+                        )}
+                      >
                         {signalCounts.negative}
                       </span>
                     </div>
-                    <span className="text-muted-foreground">
+                    <span
+                      className={cn(
+                        "text-muted-foreground",
+                        isCompleted && "text-muted-foreground/60",
+                      )}
+                    >
                       negative signal{signalCounts.negative === 1 ? "" : "s"}
                     </span>
                   </motion.div>
@@ -271,7 +296,7 @@ export const GoalCard = React.forwardRef<HTMLDivElement, GoalCardProps>(
                   >
                     <motion.span
                       variants={itemVariants}
-                      className="text-sm text-muted-foreground"
+                      className="text-sm text-muted-foreground/60"
                     >
                       Completed at{" "}
                       {new Date(goal.completed_at ?? "").toLocaleDateString()}
