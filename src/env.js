@@ -23,6 +23,10 @@ export const env = createEnv({
     // OAuth
     GOOGLE_OAUTH_CLIENT_ID: z.string(),
     GOOGLE_OAUTH_CLIENT_SECRET: z.string(),
+    // Zoom
+    ZOOM_CLIENT_ID: z.string(),
+    ZOOM_CLIENT_SECRET: z.string(),
+    ZOOM_WEBHOOK_SECRET: z.string(),
     // OpenAI
     OPENAI_API_KEY: z.string(),
     // API Video
@@ -80,6 +84,9 @@ export const env = createEnv({
     TRIGGER_SECRET_KEY: process.env.TRIGGER_SECRET_KEY,
     GOOGLE_OAUTH_CLIENT_ID: process.env.GOOGLE_OAUTH_CLIENT_ID,
     GOOGLE_OAUTH_CLIENT_SECRET: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
+    ZOOM_CLIENT_ID: process.env.ZOOM_CLIENT_ID,
+    ZOOM_CLIENT_SECRET: process.env.ZOOM_CLIENT_SECRET,
+    ZOOM_WEBHOOK_SECRET: process.env.ZOOM_WEBHOOK_SECRET,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     API_VIDEO_BASE_URI: process.env.API_VIDEO_BASE_URI,
     API_VIDEO_API_KEY: process.env.API_VIDEO_API_KEY,
