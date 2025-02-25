@@ -19,35 +19,15 @@ export function FeedbackButton() {
     bottom: 0,
   });
 
-  // Load saved position from localStorage with bounds checking
+  // Always start at lower right corner
   const [position, setPosition] = useState(() => {
     if (typeof window === "undefined") return { x: 0, y: 0 };
 
-    const saved = localStorage.getItem("feedbackButtonPosition");
-    let pos: { x: number; y: number } | null = null;
+    const maxX = window.innerWidth - BUTTON_SIZE - BUTTON_PADDING;
+    const maxY = window.innerHeight - BUTTON_SIZE - BUTTON_PADDING;
 
-    if (saved) {
-      try {
-        pos = JSON.parse(saved);
-      } catch (e) {
-        pos = null;
-      }
-    }
-
-    // Default position (bottom right) or validate saved position
-    const maxX =
-      typeof window !== "undefined"
-        ? window.innerWidth - BUTTON_SIZE - BUTTON_PADDING
-        : 0;
-    const maxY =
-      typeof window !== "undefined"
-        ? window.innerHeight - BUTTON_SIZE - BUTTON_PADDING
-        : 0;
-
-    return {
-      x: pos ? Math.min(Math.max(BUTTON_PADDING, pos.x), maxX) : maxX,
-      y: pos ? Math.min(Math.max(BUTTON_PADDING, pos.y), maxY) : maxY,
-    };
+    // Always use the bottom right position
+    return { x: maxX, y: maxY };
   });
 
   // Motion values for smooth animations
@@ -69,16 +49,17 @@ export function FeedbackButton() {
       const maxX = window.innerWidth - BUTTON_SIZE - BUTTON_PADDING;
       const maxY = window.innerHeight - BUTTON_SIZE - BUTTON_PADDING;
 
+      // Always set to bottom right
       setPosition({
-        x: position.x || maxX,
-        y: position.y || maxY,
+        x: maxX,
+        y: maxY,
       });
 
-      x.set(position.x || maxX);
-      y.set(position.y || maxY);
+      x.set(maxX);
+      y.set(maxY);
       setIsPositioned(true);
     }
-  }, [isPositioned, position.x, position.y, x, y]);
+  }, [isPositioned, x, y]);
 
   // Update drag constraints and position on window resize
   useEffect(() => {
