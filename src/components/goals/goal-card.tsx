@@ -158,7 +158,7 @@ export const GoalCard = React.forwardRef<HTMLDivElement, GoalCardProps>(
                     <motion.h3
                       variants={itemVariants}
                       className={cn(
-                        "-mb-[0.1875rem] text-lg font-semibold",
+                        "text-lg font-semibold",
                         isCompleted && "text-muted-foreground/60",
                       )}
                     >

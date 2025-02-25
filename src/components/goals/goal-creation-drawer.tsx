@@ -101,7 +101,13 @@ export function GoalCreationDrawer({
     });
   const generateGoalSignals = api.goals.generateGoalSignals.useMutation({
     onSuccess: (data) => {
-      goalForm.setValue("signals", data);
+      // Sort signals: positive first, then negative
+      const sortedSignals = [...data].sort((a, b) => {
+        if (a.direction === "positive" && b.direction === "negative") return -1;
+        if (a.direction === "negative" && b.direction === "positive") return 1;
+        return 0;
+      });
+      goalForm.setValue("signals", sortedSignals);
     },
   });
 
@@ -149,7 +155,15 @@ export function GoalCreationDrawer({
       if (mode === "create" && !goalToInit.signals?.length) {
         generateGoalSignals.mutate({ goal_text: goalToInit.text });
       } else {
-        goalForm.setValue("signals", goalToInit.signals ?? []);
+        // Sort signals: positive first, then negative
+        const sortedSignals = [...(goalToInit.signals ?? [])].sort((a, b) => {
+          if (a.direction === "positive" && b.direction === "negative")
+            return -1;
+          if (a.direction === "negative" && b.direction === "positive")
+            return 1;
+          return 0;
+        });
+        goalForm.setValue("signals", sortedSignals);
       }
     },
     [generateGoalContextQuestions, generateGoalSignals, goalForm, mode],
