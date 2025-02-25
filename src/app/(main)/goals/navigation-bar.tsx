@@ -81,7 +81,7 @@ export function NavigationBar() {
     ? /^\/goals\/reports\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.exec(
         pathname,
       )
-      ? undefined
+      ? "reports"
       : "reports"
     : "goals";
 
@@ -98,15 +98,14 @@ export function NavigationBar() {
       >
         <motion.div
           className="pointer-events-none absolute inset-0 opacity-20"
-          style={
-            {
-              background: bgGradient,
-              "--gradient-color":
-                activeTab === "goals"
-                  ? "rgba(var(--primary-rgb), 0.2)"
-                  : "rgba(var(--secondary-rgb), 0.2)",
-            } as React.CSSProperties
-          }
+          style={{
+            background: bgGradient.get(),
+            // @ts-ignore -- CSS custom property not recognized by TypeScript's CSSProperties
+            "--gradient-color":
+              activeTab === "goals"
+                ? "rgba(var(--primary-rgb), 0.2)"
+                : "rgba(var(--secondary-rgb), 0.2)",
+          }}
         />
 
         <motion.div
@@ -122,7 +121,7 @@ export function NavigationBar() {
               <div>
                 <TabsTrigger
                   value="goals"
-                  className="group relative inline-flex h-12 items-center gap-2 rounded-md bg-transparent pl-6 pr-3 text-sm font-medium transition-all hover:text-primary data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
+                  className="group relative inline-flex h-12 items-center gap-2 rounded-md bg-transparent pl-6 pr-3 text-sm font-medium transition-all hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-sm"
                   onClick={() => handleTabClick("goals")}
                   onMouseEnter={() => setHovered("goals")}
                   onMouseLeave={() => setHovered(null)}
@@ -165,7 +164,7 @@ export function NavigationBar() {
               <div>
                 <TabsTrigger
                   value="reports"
-                  className="group relative inline-flex items-center gap-2 rounded-md bg-transparent py-2 pl-3 pr-6 text-sm font-medium transition-all hover:text-primary data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
+                  className="group relative inline-flex items-center gap-2 rounded-md bg-transparent py-2 pl-3 pr-6 text-sm font-medium transition-all hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-sm"
                   onClick={() => handleTabClick("reports")}
                   onMouseEnter={() => setHovered("reports")}
                   onMouseLeave={() => setHovered(null)}

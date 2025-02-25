@@ -2,47 +2,30 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import _ from "lodash";
-import {
-  ArrowDownRight,
-  ArrowUpRight,
-  ChevronDown,
-  ChevronLeft,
-  ChevronUp,
-  FileX2Icon,
-  GoalIcon,
-  Loader2,
-  MoreVertical,
-  Settings,
-} from "lucide-react";
+import { FileX2Icon, Loader2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { z } from "zod";
 
+import { GoalHeader } from "~/components/reports/goal-header";
+import { SectionsList } from "~/components/reports/sections-list";
+import { CommentsPanel } from "~/components/reports/comments-panel";
 import {
   GoalCreationDrawer,
   type GoalFormValues,
 } from "~/components/goals/goal-creation-drawer";
 import { MomentsPlayer } from "~/components/player/moments-player";
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { Textarea } from "~/components/ui/textarea";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "~/components/ui/tooltip";
+import { Progress } from "~/components/ui/progress";
+import { cn } from "~/lib/utils";
 import { transformMoment } from "~/lib/db/moments";
 import { createClient } from "~/lib/supabase/client";
 import type { Tables } from "~/lib/supabase/database.types";
-import { cn } from "~/lib/utils";
+import type {
+  ReportMoment,
+  ReportComment,
+  ReportSection,
+} from "~/types/reports";
 import { api } from "~/trpc/react";
 
 export default function ReportPage({
@@ -95,13 +78,11 @@ export default function ReportPage({
 
   const supabase = createClient();
 
-  const handleSubmitComment = (reportId: string, e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!commentContent.trim()) return;
-
+  const handleSubmitComment = (reportId: string, content: string) => {
+    if (!content.trim()) return;
     createComment.mutate({
       reportId,
-      content: commentContent.trim(),
+      content: content.trim(),
     });
   };
 
@@ -263,7 +244,7 @@ export default function ReportPage({
     if (!goalId && groupReports?.reports[0]?.report_goals[0]?.goal.id) {
       setExpandedGoals((prev) => ({
         ...prev,
-        [groupReports.reports[0]!.report_goals[0]!.goal.id]: true,
+        [groupReports.reports[0]?.report_goals[0]?.goal.id ?? ""]: true,
       }));
     }
 
@@ -342,6 +323,12 @@ export default function ReportPage({
     }
   };
 
+  const handleSectionSelect = (sectionId: string) => {
+    setSelectedReportSectionId(sectionId);
+    setCurrentMomentIndex(0);
+    setHasJustUpdatedCurrentMomentIndex(true);
+  };
+
   if (isLoading) {
     return (
       <div className="grid min-h-[calc(100vh-4rem)] place-items-center">
@@ -374,8 +361,6 @@ export default function ReportPage({
     );
   }
 
-  console.log(currentMomentIndex);
-
   return (
     <>
       {groupReports.reports.map((report) => {
@@ -394,7 +379,7 @@ export default function ReportPage({
           reportMoments.map((rm) => rm.moment.video_api_id),
         );
         const goal = report.report_goals[0]?.goal;
-        const isExpanded = goal ? expandedGoals[goal.id] : false;
+        const isExpanded = !!(goal && expandedGoals[goal.id]);
 
         // Calculate section scores
         const sectionScores = report.report_sections.map((section) => {
@@ -424,6 +409,10 @@ export default function ReportPage({
           ["desc"],
         );
 
+        const filteredReportMoments = reportMoments.filter(
+          (rm) => rm.report_section_id === selectedReportSectionId,
+        );
+
         return (
           <div
             key={report.id}
@@ -433,217 +422,35 @@ export default function ReportPage({
             )}
           >
             {/* Goal Header */}
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-4">
-                <div className="mt-1 rounded-full bg-muted p-2">
-                  <GoalIcon className="h-5 w-5 text-foreground" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-semibold">{goal?.text}</h1>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    based on {videoApiIds.length} meetings • {momentIds.length}{" "}
-                    moments • {report.report_comments.length} comments
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => goal && handleExpand(report.id, goal.id)}
-                >
-                  {isExpanded ? (
-                    <ChevronUp className="h-5 w-5" />
-                  ) : (
-                    <ChevronDown className="h-5 w-5" />
-                  )}
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreVertical className="h-5 w-5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() => goal && handleGoalEdit(goal)}
-                    >
-                      <Settings className="mr-2 h-4 w-4" />
-                      Edit Goal
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>Share</DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive">
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
+            <GoalHeader
+              goal={goal}
+              videoCount={videoApiIds.length}
+              momentCount={momentIds.length}
+              commentCount={report.report_comments.length}
+              isExpanded={isExpanded}
+              onExpand={(goalId) => handleExpand(report.id, goalId)}
+              onEdit={handleGoalEdit}
+            />
 
             {isExpanded && (
               <div
                 className={cn("grid h-full grid-cols-[1fr,1.5fr,0px] gap-6")}
               >
-                <div className="space-y-6">
-                  <Tabs
-                    defaultValue="positive"
-                    className="w-full"
-                    onValueChange={(value) => handleTabChange(value, report)}
-                  >
-                    <TabsList className="flex w-full justify-between gap-2 bg-transparent px-0">
-                      <TabsTrigger
-                        value="positive"
-                        className="flex w-full items-center gap-1.5 rounded-md border text-sm font-medium transition-colors hover:bg-accent data-[state=active]:border-emerald-500 data-[state=active]:bg-emerald-500/10 data-[state=inactive]:text-muted-foreground"
-                      >
-                        <ArrowUpRight className="h-4 w-4 text-emerald-500" />
-                        Doing Well
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="negative"
-                        className="flex w-full items-center gap-1.5 rounded-md border text-sm font-medium transition-colors hover:bg-accent data-[state=active]:border-amber-500 data-[state=active]:bg-amber-500/10 data-[state=inactive]:text-muted-foreground"
-                      >
-                        <GoalIcon className="h-4 w-4 text-amber-500" />
-                        Growth Areas
-                      </TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="positive" className="mt-6 space-y-4">
-                      {sortedPositiveSections.map((section, index) => {
-                        const sectionMoments = reportMoments.filter(
-                          (rm) => rm.report_section_id === section.id,
-                        );
-                        const shouldShow =
-                          user?.is_admin || sectionMoments.length > 0;
-
-                        if (!shouldShow) return null;
-
-                        return (
-                          <motion.button
-                            key={section.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{
-                              duration: 0.3,
-                              delay: index * 0.1,
-                              ease: "easeOut",
-                            }}
-                            onClick={() => {
-                              setSelectedReportSectionId(section.id);
-                              setCurrentMomentIndex(0);
-                              setHasJustUpdatedCurrentMomentIndex(true);
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                setSelectedReportSectionId(section.id);
-                                setCurrentMomentIndex(0);
-                                setHasJustUpdatedCurrentMomentIndex(true);
-                              }
-                            }}
-                            className={cn(
-                              "relative w-full cursor-pointer rounded-lg border p-4 text-left hover:border-emerald-500/50",
-                              selectedReportSectionId === section.id &&
-                                "border-emerald-500/50 bg-emerald-500/5",
-                            )}
-                          >
-                            {user?.is_admin && sectionMoments.length === 0 && (
-                              <Badge
-                                className="absolute right-2 top-2"
-                                variant="secondary"
-                              >
-                                Hidden for the user
-                              </Badge>
-                            )}
-                            <Tooltip open={user?.is_admin ? undefined : false}>
-                              <TooltipTrigger>
-                                <h3 className="text-left font-semibold">
-                                  {section.title}
-                                </h3>
-                              </TooltipTrigger>
-                              <TooltipContent align="start">
-                                {section.id}
-                              </TooltipContent>
-                            </Tooltip>
-                            <p className="mt-1 text-sm text-muted-foreground">
-                              {section.summary}
-                            </p>
-                          </motion.button>
-                        );
-                      })}
-                    </TabsContent>
-                    <TabsContent value="negative" className="mt-6 space-y-4">
-                      {sortedNegativeSections.map((section, index) => {
-                        const sectionMoments = reportMoments.filter(
-                          (rm) => rm.report_section_id === section.id,
-                        );
-                        const shouldShow =
-                          user?.is_admin || sectionMoments.length > 0;
-
-                        if (!shouldShow) return null;
-
-                        return (
-                          <motion.button
-                            key={section.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{
-                              duration: 0.3,
-                              delay: index * 0.1,
-                              ease: "easeOut",
-                            }}
-                            onClick={() => {
-                              setSelectedReportSectionId(section.id);
-                              setCurrentMomentIndex(0);
-                              setHasJustUpdatedCurrentMomentIndex(true);
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                setSelectedReportSectionId(section.id);
-                                setCurrentMomentIndex(0);
-                                setHasJustUpdatedCurrentMomentIndex(true);
-                              }
-                            }}
-                            className={cn(
-                              "relative w-full cursor-pointer rounded-lg border p-4 text-left hover:border-amber-500/50",
-                              selectedReportSectionId === section.id &&
-                                "border-amber-500/50 bg-amber-500/5",
-                            )}
-                          >
-                            {user?.is_admin && sectionMoments.length === 0 && (
-                              <Badge
-                                className="absolute right-2 top-2"
-                                variant="secondary"
-                              >
-                                Hidden for the user
-                              </Badge>
-                            )}
-                            <Tooltip open={user?.is_admin ? undefined : false}>
-                              <TooltipTrigger>
-                                <h3 className="text-left font-semibold">
-                                  {section.title}
-                                </h3>
-                              </TooltipTrigger>
-                              <TooltipContent align="start">
-                                {section.id}
-                              </TooltipContent>
-                            </Tooltip>
-                            <p className="mt-1 text-sm text-muted-foreground">
-                              {section.summary}
-                            </p>
-                          </motion.button>
-                        );
-                      })}
-                    </TabsContent>
-                  </Tabs>
-                </div>
+                <SectionsList
+                  positiveSections={sortedPositiveSections}
+                  negativeSections={sortedNegativeSections}
+                  reportMoments={reportMoments}
+                  selectedSectionId={selectedReportSectionId}
+                  onSectionSelect={handleSectionSelect}
+                  isAdmin={user?.is_admin}
+                  onTabChange={(value) => handleTabChange(value, report)}
+                />
 
                 <MomentsPlayer
-                  reportMoments={reportMoments
-                    .filter(
-                      (rm) => rm.report_section_id === selectedReportSectionId,
-                    )
-                    .map((rm, idx) => ({
-                      ...rm,
-                      moment: transformMoment(rm.moment, idx),
-                    }))}
+                  reportMoments={filteredReportMoments.map((rm, idx) => ({
+                    ...rm,
+                    moment: transformMoment(rm.moment, idx),
+                  }))}
                   currentMomentIndex={currentMomentIndex}
                   setCurrentMomentIndex={setCurrentMomentIndex}
                   hasJustUpdatedCurrentMomentIndex={
@@ -654,128 +461,16 @@ export default function ReportPage({
                   }
                 />
 
-                <div className="relative">
-                  <AnimatePresence mode="wait">
-                    {isCommentsVisible ? (
-                      <motion.div
-                        key="comments"
-                        initial={{ x: "100%" }}
-                        animate={{ x: 0 }}
-                        exit={{ x: "100%" }}
-                        transition={{
-                          type: "spring",
-                          stiffness: 400,
-                          damping: 40,
-                        }}
-                        className="absolute -top-2 right-0 z-30 h-[calc(100vh-12rem)] w-[300px] rounded-sm border bg-background shadow-lg"
-                      >
-                        <div className="flex h-12 items-center justify-between border-b px-4">
-                          <div className="flex items-center gap-2">
-                            <h2 className="text-sm font-medium">Comments</h2>
-                            {report.report_comments.length > 0 && (
-                              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary/10 px-1.5 text-xs font-medium text-primary">
-                                {report.report_comments.length}
-                              </span>
-                            )}
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setIsCommentsVisible(false)}
-                            className="-mr-2 h-full w-8 text-foreground hover:bg-transparent hover:text-muted-foreground"
-                          >
-                            <ChevronUp className="h-4 w-4 rotate-90" />
-                          </Button>
-                        </div>
-
-                        <div className="flex h-[calc(100%-6rem)] flex-col justify-between py-4">
-                          <div className="scrollbar-thin scrollbar-thumb-accent scrollbar-track-transparent -mr-2 flex-1 space-y-4 overflow-y-auto px-4 pr-6">
-                            {report.report_comments.map((comment, index) => (
-                              <motion.div
-                                key={comment.id}
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.05 }}
-                                className="group relative flex gap-2 rounded-lg"
-                              >
-                                <div className="w-full min-w-0">
-                                  <div className="flex items-baseline justify-between gap-2 text-sm">
-                                    <span className="truncate font-medium text-primary">
-                                      {comment.user.nickname}
-                                    </span>
-                                    <span className="shrink-0 text-[10px] text-muted-foreground">
-                                      {new Date(
-                                        comment.created_at,
-                                      ).toLocaleDateString("en-US", {
-                                        month: "short",
-                                        day: "numeric",
-                                        hour: "numeric",
-                                        minute: "numeric",
-                                      })}
-                                    </span>
-                                  </div>
-                                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                                    {comment.content}
-                                  </p>
-                                </div>
-                              </motion.div>
-                            ))}
-                          </div>
-
-                          <div className="absolute inset-x-0 bottom-0 rounded-b-lg border-t bg-background">
-                            <form
-                              onSubmit={(e) =>
-                                handleSubmitComment(report.id, e)
-                              }
-                              className="space-y-2"
-                            >
-                              <Textarea
-                                placeholder="Write a comment... (Press Enter to submit)"
-                                value={commentContent}
-                                onChange={(e) =>
-                                  setCommentContent(e.target.value)
-                                }
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter" && !e.shiftKey) {
-                                    e.preventDefault();
-                                    handleSubmitComment(report.id);
-                                  }
-                                }}
-                                rows={3}
-                                className="resize-none rounded-lg border-none bg-muted/50 placeholder:text-muted-foreground/50 focus-visible:ring-0"
-                                disabled={createComment.isPending}
-                              />
-                              <button type="submit" className="sr-only">
-                                Submit comment
-                              </button>
-                            </form>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        key="toggle"
-                        className="absolute -right-14 -top-2 h-8"
-                      >
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setIsCommentsVisible(true)}
-                          className="group relative flex h-8 items-center gap-1 rounded-l-full rounded-r-none border-r px-0 pr-2 shadow-sm"
-                        >
-                          <div className="relative flex h-8 w-8 items-center justify-center rounded-full">
-                            <ChevronLeft className="ml-1 h-3 w-3 transition-transform group-hover:-translate-x-0.5" />
-                          </div>
-                          <span className="pr-4 text-xs font-medium leading-none">
-                            {report.report_comments.length > 0
-                              ? `${report.report_comments.length} Comments`
-                              : "Comments"}
-                          </span>
-                        </Button>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                <CommentsPanel
+                  reportId={report.id}
+                  comments={report.report_comments as ReportComment[]}
+                  isVisible={isCommentsVisible}
+                  onToggleVisibility={() =>
+                    setIsCommentsVisible(!isCommentsVisible)
+                  }
+                  onSubmitComment={handleSubmitComment}
+                  isPendingSubmit={createComment.isPending}
+                />
               </div>
             )}
           </div>
