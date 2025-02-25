@@ -1,6 +1,8 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
+import { env } from "~/env";
+import { sendInvitationEmail } from "~/lib/email";
 import { JsonObject } from "~/lib/schemas/utils";
 import { createClient } from "~/lib/supabase/server";
 import {
@@ -232,5 +234,86 @@ export const authRouter = createTRPCRouter({
       }
 
       return coachProfile;
+    }),
+
+  handleZoomReviewerInvite: publicProcedure
+    .input(
+      z.object({
+        clientId: z.string().min(1, "Zoom app client ID is required"),
+        email: z.string().email("Please provide a valid email address"),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      if (input.clientId !== env.ZOOM_CLIENT_ID) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid Zoom app client ID.",
+        });
+      }
+
+      const supabase = await createClient();
+
+      try {
+        const { data: existingUser } = await supabase
+          .from("profiles")
+          .select("id, email")
+          .eq("email", input.email)
+          .single();
+
+        if (existingUser) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "A user with this email already exists.",
+          });
+        }
+
+        const { data: existingInvite } = await supabase
+          .from("user_invites")
+          .select("id")
+          .eq("email", input.email)
+          .single();
+
+        if (existingInvite) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "This email already has an active invitation.",
+          });
+        }
+
+        const { data: userInvite, error: inviteError } = await supabase
+          .from("user_invites")
+          .insert({
+            first_name: "Zoom Reviewer",
+            last_name: "",
+            company: "Zoom",
+            email: input.email,
+            invited_by: "",
+            role: "user",
+          })
+          .select("*, invited_by_profile:profiles(*)")
+          .single();
+
+        if (inviteError) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Failed to create invitation: ${inviteError.message}`,
+            cause: inviteError,
+          });
+        }
+
+        await sendInvitationEmail({ invite: userInvite });
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to send invitation: ${(error as Error).message}`,
+          cause: error,
+        });
+      }
     }),
 });
