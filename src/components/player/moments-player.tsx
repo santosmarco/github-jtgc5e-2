@@ -349,7 +349,7 @@ const ReactionControls = memo(function ReactionControls({
             <span className="text-xs">{thumbsDownCount}</span>
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Not Relevant</TooltipContent>
+        <TooltipContent className="bg-destructive">Not Relevant</TooltipContent>
       </Tooltip>
     </div>
   );
@@ -395,7 +395,7 @@ const NavigationControls = memo(function NavigationControls({
   }, [canGoPrevious, canGoNext, onPrevious, onNext]);
 
   return (
-    <div className="grid grid-cols-3 border-t border-border bg-background">
+    <div className="grid grid-cols-3 bg-background">
       {/* Reactions */}
       <div className="col-span-3 flex items-center justify-center border-b border-border px-4 py-2">
         <ReactionControls momentId={currentMoment.moment.id} />
