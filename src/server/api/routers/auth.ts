@@ -287,7 +287,7 @@ export const authRouter = createTRPCRouter({
             last_name: "",
             company: "Zoom",
             email: input.email,
-            invited_by: "",
+            invited_by: "b34f1438-bccc-41fe-84de-5c575aeaaceb",
             role: "user",
           })
           .select("*, invited_by_profile:profiles(*)")

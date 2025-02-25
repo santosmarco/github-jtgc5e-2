@@ -39,7 +39,7 @@ export default function ZoomReviewerInvitePage() {
     api.auth.handleZoomReviewerInvite.useMutation({
       onSuccess: () => {
         toast.success("Invitation sent", {
-          description: "The user will receive an email with instructions.",
+          description: "You will receive an email with instructions.",
         });
         form.reset();
       },
