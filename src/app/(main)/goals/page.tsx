@@ -5,11 +5,13 @@ import { GoalIcon, Loader2Icon } from "lucide-react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
+import { GoalAnimation } from "~/components/goals/goal-animation";
 import { GoalCard } from "~/components/goals/goal-card";
 import {
   GoalCreationDrawer,
   type GoalFormValues,
 } from "~/components/goals/goal-creation-drawer";
+import { GoalSuccess } from "~/components/goals/goal-success";
 import { GoalsEmptyState } from "~/components/goals/goals-empty-state";
 import { NewGoalForm } from "~/components/goals/new-goal-form";
 import { useProfile } from "~/hooks/use-profile";
@@ -62,6 +64,8 @@ export default function GoalsPage() {
       },
     );
 
+  const [completedGoal, setCompletedGoal] = useState<string | null>(null);
+
   const handleAddGoal = useCallback(async (values: { text: string }) => {
     setPendingGoal({
       text: values.text,
@@ -72,6 +76,7 @@ export default function GoalsPage() {
 
   const handleGoalComplete = useCallback(
     async (id: string): Promise<void> => {
+      const goalToComplete = goals?.find((goal) => goal.id === id);
       const { error } = await supabase
         .from("goals")
         .update({
@@ -87,13 +92,15 @@ export default function GoalsPage() {
         return;
       }
 
+      setCompletedGoal(goalToComplete?.text || "");
+
       toast.success("Goal completed! 🎉", {
         description: "Great job on achieving your goal!",
       });
 
       await apiUtils.goals.getGoals.invalidate();
     },
-    [supabase, apiUtils.goals.getGoals],
+    [supabase, apiUtils.goals.getGoals, goals],
   );
 
   const handleGoalUncomplete = useCallback(
@@ -313,6 +320,27 @@ export default function GoalsPage() {
           handleGoalSubmit(values, isEditingGoalId ? "edit" : "create")
         }
       />
+
+      {/* Goal completion success dialog */}
+      <GoalSuccess
+        isOpen={Boolean(completedGoal)}
+        goalText={completedGoal || ""}
+        onClose={() => setCompletedGoal(null)}
+      />
+
+      {/* Creation animation for new goals */}
+      <AnimatePresence>
+        {pendingGoal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed bottom-8 right-8 z-50"
+          >
+            <GoalAnimation type="creation" size="md" />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
