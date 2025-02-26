@@ -10,6 +10,11 @@ export async function __dangerouslyCreateAdminClient__() {
   return createBrowserClient<Database>(
     env.NEXT_PUBLIC_SUPABASE_URL,
     env.SUPABASE_SERVICE_ROLE_KEY,
+    {
+      auth: {
+        flowType: "pkce",
+      },
+    },
   );
 }
 

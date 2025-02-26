@@ -126,8 +126,8 @@ export function createCalendarSyncService(
           profile_email: calendar.profile.email,
         });
 
-        for (const event of events.results ?? []) {
-          await processCalendarEvent(calendar, event);
+        for (const calendarEvent of events.results ?? []) {
+          await processCalendarEvent(calendar, calendarEvent);
         }
 
         logger.info("✅ Completed calendar sync event processing", {
@@ -475,25 +475,25 @@ export function createCalendarSyncService(
     });
   }
 
-  async function getBotName(calendar: Tables<"recall_calendars_v2">) {
+  async function getBotName(calendar: RecallCalendarWithProfile) {
     return logger.trace("calendar-sync.get-bot-name", async (trace) => {
       trace.setAttributes({
         "calendar.id": calendar.id,
-        "profile.id": calendar.profile_id,
+        "profile.id": calendar.profile.id,
       });
 
       try {
         const { data: userSettings } = await supabase
           .from("user_settings")
           .select("*")
-          .eq("profile_id", calendar.profile_id)
+          .eq("profile_id", calendar.profile.id)
           .maybeSingle();
 
         const botName = userSettings?.bot_name ?? "Notetaker";
 
         logger.info("✅ Retrieved bot name", {
           calendar_id: calendar.id,
-          profile_id: calendar.profile_id,
+          profile_id: calendar.profile.id,
           bot_name: botName,
         });
 
@@ -502,7 +502,7 @@ export function createCalendarSyncService(
         logger.error("Failed to get bot name", {
           error,
           calendar_id: calendar.id,
-          profile_id: calendar.profile_id,
+          profile_id: calendar.profile.id,
         });
         await slack.error({
           text: `Failed to get bot name: ${(error as Error).message}`,
@@ -513,7 +513,7 @@ export function createCalendarSyncService(
   }
 
   async function getBotMetadata(
-    calendar: Tables<"recall_calendars_v2">,
+    calendar: RecallCalendarWithProfile,
     event: RecallCalendarEvent,
   ) {
     return logger.trace("calendar-sync.get-bot-metadata", async (trace) => {
@@ -528,14 +528,14 @@ export function createCalendarSyncService(
       });
 
       return {
-        user_id: calendar.profile_id,
+        user_id: calendar.profile.id,
         event_id: event.id,
       } satisfies BotMetadata;
     });
   }
 
   async function getBotDeduplicationKey(
-    calendar: Tables<"recall_calendars_v2">,
+    calendar: RecallCalendarWithProfile,
     event: RecallCalendarEvent,
   ) {
     return logger.trace(
@@ -546,7 +546,7 @@ export function createCalendarSyncService(
           "event.id": event.id,
         });
 
-        const key = `${event.start_time}-${event.meeting_url}-${calendar.profile_id}`;
+        const key = `${event.start_time}-${event.meeting_url}-${calendar.profile.id}`;
 
         logger.info("🔑 Generated deduplication key", {
           calendar_id: calendar.id,
@@ -579,7 +579,7 @@ export function createCalendarSyncService(
             event_id: event.id,
             calendar: calendar,
             event: event,
-            profile_id: calendar.profile_id,
+            profile_id: calendar.profile.id,
             user_email: calendar.profile.email,
           });
           await slack.error({
@@ -599,13 +599,91 @@ export function createCalendarSyncService(
           start_time: startTimeUnix,
           start_time_iso: event.start_time,
           deduplication_key: botDeduplicationKey,
-          profile_id: calendar.profile_id,
+          profile_id: calendar.profile.id,
           user_email: calendar.profile.email,
         });
 
         await slack.info({
           text: `[${calendar.profile.email}] Creating Zoom bot: ${botName} for meeting at ${new Date(event.start_time).toLocaleString()}`,
         });
+
+        const {
+          data: { user },
+        } = await supabase.auth.admin.getUserById(calendar.profile.id);
+
+        if (user?.app_metadata.recall_zoom_oauth_credential) {
+          logger.info("🔑 User has Zoom integration", {
+            user_id: user.id,
+          });
+
+          await slack.info({
+            text: `[${calendar.profile.email}] Creating Zoom bot: ${botName} for meeting at ${new Date(event.start_time).toLocaleString()}`,
+          });
+
+          const calendarEventResult =
+            await recall.calendarV2.calendar_events_bot_create(
+              {
+                deduplication_key: botDeduplicationKey,
+                bot_config: {
+                  bot_name: botName,
+                  automatic_leave: {
+                    waiting_room_timeout:
+                      BOT_AUTOMATIC_LEAVE.WAITING_ROOM_TIMEOUT_IN_SECONDS,
+                    noone_joined_timeout:
+                      BOT_AUTOMATIC_LEAVE.NOONE_JOINED_TIMEOUT_IN_SECONDS,
+                  },
+                  transcription_options: {
+                    provider: "gladia",
+                  },
+                  metadata: botMetadata,
+                } satisfies Partial<RecallBot>,
+              },
+              {
+                params: { id: event.id },
+              },
+            );
+
+          for (const bot of calendarEventResult.bots) {
+            logger.info("✅ Successfully created Zoom bot", {
+              bot_id: bot.bot_id,
+              event_id: event.id,
+              profile_id: calendar.profile.id,
+              user_email: calendar.profile.email,
+              deduplication_key: bot.deduplication_key,
+            });
+
+            await slack.success({
+              text: `[${calendar.profile.email}] Successfully created Zoom bot: ${bot.bot_id}`,
+            });
+          }
+
+          const { data: meetingBots } = await supabase
+            .from("meeting_bots_v2")
+            .insert(
+              calendarEventResult.bots.map(
+                (bot) =>
+                  ({
+                    id: bot.bot_id,
+                    provider: "recall",
+                    profile_id: calendar.profile.id,
+                    recall_calendar_id: calendar.id,
+                    event_id: event.id,
+                    deduplication_key: bot.deduplication_key,
+                  }) satisfies TablesInsert<"meeting_bots_v2">,
+              ),
+            )
+            .select("*");
+
+          logger.info("💾 Saved Zoom bots", {
+            event_id: event.id,
+            meeting_bots: meetingBots,
+            profile_id: calendar.profile.id,
+            user_email: calendar.profile.email,
+            bot_count: meetingBots?.length ?? 0,
+          });
+
+          return;
+        }
 
         const meetingJoinResult = await meetingBaas.meetings.join({
           bot_name: botName,
@@ -630,7 +708,7 @@ export function createCalendarSyncService(
         logger.info("✅ Successfully created Zoom bot", {
           bot_id: meetingJoinResult.bot_id,
           event_id: event.id,
-          profile_id: calendar.profile_id,
+          profile_id: calendar.profile.id,
           user_email: calendar.profile.email,
           start_time: event.start_time,
         });
@@ -654,7 +732,7 @@ export function createCalendarSyncService(
           .insert({
             id: meetingJoinResult.bot_id,
             provider: "meeting_baas",
-            profile_id: calendar.profile_id,
+            profile_id: calendar.profile.id,
             recall_calendar_id: calendar.id,
             event_id: event.id,
             deduplication_key:
@@ -666,7 +744,7 @@ export function createCalendarSyncService(
         logger.info("💾 Saved Zoom bots", {
           event_id: event.id,
           meeting_bots: meetingBots,
-          profile_id: calendar.profile_id,
+          profile_id: calendar.profile.id,
           user_email: calendar.profile.email,
           bot_count: meetingBots?.length ?? 0,
         });
@@ -675,7 +753,7 @@ export function createCalendarSyncService(
           error,
           event_id: event.id,
           calendar_id: calendar.id,
-          profile_id: calendar.profile_id,
+          profile_id: calendar.profile.id,
         });
         await slack.error({
           text: `[${calendar.profile.email}] Failed to handle Zoom meeting: ${(error as Error).message}`,
@@ -706,7 +784,7 @@ export function createCalendarSyncService(
               event_id: event.id,
               calendar: calendar,
               event: event,
-              profile_id: calendar.profile_id,
+              profile_id: calendar.profile.id,
               user_email: calendar.profile.email,
             },
           );
@@ -722,7 +800,7 @@ export function createCalendarSyncService(
           bot_name: botName,
           start_time: event.start_time,
           deduplication_key: botDeduplicationKey,
-          profile_id: calendar.profile_id,
+          profile_id: calendar.profile.id,
           user_email: calendar.profile.email,
         });
 
@@ -757,7 +835,7 @@ export function createCalendarSyncService(
           logger.info("✅ Successfully created Google Meet bot", {
             bot_id: bot.bot_id,
             event_id: event.id,
-            profile_id: calendar.profile_id,
+            profile_id: calendar.profile.id,
             user_email: calendar.profile.email,
             deduplication_key: bot.deduplication_key,
           });
@@ -775,7 +853,7 @@ export function createCalendarSyncService(
                 ({
                   id: bot.bot_id,
                   provider: "recall",
-                  profile_id: calendar.profile_id,
+                  profile_id: calendar.profile.id,
                   recall_calendar_id: calendar.id,
                   event_id: event.id,
                   deduplication_key: bot.deduplication_key,
@@ -787,7 +865,7 @@ export function createCalendarSyncService(
         logger.info("💾 Saved Google Meet bots", {
           event_id: event.id,
           meeting_bots: meetingBots,
-          profile_id: calendar.profile_id,
+          profile_id: calendar.profile.id,
           user_email: calendar.profile.email,
           bot_count: meetingBots?.length ?? 0,
         });
@@ -796,7 +874,7 @@ export function createCalendarSyncService(
           error,
           event_id: event.id,
           calendar_id: calendar.id,
-          profile_id: calendar.profile_id,
+          profile_id: calendar.profile.id,
         });
         await slack.error({
           text: `[${calendar.profile.email}] Failed to handle Google Meet meeting: ${(error as Error).message}`,

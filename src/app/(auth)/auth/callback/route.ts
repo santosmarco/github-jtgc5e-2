@@ -1,4 +1,6 @@
 import type { Session, User } from "@supabase/supabase-js";
+import { isAxiosError } from "axios";
+import _ from "lodash";
 import { type NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 
@@ -11,7 +13,8 @@ import { createClient, type SupabaseServerClient } from "~/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
   logger.info("Auth callback started", { url: request.url });
-  const { code, provider, next, invite } = validateAndSetupRequest(request);
+  const { code, provider, next, invite, userId } =
+    validateAndSetupRequest(request);
   logger.info("Request params", { code, provider, next, invite });
 
   // Step 1: Validate code presence
@@ -41,10 +44,105 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Step 3: Authenticate user
-    logger.info("Authenticating user", { code });
+    // For Zoom, we need to handle a custom flow
+    if (provider === "zoom") {
+      logger.info("Processing Zoom OAuth flow", { code });
+      const recall = createRecallClient();
+      const now = new Date().toISOString();
+
+      try {
+        // First, create or get the Zoom OAuth App
+        const { results } = await recall.zoomOauthApps.zoom_oauth_apps_list({
+          queries: {
+            client_id: env.ZOOM_CLIENT_ID,
+          },
+        });
+
+        let zoomApp = results?.[0];
+        logger.info("Zoom OAuth App search result", {
+          appExists: !!zoomApp,
+        });
+
+        if (!zoomApp) {
+          zoomApp = await recall.zoomOauthApps.zoom_oauth_apps_create({
+            id: uuidv4(),
+            kind: "user_level" as const,
+            client_id: env.ZOOM_CLIENT_ID,
+            client_secret: env.ZOOM_CLIENT_SECRET,
+            webhook_secret: env.ZOOM_WEBHOOK_SECRET,
+            webhook_last_validation: null,
+            created_at: now,
+          });
+          logger.info("Created new Zoom OAuth App", { appId: zoomApp.id });
+        }
+
+        // Create OAuth credentials using the original code
+        const credentials =
+          await recall.zoomOauthCredentials.zoom_oauth_credentials_create({
+            oauth_app: zoomApp.id,
+            id: uuidv4(),
+            status: "healthy" as const,
+            created_at: new Date().toISOString(),
+            meeting_sync_status: "not_started" as const,
+            authorization_code: {
+              code,
+              redirect_uri: `${getBaseUrl()}auth/callback`,
+            },
+            ...(userId && { user_id: userId }),
+          });
+
+        logger.info("Zoom OAuth credentials created in Recall", {
+          credentialsId: credentials.id,
+        });
+
+        // Now authenticate with Supabase
+        // Since we're not using Supabase's built-in Zoom OAuth,
+        // we'll need to check if the user is already authenticated
+        const supabaseAdmin = await __dangerouslyCreateAdminClient__();
+        const { data: userData } = await supabaseAdmin.auth.admin.getUserById(
+          userId ?? "",
+        );
+        await supabaseAdmin.auth.admin.updateUserById(userId ?? "", {
+          app_metadata: {
+            ...userData.user?.app_metadata,
+            integration_providers: _.uniq([
+              ...(userData.user?.app_metadata?.integration_providers ?? []),
+              "zoom",
+            ]),
+            recall_zoom_oauth_credential: {
+              id: credentials.id,
+            },
+          },
+        });
+
+        if (userData.user) {
+          // Redirect to integrations page with success parameter
+          return NextResponse.redirect(
+            `${getBaseUrl()}integrations?connectedTo=zoom`,
+          );
+        }
+
+        // No authenticated user, redirect to login
+        logger.warn("No authenticated user for Zoom integration");
+        return NextResponse.redirect(
+          `${getBaseUrl()}login?reason=unauthenticated&next=/integrations`,
+        );
+      } catch (error) {
+        logger.error("Failed to setup Zoom integration in Recall:", {
+          error,
+        });
+        if (isAxiosError(error)) {
+          logger.error("Zoom OAuth error response:", {
+            status: error.response?.status,
+            data: error.response?.data,
+          });
+        }
+        throw error;
+      }
+    }
+
     const { user, session } = await performAuthentication(supabase, code);
-    logger.info("Authentication result", { user, session });
+
     if (!user || !session) {
       logger.error("Authentication failed: Missing user or session data", {
         user,
@@ -52,6 +150,26 @@ export async function GET(request: NextRequest) {
       });
       return NextResponse.redirect(`${getBaseUrl()}auth/error`);
     }
+
+    // Add the provider to app_metadata for all providers (not just Zoom)
+    logger.info("Adding provider to app_metadata", {
+      userId: user.id,
+      provider,
+    });
+    const supabaseAdmin = await __dangerouslyCreateAdminClient__();
+    const { data: userData } = await supabaseAdmin.auth.admin.getUserById(
+      user.id,
+    );
+
+    await supabaseAdmin.auth.admin.updateUserById(user.id, {
+      app_metadata: {
+        ...userData.user?.app_metadata,
+        integration_providers: _.uniq([
+          ...(userData.user?.app_metadata?.integration_providers ?? []),
+          provider,
+        ]),
+      },
+    });
 
     // Step 4: Check user profile status
     logger.info("Checking user profile", { userId: user.id });
@@ -114,9 +232,6 @@ export async function GET(request: NextRequest) {
       logger.info("Google Calendar setup complete");
     }
 
-    // Step 7: Handle Zoom setup if applicable
-    // @todo
-
     // Step 8: Handle final redirect
     logger.info("Processing final redirect", { next });
     return handleRedirect(request, next);
@@ -142,6 +257,7 @@ function validateAndSetupRequest(request: NextRequest) {
   let invite: string | null = null;
   let provider: string | null = null;
   let next: string | null = searchParams.get("next");
+  let userId: string | null = searchParams.get("user_id");
 
   // Parse and validate the state parameter
   const stateParam = searchParams.get("state");
@@ -153,7 +269,10 @@ function validateAndSetupRequest(request: NextRequest) {
         nonce: string;
         timestamp: number;
         next: string | null;
+        user_id: string | null;
       };
+
+      userId ??= stateData.user_id;
 
       // Validate timestamp to prevent replay attacks (15 minute window)
       const timestamp = stateData.timestamp;
@@ -184,9 +303,10 @@ function validateAndSetupRequest(request: NextRequest) {
 
   const result = {
     code: searchParams.get("code"),
-    provider: provider ?? searchParams.get("provider"),
+    provider: provider ?? searchParams.get("provider") ?? "zoom",
     next: next ?? "",
     invite: invite ?? searchParams.get("invite"),
+    userId: userId ?? searchParams.get("user_id"),
   };
 
   logger.info("Request setup result", {
@@ -305,7 +425,7 @@ async function handleInvitedUserProfile(
           .from("profiles")
           .insert({
             id: user.id,
-            email: user.email!,
+            email: user.email || "",
             ...profileData,
           })
           .select("*")
@@ -348,6 +468,21 @@ async function setupGoogleCalendar(
   profile: Tables<"profiles">,
 ) {
   logger.info("Setting up Google Calendar", { user, profile });
+
+  // If there's no refresh token, we can't set up Google Calendar
+  if (!session.provider_refresh_token) {
+    logger.error("Missing provider refresh token", { user });
+    return;
+  }
+
+  // Store Google Calendar credentials in app_metadata
+  const supabaseAdmin = await __dangerouslyCreateAdminClient__();
+  const { data: userData } = await supabaseAdmin.auth.admin.getUserById(
+    user.id,
+  );
+
+  const existingRecallCalendar = await maybeGetRecallCalendar(user);
+
   const { data: existingCalendar } = await supabase
     .from("recall_calendars_v2")
     .select("*, profile:profiles(*)")
@@ -356,13 +491,39 @@ async function setupGoogleCalendar(
     .maybeSingle();
   logger.info("Existing calendar check", { existingCalendar });
 
-  if (!existingCalendar && profile.role !== "coach") {
+  if (
+    existingRecallCalendar?.id &&
+    existingCalendar?.id &&
+    existingCalendar.id !== existingRecallCalendar.id
+  ) {
+    logger.info("Updating recall calendar", { userId: user.id });
+    await supabase
+      .from("recall_calendars_v2")
+      .update({
+        id: existingRecallCalendar.id,
+      })
+      .eq("id", existingCalendar.id);
+  }
+
+  if (!existingRecallCalendar && profile.role !== "coach") {
     logger.info("Creating new recall calendar", { userId: user.id });
     const recallCalendar = await createRecallCalendar(
       user,
       session.provider_refresh_token,
     );
     logger.info("Recall calendar created", { recallCalendar });
+
+    // Update app_metadata with Google Calendar credentials
+    await supabaseAdmin.auth.admin.updateUserById(user.id, {
+      app_metadata: {
+        ...userData.user?.app_metadata,
+        recall_google_calendar_credential: {
+          id: recallCalendar.id,
+          refresh_token: session.provider_refresh_token,
+        },
+      },
+    });
+
     await supabase.from("recall_calendars_v2").insert({
       id: recallCalendar.id,
       profile_id: user.id,
@@ -372,6 +533,18 @@ async function setupGoogleCalendar(
     });
     logger.info("Calendar setup complete", { userId: user.id });
   }
+}
+
+async function maybeGetRecallCalendar(user: User) {
+  const recall = createRecallClient();
+  const allRecallCalendars = await recall.calendarV2.calendars_list({
+    queries: {
+      platform: "google_calendar",
+    },
+  });
+  return allRecallCalendars.results?.find(
+    (calendar) => calendar.oauth_email === user.email,
+  );
 }
 
 async function createRecallCalendar(

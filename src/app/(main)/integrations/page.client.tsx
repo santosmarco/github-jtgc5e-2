@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import _ from "lodash";
 import { ArrowRight, Puzzle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -64,7 +65,6 @@ const integrations = [
     description: "Automatically analyze and process your Zoom recordings.",
     provider: "zoom",
     icon: SiZoom,
-    comingSoon: true,
   },
   {
     name: "Slack",
@@ -85,6 +85,7 @@ const integrations = [
 
 export function IntegrationsPageClient() {
   const userQuery = api.auth.getUser.useQuery();
+  const removeProviderMutation = api.auth.removeProvider.useMutation();
   const supabase = createClient();
   const router = useRouter();
   const [connectedTo, setConnectedTo] = useQueryState(
@@ -109,6 +110,7 @@ export function IntegrationsPageClient() {
           nonce,
           timestamp: Date.now(),
           next: "/integrations",
+          user_id: userQuery.data?.id,
         }),
       );
 
@@ -127,49 +129,54 @@ export function IntegrationsPageClient() {
           ...(provider === "zoom" && {
             queryParams: {
               response_type: "code",
-              access_type: "offline",
+              client_id: "HpctcAXT0uBNkR_2aLHHg",
+              redirect_uri: `${getBaseUrl()}auth/callback`,
+              state,
             },
-            scopes: "meeting:read meeting:write recording:read recording:write",
           }),
         },
       });
     },
-    [supabase],
+    [supabase, userQuery.data?.id],
   );
 
   const handleDisconnect = useCallback(
     async (provider: Integration["provider"]) => {
       setDisconnectingProviders((prev) => [...prev, provider]);
 
-      const integrationIdentity = userQuery.data?.identities?.find(
-        (i) => i.provider === provider,
-      );
+      // Check if the provider is actually connected
+      const isProviderConnected =
+        userQuery.data?.app_metadata?.integration_providers?.includes(provider);
 
-      if (!integrationIdentity) {
-        toast.error("Not connected", {
-          description: "You are not connected to this integration.",
+      if (!isProviderConnected) {
+        toast.info("Not connected", {
+          description: "You are not currently connected to this integration.",
         });
         setDisconnectingProviders((prev) => prev.filter((p) => p !== provider));
         return;
       }
 
-      const { error } = await supabase.auth.unlinkIdentity(integrationIdentity);
+      try {
+        // Only attempt to remove if connected
+        await removeProviderMutation.mutateAsync({
+          provider,
+          userId: userQuery.data?.id ?? "",
+        });
 
-      if (error) {
-        toast.error("Failed to disconnect", { description: error.message });
+        await userQuery.refetch();
+        toast.info("Disconnected", {
+          description: "You are no longer connected to this integration.",
+        });
+      } catch (error) {
+        toast.error("Failed to disconnect", {
+          description:
+            error instanceof Error ? error.message : "An error occurred",
+        });
+      } finally {
         setDisconnectingProviders((prev) => prev.filter((p) => p !== provider));
-        return;
       }
-
-      await userQuery.refetch();
-
-      toast.info("Disconnected", {
-        description: "You are no longer connected to this integration.",
-      });
-
-      setDisconnectingProviders((prev) => prev.filter((p) => p !== provider));
     },
-    [supabase, userQuery],
+    [userQuery, removeProviderMutation],
   );
 
   useEffect(() => {
@@ -213,16 +220,16 @@ export function IntegrationsPageClient() {
           className="grid gap-6 md:grid-cols-2"
         >
           {integrations.map((integration) => {
-            const isConnected = userQuery.data?.identities?.some(
-              (i) => i.provider === integration.provider,
-            );
+            const isConnected =
+              userQuery.data?.app_metadata?.integration_providers?.includes(
+                integration.provider,
+              );
             const isLoading =
               userQuery.isLoading ||
               connectingProviders.includes(integration.provider) ||
               disconnectingProviders.includes(integration.provider);
-            const providerList = userQuery.data?.identities?.map(
-              (i) => i.provider,
-            );
+            const providerList =
+              userQuery.data?.app_metadata?.integration_providers ?? [];
 
             return (
               <motion.div

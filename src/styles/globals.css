@@ -63,4 +63,14 @@
   * {
     @apply border-border;
   }
+
+  ::selection {
+    background-color: hsl(250 95% 76% / 0.8);
+    color: white;
+  }
+
+  .dark ::selection {
+    background-color: hsl(217 91% 60% / 0.9);
+    color: white;
+  }
 }

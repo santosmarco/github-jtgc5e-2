@@ -3,13 +3,34 @@ import { z } from "zod";
 
 import { env } from "~/env";
 import { sendInvitationEmail } from "~/lib/email";
+import { logger } from "~/lib/logging/server";
+import { createClient as createRecallClient } from "~/lib/recall/client";
 import { JsonObject } from "~/lib/schemas/utils";
+import { __dangerouslyCreateAdminClient__ } from "~/lib/supabase/admin";
 import { createClient } from "~/lib/supabase/server";
 import {
   createTRPCRouter,
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
+
+// Define a type for Zoom OAuth credential
+interface ZoomOAuthCredential {
+  id: string;
+  [key: string]: unknown;
+}
+
+// Define a type for app_metadata
+interface AppMetadata {
+  integration_providers?: string[];
+  recall_zoom_oauth_credential?: ZoomOAuthCredential | null;
+  recall_google_calendar_credential?: {
+    id: string;
+    refresh_token: string;
+    [key: string]: unknown;
+  } | null;
+  [key: string]: unknown;
+}
 
 export const authRouter = createTRPCRouter({
   signOut: publicProcedure.mutation(async () => {
@@ -234,6 +255,245 @@ export const authRouter = createTRPCRouter({
       }
 
       return coachProfile;
+    }),
+
+  removeProvider: protectedProcedure
+    .input(
+      z.object({
+        provider: z.string().min(1, "Provider is required"),
+        userId: z.string().min(1, "User ID is required"),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      try {
+        const supabaseAdmin = await __dangerouslyCreateAdminClient__();
+        const recall = createRecallClient();
+
+        // Get current user data
+        const { data: userData, error: getUserError } =
+          await supabaseAdmin.auth.admin.getUserById(input.userId);
+
+        if (getUserError) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Failed to get user data: ${getUserError.message}`,
+            cause: getUserError,
+          });
+        }
+
+        if (!userData.user) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "User not found",
+          });
+        }
+
+        // Special handling for Zoom provider
+        if (input.provider === "zoom") {
+          try {
+            logger.info("Cleaning up Zoom credentials in Recall", {
+              userId: input.userId,
+            });
+
+            // Check if we have a stored credential ID in app_metadata
+            const credentialId =
+              userData.user.app_metadata?.recall_zoom_oauth_credential?.id;
+
+            // Track if we should clear the credential from metadata
+            let shouldClearCredential = false;
+
+            if (credentialId) {
+              try {
+                logger.info("Deleting Zoom credential from app_metadata", {
+                  credentialId,
+                  userId: input.userId,
+                });
+
+                // Delete the credential using the ID from app_metadata
+                await recall.zoomOauthCredentials.zoom_oauth_credentials_destroy(
+                  undefined,
+                  {
+                    params: {
+                      id: credentialId,
+                    },
+                  },
+                );
+
+                logger.info("Successfully deleted Zoom credential", {
+                  credentialId,
+                });
+
+                // Credential was successfully deleted, mark to clear from metadata
+                shouldClearCredential = true;
+              } catch (destroyError) {
+                logger.error("Failed to delete Zoom credential", {
+                  credentialId,
+                  error: destroyError,
+                });
+              }
+            } else {
+              logger.info("No Zoom credential ID found in app_metadata", {
+                userId: input.userId,
+              });
+            }
+
+            // Get current providers array or initialize empty array
+            const currentProviders =
+              userData.user.app_metadata?.integration_providers || [];
+
+            // Remove the specified provider
+            const updatedProviders = currentProviders.filter(
+              (provider: string) => provider !== input.provider,
+            );
+
+            // Create updated metadata, conditionally clearing credential reference
+            const updatedMetadata: AppMetadata = {
+              ...userData.user.app_metadata,
+              integration_providers: updatedProviders,
+            };
+
+            // Clear the credential data if successfully deleted
+            if (shouldClearCredential) {
+              updatedMetadata.recall_zoom_oauth_credential = null;
+              logger.info("Cleared Zoom credential reference from metadata", {
+                userId: input.userId,
+              });
+            }
+
+            // Update user metadata
+            const { error: updateError } =
+              await supabaseAdmin.auth.admin.updateUserById(input.userId, {
+                app_metadata: updatedMetadata,
+              });
+
+            if (updateError) {
+              throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: `Failed to update user metadata: ${updateError.message}`,
+                cause: updateError,
+              });
+            }
+
+            return { success: true };
+          } catch (recallError) {
+            // Log the error but continue with removing the provider from app_metadata
+            logger.error("Failed to clean up Zoom credentials in Recall", {
+              error: recallError,
+              userId: input.userId,
+            });
+          }
+        }
+
+        // Special handling for Google provider
+        if (input.provider === "google") {
+          logger.info("Cleaning up Google Calendar credential", {
+            userId: input.userId,
+          });
+
+          try {
+            await recall.calendarV2.calendars_destroy(undefined, {
+              params: {
+                id: userData.user.app_metadata
+                  ?.recall_google_calendar_credential?.id,
+              },
+            });
+          } catch {
+            const allRecallCalendars = await recall.calendarV2.calendars_list({
+              queries: {
+                platform: "google_calendar",
+              },
+            });
+            logger.info("All Recall calendars", {
+              allRecallCalendars,
+            });
+
+            const calendarToDelete = allRecallCalendars.results?.find(
+              (calendar) => calendar.oauth_email === userData.user.email,
+            );
+
+            if (calendarToDelete) {
+              await recall.calendarV2.calendars_destroy(undefined, {
+                params: { id: calendarToDelete.id },
+              });
+            }
+          }
+
+          // Get current providers array or initialize empty array
+          const currentProviders =
+            userData.user.app_metadata?.integration_providers || [];
+
+          // Remove the specified provider
+          const updatedProviders = currentProviders.filter(
+            (provider: string) => provider !== input.provider,
+          );
+
+          // Create updated metadata, clearing credential reference
+          const updatedMetadata: AppMetadata = {
+            ...userData.user.app_metadata,
+            integration_providers: updatedProviders,
+            recall_google_calendar_credential: null,
+          };
+
+          // Update user metadata
+          const { error: updateError } =
+            await supabaseAdmin.auth.admin.updateUserById(input.userId, {
+              app_metadata: updatedMetadata,
+            });
+
+          if (updateError) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: `Failed to update user metadata: ${updateError.message}`,
+              cause: updateError,
+            });
+          }
+
+          logger.info("Successfully cleared Google Calendar credentials", {
+            userId: input.userId,
+          });
+
+          return { success: true };
+        }
+
+        // Handle non-Zoom providers or fallback if Zoom cleanup fails
+        // Get current providers array or initialize empty array
+        const currentProviders =
+          userData.user.app_metadata?.integration_providers || [];
+
+        // Remove the specified provider
+        const updatedProviders = currentProviders.filter(
+          (provider: string) => provider !== input.provider,
+        );
+
+        // Update user metadata
+        const { error: updateError } =
+          await supabaseAdmin.auth.admin.updateUserById(input.userId, {
+            app_metadata: {
+              ...userData.user.app_metadata,
+              integration_providers: updatedProviders,
+            },
+          });
+
+        if (updateError) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Failed to update user metadata: ${updateError.message}`,
+            cause: updateError,
+          });
+        }
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to remove provider: ${(error as Error).message}`,
+          cause: error,
+        });
+      }
     }),
 
   handleZoomReviewerInvite: publicProcedure
