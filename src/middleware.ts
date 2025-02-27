@@ -39,6 +39,6 @@ export const middleware = withLogtail(async (request: LogtailRequest) => {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|embed|api/webhooks|api/emails|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|embed|api/webhooks|api/emails|_zoom|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
