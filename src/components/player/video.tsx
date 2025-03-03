@@ -44,6 +44,7 @@ export type VideoPlayerProps = {
   end_time?: number;
   ideal_time?: number | null;
   initialPlayTime?: number;
+  isQAMode?: boolean;
 };
 
 const PLAYBACK_SPEEDS = [0.8, 1, 1.2, 1.5, 1.7, 2, 2.5];
@@ -57,6 +58,7 @@ export function VideoPlayer({
   end_time,
   ideal_time,
   initialPlayTime,
+  isQAMode,
 }: VideoPlayerProps) {
   const {
     videoRef,
@@ -307,10 +309,15 @@ export function VideoPlayer({
         >
           <Tooltip open={!!hoveredMoment}>
             <div className="relative -mb-1 h-1 w-full rounded-full bg-accent">
-              {momentsShown?.map((moment) => (
+              {momentsShown?.map((moment, index) => (
                 <Tooltip key={moment.index}>
                   <TooltipTrigger
-                    className="absolute top-0 h-full rounded-full bg-primary"
+                    className={cn(
+                      "absolute top-0 h-full rounded-full",
+                      isQAMode && index % 2 === 0
+                        ? "bg-primary"
+                        : "bg-accent-foreground",
+                    )}
                     style={{
                       // Adjust the marker positions by subtracting start_time if trimmed.
                       left: `${
@@ -328,6 +335,8 @@ export function VideoPlayer({
                             timelineDuration) *
                         100
                       }%`,
+                      top: isQAMode ? (index % 2 === 0 ? "0%" : "50%") : "0%",
+                      height: isQAMode ? "50%" : "100%",
                     }}
                   />
                   <TooltipContent className="bg-accent text-xs text-foreground">
