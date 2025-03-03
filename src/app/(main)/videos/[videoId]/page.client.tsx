@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import _ from "lodash";
-import { CameraIcon, ChevronLeft } from "lucide-react";
+import { CameraIcon, ChevronLeft, Beaker } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
 import { memo } from "react";
@@ -42,6 +42,10 @@ export function VideoPageClient({ videoId }: VideoPageClientProps) {
   });
   const [category, setCategory] = useQueryState("category", parseAsString);
   const [startAt, setStartAt] = useQueryState("startAt", parseAsInteger);
+  const [isQAMode, setIsQAMode] = useQueryState(
+    "qa",
+    parseAsString.withDefault("false"),
+  );
   const vtt = video?.vtt ?? "";
   const summary = video?.summary;
   const moments = video?.moments ?? [];
@@ -125,16 +129,29 @@ export function VideoPageClient({ videoId }: VideoPageClientProps) {
             <div className="font-bold lg:text-base">{video.title}</div>
           </motion.div>
         </motion.div>
-        {user?.role !== "coach" && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
-            className="mr-4"
-          >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
+          className="mr-4 flex items-center gap-2"
+        >
+          {user?.is_admin && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                setIsQAMode(isQAMode === "true" ? "false" : "true")
+              }
+              className="flex items-center gap-2 text-muted-foreground hover:text-primary"
+            >
+              <Beaker className="h-4 w-4" />
+              <span className="text-sm">QA Mode</span>
+            </Button>
+          )}
+          {user?.role !== "coach" && (
             <DeleteMeetingButton meetingId={video.videoId} />
-          </motion.div>
-        )}
+          )}
+        </motion.div>
       </header>
 
       <div className="container mx-auto space-y-8 pt-24">
@@ -146,6 +163,7 @@ export function VideoPageClient({ videoId }: VideoPageClientProps) {
                 ({ activity }) => !category || activity === category,
               )}
               startAt={startAt ?? undefined}
+              isQAMode={isQAMode === "true"}
             />
             {summary && (
               <div className="block space-y-2 pb-2 lg:hidden">
@@ -153,12 +171,34 @@ export function VideoPageClient({ videoId }: VideoPageClientProps) {
                 <VideoTags video={video} />
               </div>
             )}
-            <VideoMoments
-              moments={sortedMoments}
-              selectedCategory={category ?? undefined}
-              onCategoryChange={handleCategoryChange}
-              onSkipToMoment={handleSkipToMoment}
-            />
+            {isQAMode === "true" ? (
+              <div className="grid grid-cols-2 gap-8">
+                <div className="border-r border-border pr-8">
+                  <VideoMoments
+                    moments={sortedMoments}
+                    selectedCategory={category ?? undefined}
+                    onCategoryChange={handleCategoryChange}
+                    onSkipToMoment={handleSkipToMoment}
+                  />
+                </div>
+                <div>
+                  <VideoMoments
+                    moments={sortedMoments}
+                    selectedCategory={category ?? undefined}
+                    onCategoryChange={handleCategoryChange}
+                    onSkipToMoment={handleSkipToMoment}
+                    variant="qa"
+                  />
+                </div>
+              </div>
+            ) : (
+              <VideoMoments
+                moments={sortedMoments}
+                selectedCategory={category ?? undefined}
+                onCategoryChange={handleCategoryChange}
+                onSkipToMoment={handleSkipToMoment}
+              />
+            )}
           </div>
           <div className="hidden space-y-3 lg:block">
             {summary && <MeetingSummary summary={summary} />}
