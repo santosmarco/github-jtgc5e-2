@@ -7,6 +7,7 @@ import { createLiveMeetingService } from "~/lib/meeting-bots/live-meeting/servic
 import type { MeetingBotsServiceDependencies } from "~/lib/meeting-bots/types";
 import { createClient as createRecallClient } from "~/lib/recall/client";
 import { slack } from "~/lib/slack";
+import { __dangerouslyCreateAdminClient__ } from "~/lib/supabase/admin";
 import { createClient as createSupabaseClient } from "~/lib/supabase/server";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
@@ -51,7 +52,7 @@ export const calendarRouter = createTRPCRouter({
     )
     .mutation(async ({ input }) => {
       const deps = {
-        supabase: await createSupabaseClient(),
+        supabase: await __dangerouslyCreateAdminClient__(),
         logger: logger,
         recall: createRecallClient(),
         meetingBaas: meetingBaas,
