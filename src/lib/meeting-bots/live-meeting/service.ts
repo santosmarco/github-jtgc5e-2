@@ -3,6 +3,7 @@ import utc from "dayjs/plugin/utc";
 
 import { BOT_AUTOMATIC_LEAVE } from "../constants";
 import type { MeetingBotsServiceDependencies } from "../types";
+import { error } from "console";
 
 dayjs.extend(utc);
 
@@ -52,7 +53,10 @@ export function createLiveMeetingService(deps: MeetingBotsServiceDependencies) {
         provider: isZoomMeeting ? "meeting_baas" : "recall",
       });
 
-      if (isZoomMeeting) {
+      if (
+        isZoomMeeting &&
+        !userDetails.user.app_metadata?.integration_providers?.includes("zoom")
+      ) {
         const meetingJoinResult = await meetingBaas.meetings
           .join({
             bot_name: botName,
@@ -204,6 +208,26 @@ export function createLiveMeetingService(deps: MeetingBotsServiceDependencies) {
   }
 
   async function getUserDetails(userId: string) {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.admin.getUserById(userId);
+
+    if (userError) {
+      logger.error("❌ Failed to get user details", {
+        error: userError,
+        user_id: userId,
+      });
+      return null;
+    }
+
+    if (!user) {
+      logger.error("❓ User not found", {
+        user_id: userId,
+      });
+      return null;
+    }
+
     const { data: userDetails, error: userDetailsError } = await supabase
       .from("user_settings")
       .select("*, profile:profiles!inner(*)")
@@ -232,6 +256,7 @@ export function createLiveMeetingService(deps: MeetingBotsServiceDependencies) {
     });
 
     return {
+      user,
       profile,
       settings,
     };
