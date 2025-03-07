@@ -371,8 +371,8 @@ export default function ReportPage({
               !rm.moment._internal_thumbs_down ||
               rm.moment._internal_thumbs_down <= 0,
           ),
-          [(rm) => rm.report_section_confidence, (rm) => rm.score],
-          ["desc", "desc"],
+          [(rm) => rm.score],
+          ["desc"],
         );
         const momentIds = _.uniq(reportMoments.map((rm) => rm.moment.id));
         const videoApiIds = _.uniq(
