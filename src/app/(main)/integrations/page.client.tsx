@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { animate, motion } from "framer-motion";
 import _ from "lodash";
 import { ArrowRight, Puzzle } from "lucide-react";
 import Link from "next/link";
@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState } from "react";
 import { SiApple, SiGoogle, SiSlack, SiZoom } from "react-icons/si";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
+import { cn } from "~/lib/utils";
 
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
@@ -98,6 +99,17 @@ export function IntegrationsPageClient() {
   const [disconnectingProviders, setDisconnectingProviders] = useState<
     Integration["provider"][]
   >([]);
+
+  // Subtle highlight effect for the Zoom card
+  const [isZoomHighlighted, setIsZoomHighlighted] = useState(true);
+
+  // Turn off highlight after 5 seconds
+  useEffect(() => {
+    if (isZoomHighlighted) {
+      const timer = setTimeout(() => setIsZoomHighlighted(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [isZoomHighlighted]);
 
   const handleConnect = useCallback(
     async (provider: Integration["provider"]) => {
@@ -212,6 +224,29 @@ export function IntegrationsPageClient() {
             Connect Titan with your favorite tools and supercharge your
             workflow.
           </p>
+
+          {/* New Zoom Integration Banner */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+            className="mx-auto mt-6 max-w-md rounded-lg bg-gradient-to-r from-primary/10 to-primary/5 p-4"
+          >
+            <div className="flex items-center gap-3">
+              <SiZoom className="h-6 w-6 text-primary" />
+              <div className="text-left">
+                <h3 className="flex items-center gap-2 text-sm font-semibold">
+                  <span>New! Better Zoom Bots</span>
+                  <span className="inline-flex rounded-full bg-primary/20 px-2 py-0.5 text-xs font-medium text-primary">
+                    Upgrade Available
+                  </span>
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Get better results with enhanced Zoom analyses
+                </p>
+              </div>
+            </div>
+          </motion.div>
         </motion.div>
 
         {/* Available Integrations */}
@@ -231,17 +266,50 @@ export function IntegrationsPageClient() {
             const providerList =
               userQuery.data?.app_metadata?.integration_providers ?? [];
 
+            // Check if this is the Zoom integration
+            const isZoom = integration.provider === "zoom";
+
             return (
               <motion.div
                 key={integration.provider}
                 variants={itemVariants}
-                whileHover={{ scale: 1.02 }}
-                className="group"
+                whileHover={{ scale: 1.01 }}
+                className={cn(
+                  "group relative",
+                  isZoom && isZoomHighlighted && "z-10",
+                )}
               >
-                <Card className="relative overflow-hidden border-2 border-border p-6 transition-colors duration-300 hover:border-primary/50">
+                {/* Subtle highlight for Zoom */}
+                {isZoom && isZoomHighlighted && (
+                  <motion.div
+                    className="absolute -inset-2 -z-10 rounded-xl bg-primary/5"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 0.6 }}
+                    transition={{ duration: 1 }}
+                  />
+                )}
+
+                <Card
+                  className={cn(
+                    "relative overflow-hidden border-2 border-border p-6 transition-colors duration-300 hover:border-primary/30",
+                    isZoom &&
+                      isZoomHighlighted &&
+                      "border-primary/30 shadow-md shadow-primary/5",
+                  )}
+                >
                   <div className="absolute -right-12 -top-12 h-24 w-24 rotate-45 bg-gradient-to-br from-primary/10 to-transparent" />
+
+                  {/* Upgrade label for Zoom */}
+                  {isZoom && (
+                    <div className="absolute right-3 top-3 rounded-full bg-primary/90 px-2 py-0.5 text-xs font-medium text-foreground">
+                      UPGRADE
+                    </div>
+                  )}
+
                   <div className="mb-4 flex items-center gap-3">
-                    <integration.icon className="h-5 w-5" />
+                    <integration.icon
+                      className={cn("h-5 w-5", isZoom && "text-primary")}
+                    />
                     <h3 className="text-xl font-semibold">
                       {integration.name}
                     </h3>
@@ -262,7 +330,13 @@ export function IntegrationsPageClient() {
                         ? handleDisconnect(integration.provider)
                         : handleConnect(integration.provider)
                     }
-                    className="group/btn relative overflow-hidden"
+                    className={cn(
+                      "group/btn relative overflow-hidden",
+                      isZoom &&
+                        !isConnected &&
+                        isZoomHighlighted &&
+                        "ring-1 ring-primary/30",
+                    )}
                     disabled={
                       integration.comingSoon ??
                       (isLoading ||
@@ -283,7 +357,9 @@ export function IntegrationsPageClient() {
                               ? "Disconnect"
                               : isLoading
                                 ? "Loading..."
-                                : "Connect"}
+                                : isZoom && !isConnected
+                                  ? "Upgrade Now"
+                                  : "Upgrade"}
                     </span>
                     <motion.div
                       initial={{ x: "-100%" }}

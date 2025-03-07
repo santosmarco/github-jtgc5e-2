@@ -54,6 +54,7 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
   const { profile: selectedProfile, setProfile: setSelectedProfile } =
     useProfile();
   const [authSectionIsHovered, setAuthSectionIsHovered] = useState(false);
+  const [showZoomPromo, setShowZoomPromo] = useState(true);
   const { data: tasks } = api.onboarding.getTaskList.useQuery({
     profileId: selectedProfile?.id ?? user.id,
   });
@@ -86,6 +87,9 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
     void fetchProfiles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [didSetProfiles]);
+
+  const hasConnectedZoom =
+    user.app_metadata.integration_providers?.includes("zoom");
 
   useEffect(() => {
     if (!didSetProfiles || selectedProfile) return;
@@ -135,6 +139,20 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
       label: "Moments",
       isActive: pathname.startsWith("/moments"),
     },
+    // Add Integrations to main menu with subtle indicator
+    !hasConnectedZoom && {
+      href: "/integrations",
+      icon: (
+        <div className="relative">
+          <Puzzle className="h-5 w-5" />
+          {showZoomPromo && !hasConnectedZoom && (
+            <div className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-primary" />
+          )}
+        </div>
+      ),
+      label: "Integrations",
+      isActive: pathname.startsWith("/integrations"),
+    },
   ].filter((x): x is Exclude<typeof x, false | undefined> => !!x);
 
   return (
@@ -162,7 +180,15 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.1 }}
             >
-              <Link href={item.href} onClick={onNavClick}>
+              <Link
+                href={item.href}
+                onClick={() => {
+                  onNavClick?.();
+                  if (item.href === "/integrations") {
+                    setShowZoomPromo(false);
+                  }
+                }}
+              >
                 <motion.div
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -325,12 +351,22 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
                     <DropdownMenuSeparator />
                   </>
                 )}
-                <Link href="/integrations" onClick={onNavClick}>
+                <Link
+                  href="/integrations"
+                  onClick={() => {
+                    onNavClick?.();
+                    setShowZoomPromo(false);
+                  }}
+                >
                   <DropdownMenuItem className="cursor-pointer gap-2">
                     <Puzzle className="h-4 w-4" />
                     Integrations
+                    {showZoomPromo && !hasConnectedZoom && (
+                      <span className="ml-1.5 h-1.5 w-1.5 rounded-full bg-primary" />
+                    )}
                   </DropdownMenuItem>
                 </Link>
+
                 {(selectedProfile?.role === "coach" ||
                   selectedProfile?.is_admin) && (
                   <Link href="/clients" onClick={onNavClick}>
