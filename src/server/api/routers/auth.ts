@@ -561,7 +561,19 @@ export const authRouter = createTRPCRouter({
           });
         }
 
-        await sendInvitationEmail({ invite: userInvite });
+        try {
+          await sendInvitationEmail({ invite: userInvite });
+        } catch (emailError) {
+          console.error("Failed to send invitation email:", emailError);
+          // Remove the created invite since email sending failed
+          await supabase.from("user_invites").delete().eq("id", userInvite.id);
+
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Failed to send invitation email: ${(emailError as Error).message}`,
+            cause: emailError,
+          });
+        }
 
         return { success: true };
       } catch (error) {
