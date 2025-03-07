@@ -252,13 +252,17 @@ export default function ReportPage({
     if (selectedReportSectionId === null && groupReports) {
       const report = groupReports.reports[0];
       if (report) {
+        // Filter valid moments
+        const validReportMoments = report.report_moments.filter(
+          (rm) =>
+            !rm.moment._internal_thumbs_down ||
+            rm.moment._internal_thumbs_down <= 0,
+        );
+
         // Calculate section scores for initial selection
         const sectionScores = report.report_sections.map((section) => {
-          const sectionMoments = report.report_moments.filter(
-            (rm) =>
-              rm.report_section_id === section.id &&
-              (!rm.moment._internal_thumbs_down ||
-                rm.moment._internal_thumbs_down <= 0),
+          const sectionMoments = validReportMoments.filter(
+            (rm) => rm.report_section_id === section.id,
           );
           const totalScore = sectionMoments.reduce(
             (sum, rm) => sum + (rm.score ?? 0),
@@ -270,6 +274,17 @@ export default function ReportPage({
           };
         });
 
+        // Find the section with the highest scoring moment
+        const highestScoringMoment = _.maxBy(
+          validReportMoments,
+          (rm) => rm.score,
+        );
+        const sectionWithHighestMoment = highestScoringMoment
+          ? sectionScores.find(
+              (s) => s.id === highestScoringMoment.report_section_id,
+            )
+          : null;
+
         // Get highest scoring positive section
         const sortedPositiveSections = _.orderBy(
           sectionScores.filter((s) => s.direction === "positive"),
@@ -277,8 +292,13 @@ export default function ReportPage({
           ["desc"],
         );
 
-        const firstPositiveSection = sortedPositiveSections[0];
-        setSelectedReportSectionId(firstPositiveSection?.id ?? null);
+        // Prioritize section with highest moment if it's positive, otherwise use highest scoring positive section
+        if (sectionWithHighestMoment?.direction === "positive") {
+          setSelectedReportSectionId(sectionWithHighestMoment.id);
+        } else {
+          const firstPositiveSection = sortedPositiveSections[0];
+          setSelectedReportSectionId(firstPositiveSection?.id ?? null);
+        }
       }
     }
   }, [groupReports, selectedReportSectionId, goalId]);
@@ -396,16 +416,34 @@ export default function ReportPage({
           };
         });
 
-        // Sort sections by total score
+        // Find the section with the highest scoring moment
+        const highestScoringMoment = _.maxBy(reportMoments, (rm) => rm.score);
+        const sectionWithHighestMoment = highestScoringMoment
+          ? sectionScores.find(
+              (s) => s.id === highestScoringMoment.report_section_id,
+            )
+          : null;
+
+        // Sort sections by total score, but prioritize the section with highest moment
         const sortedPositiveSections = _.orderBy(
           sectionScores.filter((s) => s.direction === "positive"),
-          ["totalScore"],
+          [
+            (s) =>
+              s.id === sectionWithHighestMoment?.id
+                ? Number.POSITIVE_INFINITY
+                : s.totalScore,
+          ],
           ["desc"],
         );
 
         const sortedNegativeSections = _.orderBy(
           sectionScores.filter((s) => s.direction === "negative"),
-          ["totalScore"],
+          [
+            (s) =>
+              s.id === sectionWithHighestMoment?.id
+                ? Number.POSITIVE_INFINITY
+                : s.totalScore,
+          ],
           ["desc"],
         );
 
