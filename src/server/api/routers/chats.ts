@@ -145,7 +145,7 @@ export const chatsRouter = createTRPCRouter({
       z.object({
         userId: z.string(),
         topic: z.string(),
-        messages: AICoreMessage.array(),
+        messages: /* AICoreMessage.array() */ z.any().array(),
       }),
     )
     .mutation(async ({ input }) => {

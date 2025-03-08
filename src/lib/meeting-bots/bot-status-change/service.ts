@@ -285,9 +285,7 @@ export function createBotStatusChangeService(
             ...(storageUrl && { mp4_source_url: storageUrl }),
             ...(apiVideoId && { api_video_id: apiVideoId }),
           })
-          .eq("id", meetingBot.id)
-          .select("*")
-          .single();
+          .eq("id", meetingBot.id);
 
         if (meetingBotUpdateError) {
           logger.error("❌ Failed to update meeting bot with video data", {
@@ -698,7 +696,10 @@ export function createBotStatusChangeService(
         user_email: bot.profile.email,
       });
 
-      await processVideo({ meetingBotId: bot.id });
+      await processVideo({
+        meetingBotId: bot.id,
+        steps: ["all"],
+      });
 
       logger.info("✅ Video processing initiated", {
         bot_id: bot.id,
@@ -824,18 +825,21 @@ export function createBotStatusChangeService(
     });
 
     const words = transcript.flatMap((slice, transcriptSliceIndex) =>
-      slice.words.map(
-        (word, wordIndex) =>
-          ({
-            bot_id: bot.id,
-            transcript_slice_id: transcriptSlices[transcriptSliceIndex]?.id!,
-            start_time: word.start_timestamp,
-            end_time: word.end_timestamp,
-            content: word.text,
-            index: wordIndex,
-          }) satisfies TablesInsert<"transcript_words_v2"> &
-            TablesInsert<"transcript_words">,
-      ),
+      slice.words
+        .map(
+          (word, wordIndex) =>
+            ({
+              bot_id: bot.id,
+              transcript_slice_id:
+                transcriptSlices[transcriptSliceIndex]?.id ?? "",
+              start_time: word.start_timestamp,
+              end_time: word.end_timestamp,
+              content: word.text,
+              index: wordIndex,
+            }) satisfies TablesInsert<"transcript_words_v2"> &
+              TablesInsert<"transcript_words">,
+        )
+        .filter((word) => !!word.transcript_slice_id),
     );
 
     logger.info("📝 Inserting transcript words", {

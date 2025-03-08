@@ -9,10 +9,12 @@ import {
 } from "~/lib/meeting-bots/schemas";
 import { slack } from "~/lib/slack";
 
-export const dynamic = "force-static";
+export const maxDuration = 800;
 
 export async function POST(request: NextRequest) {
-  async function run() {
+  const response = new NextResponse(null, { status: 200 });
+
+  const processWebhook = async () => {
     try {
       const body = await request.json();
 
@@ -49,13 +51,21 @@ export async function POST(request: NextRequest) {
           bot_id: parsedBody.data.bot_id,
           status: parsedBody.data.status,
         });
-        void processMeetingBot.trigger(parsedBody, {
-          tags: [
-            parsedBody.event,
-            parsedBody.data.status.code,
-            parsedBody.data.bot_id,
-          ],
-        });
+
+        try {
+          await processMeetingBot.trigger(parsedBody, {
+            tags: [
+              parsedBody.event,
+              parsedBody.data.status.code,
+              parsedBody.data.bot_id,
+            ],
+          });
+        } catch (triggerError) {
+          logger.error("❌ Failed to trigger meeting bot processing", {
+            error: triggerError,
+            bot_id: parsedBody.data.bot_id,
+          });
+        }
       } else if (parsedBody.event === "calendar.sync_events") {
         const query = CalendarSyncEventQuery.catch({
           full: "false",
@@ -67,29 +77,53 @@ export async function POST(request: NextRequest) {
           query,
         });
 
-        void syncCalendars.trigger({ ...parsedBody, ...query });
+        try {
+          await syncCalendars.trigger({ ...parsedBody, ...query });
+        } catch (syncError) {
+          logger.error("❌ Failed to trigger calendar sync", {
+            error: syncError,
+            calendar_id: parsedBody.data.calendar_id,
+          });
+        }
       }
 
       logger.info("✨ Successfully processed webhook", {
         event: parsedBody.event,
       });
 
-      await slack.success({
-        text: `Successfully processed ${parsedBody.event} webhook`,
-      });
+      try {
+        await slack.success({
+          text: `Successfully processed ${parsedBody.event} webhook`,
+        });
+      } catch (slackError) {
+        logger.error("❌ Failed to send success notification to Slack", {
+          error: slackError,
+        });
+      }
     } catch (error) {
       logger.error("❌ Failed to process webhook", {
         error,
         url: request.url,
       });
 
-      await slack.error({
-        text: `Failed to process webhook: ${(error as Error).message}`,
-      });
+      try {
+        await slack.error({
+          text: `Failed to process webhook: ${(error as Error).message}`,
+        });
+      } catch (slackError) {
+        logger.error("❌ Failed to send error notification to Slack", {
+          original_error: error,
+          slack_error: slackError,
+        });
+      }
     }
-  }
+  };
 
-  await run();
+  await processWebhook().catch((error) => {
+    logger.error("❌ Unhandled error in webhook processing", {
+      error,
+    });
+  });
 
-  return new NextResponse(null, { status: 200 });
+  return response;
 }

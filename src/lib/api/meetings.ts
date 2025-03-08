@@ -28,14 +28,30 @@ export async function deleteMeeting({ videoId }: MeetingDeleteParams) {
   }
 }
 
+export const ProcessVideoStep = z.enum([
+  "all",
+  "ingestion",
+  "action_items",
+  "topics",
+  "moments",
+  "observations",
+  "embed_moments",
+  "embed_meeting",
+  "embed_qna",
+  "embed_notes",
+]);
+export type ProcessVideoStep = z.infer<typeof ProcessVideoStep>;
+
 export const ProcessVideoParams = z.object({
   meetingBotId: z.string(),
+  steps: z.array(ProcessVideoStep).default(["all"]),
 });
 export type ProcessVideoParams = z.infer<typeof ProcessVideoParams>;
 
-export async function processVideo({ meetingBotId }: ProcessVideoParams) {
+export async function processVideo(params: z.input<typeof ProcessVideoParams>) {
   try {
-    const response = await client.post("/process_video", { meetingBotId });
+    const parsedParams = ProcessVideoParams.parse(params);
+    const response = await client.post("/process_video", parsedParams);
     return response.data;
   } catch (error) {
     if (axios.isAxiosError(error)) {
