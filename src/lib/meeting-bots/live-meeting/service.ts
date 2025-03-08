@@ -9,6 +9,7 @@ dayjs.extend(utc);
 export type LaunchLiveMeetingInput = {
   userId: string;
   meetingUrl: string;
+  meetingTitle: string;
 };
 
 export function createLiveMeetingService(deps: MeetingBotsServiceDependencies) {
@@ -37,10 +38,17 @@ export function createLiveMeetingService(deps: MeetingBotsServiceDependencies) {
               .minute(Math.floor(dayjs(now).minute() / 5) * 5)
               .second(0)
               .millisecond(0); // e.g., 12:00:00.000 stays 12:00:00.000, 12:01:30.500 -> 12:00:00.000, 12:02:15.200 -> 12:00:00.000, 12:03:45.800 -> 12:00:00.000, 12:04:20.100 -> 12:00:00.000, 12:05:10.900 -> 12:05:00.000, 12:06:40.300 -> 12:05:00.000, etc.
+
+      // Generate a default title if none is provided
+      const meetingTitle =
+        input.meetingTitle.trim() ||
+        `Untitled Meeting (${dayjs().format("MMMM D, YYYY [at] h:mm A")})`;
+
       const botName = userDetails.settings.bot_name ?? "Notetaker";
       const botDeduplicationKey = `${dayjs(nowRoundedToTheFifthMinute).format("YYYY-MM-DDTHH:mm:ss[Z]")}-${input.meetingUrl}-${userDetails.profile.id}`;
       const botMetadata = {
         user_id: userDetails.profile.id,
+        meeting_title: meetingTitle,
       };
 
       const isZoomMeeting = input.meetingUrl.includes("zoom.us");
@@ -50,6 +58,7 @@ export function createLiveMeetingService(deps: MeetingBotsServiceDependencies) {
         bot_name: botName,
         deduplication_key: botDeduplicationKey,
         provider: isZoomMeeting ? "meeting_baas" : "recall",
+        meeting_title: meetingTitle,
       });
 
       if (
@@ -102,6 +111,7 @@ export function createLiveMeetingService(deps: MeetingBotsServiceDependencies) {
             profile_id: userDetails.profile.id,
             provider: "meeting_baas",
             deduplication_key: botDeduplicationKey,
+            title: meetingTitle,
           });
 
         if (meetingBotError) {
@@ -142,6 +152,9 @@ export function createLiveMeetingService(deps: MeetingBotsServiceDependencies) {
             provider: "gladia",
           },
           metadata: botMetadata,
+          meeting_metadata: {
+            title: meetingTitle,
+          },
         })
         .catch((error) => {
           logger.error("❌ Failed to create recall meeting bot", {
@@ -170,6 +183,7 @@ export function createLiveMeetingService(deps: MeetingBotsServiceDependencies) {
           profile_id: userDetails.profile.id,
           provider: "recall",
           deduplication_key: botDeduplicationKey,
+          title: meetingTitle,
         });
 
       if (meetingBotError) {

@@ -47,6 +47,7 @@ export const calendarRouter = createTRPCRouter({
     .input(
       z.object({
         meetingUrl: z.string().url(),
+        meetingTitle: z.string(),
         profileId: z.string(),
       }),
     )
@@ -65,6 +66,7 @@ export const calendarRouter = createTRPCRouter({
       const result = await launchLiveMeeting({
         userId: input.profileId,
         meetingUrl: input.meetingUrl,
+        meetingTitle: input.meetingTitle,
       });
 
       if (!result.success) {

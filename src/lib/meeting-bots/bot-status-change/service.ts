@@ -646,6 +646,10 @@ export function createBotStatusChangeService(
   ) {
     const fallbackTitle = `Meeting Recording - ${bot.id}`;
     try {
+      if (typeof bot.title === "string" && bot.title.trim() !== "") {
+        return bot.title;
+      }
+
       return bot.event?.raw &&
         typeof bot.event.raw === "object" &&
         "summary" in bot.event.raw &&

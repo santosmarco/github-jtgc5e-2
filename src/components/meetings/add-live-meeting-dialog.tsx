@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import dayjs from "dayjs";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -32,6 +33,10 @@ const formSchema = z.object({
     .string()
     .url("Please enter a valid URL")
     .min(1, "Meeting URL is required"),
+  meetingTitle: z
+    .string()
+    .max(100, "Meeting title must be less than 100 characters")
+    .optional(),
 });
 
 type AddLiveMeetingDialogProps = {
@@ -47,10 +52,13 @@ export function AddLiveMeetingDialog({
   onClose,
   onSuccess,
 }: AddLiveMeetingDialogProps) {
+  const defaultMeetingTitle = `Untitled Meeting (${dayjs().format("MMMM D, YYYY [at] h:mm A")})`;
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       meetingUrl: "",
+      meetingTitle: "",
     },
   });
 
@@ -69,7 +77,8 @@ export function AddLiveMeetingDialog({
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     launchMeetingBot({
-      meetingUrl: values.meetingUrl,
+      meetingUrl: values.meetingUrl.trim(),
+      meetingTitle: values.meetingTitle?.trim() || defaultMeetingTitle,
       profileId: user.id,
     });
   }
@@ -80,12 +89,34 @@ export function AddLiveMeetingDialog({
         <DialogHeader>
           <DialogTitle>Add Live Meeting</DialogTitle>
           <DialogDescription>
-            Enter the URL of your meeting to start recording and analyzing.
+            Enter the URL and title of your meeting to start recording and
+            analyzing.
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="meetingTitle"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Meeting Title{" "}
+                    <small className="text-muted-foreground">(optional)</small>
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder={defaultMeetingTitle}
+                      {...field}
+                      disabled={isLoading}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="meetingUrl"
@@ -94,6 +125,7 @@ export function AddLiveMeetingDialog({
                   <FormLabel>Meeting URL</FormLabel>
                   <FormControl>
                     <Input
+                      autoFocus
                       placeholder="https://meet.google.com/..."
                       {...field}
                       disabled={isLoading}

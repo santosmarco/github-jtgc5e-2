@@ -986,6 +986,7 @@ export type Database = {
           speakers: string[] | null
           status: string | null
           sub_code: string | null
+          title: string | null
         }
         Insert: {
           api_video_id?: string | null
@@ -1006,6 +1007,7 @@ export type Database = {
           speakers?: string[] | null
           status?: string | null
           sub_code?: string | null
+          title?: string | null
         }
         Update: {
           api_video_id?: string | null
@@ -1026,6 +1028,7 @@ export type Database = {
           speakers?: string[] | null
           status?: string | null
           sub_code?: string | null
+          title?: string | null
         }
         Relationships: [
           {
@@ -1070,6 +1073,7 @@ export type Database = {
           speakers: string[] | null
           status: string | null
           sub_code: string | null
+          title: string | null
         }
         Insert: {
           api_video_id?: string | null
@@ -1089,6 +1093,7 @@ export type Database = {
           speakers?: string[] | null
           status?: string | null
           sub_code?: string | null
+          title?: string | null
         }
         Update: {
           api_video_id?: string | null
@@ -1108,6 +1113,7 @@ export type Database = {
           speakers?: string[] | null
           status?: string | null
           sub_code?: string | null
+          title?: string | null
         }
         Relationships: [
           {
@@ -2252,6 +2258,7 @@ export type Database = {
           altitude_score_reasoning_not_lower: string | null
           altitude_type: string | null
           created_at: string | null
+          final_score: number | null
           id: string
           intensity: number | null
           interestingness_reasoning: string | null
@@ -2298,6 +2305,7 @@ export type Database = {
           altitude_score_reasoning_not_lower?: string | null
           altitude_type?: string | null
           created_at?: string | null
+          final_score?: number | null
           id?: string
           intensity?: number | null
           interestingness_reasoning?: string | null
@@ -2344,6 +2352,7 @@ export type Database = {
           altitude_score_reasoning_not_lower?: string | null
           altitude_type?: string | null
           created_at?: string | null
+          final_score?: number | null
           id?: string
           intensity?: number | null
           interestingness_reasoning?: string | null
