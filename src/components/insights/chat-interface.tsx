@@ -391,7 +391,12 @@ export function ChatInterface({
               variants={containerVariants}
               className="flex flex-wrap items-center justify-center gap-3 px-3"
             >
-              {["Coach", ...topics].map((topic) => {
+              {[
+                "Coach",
+                ...topics.filter((t) =>
+                  Object.keys(TOPIC_CONFIGURATIONS).includes(t),
+                ),
+              ].map((topic) => {
                 const TopicIcon = getMomentIcon(topic);
                 const topicConversationStarter =
                   TOPIC_CONFIGURATIONS[topic]?.conversationStarter;
