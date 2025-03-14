@@ -238,7 +238,22 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "chats_user_id_fkey1"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "chats_user_id_fkey1"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       chunks: {
         Row: {
@@ -635,6 +650,53 @@ export type Database = {
           },
         ]
       }
+      goal_signal_templates: {
+        Row: {
+          activity: string | null
+          activity_type: string | null
+          created_at: string
+          direction: Database["public"]["Enums"]["goal_signal_direction_type"]
+          goal_template_id: string
+          id: string
+          is_current: boolean
+          tag: string | null
+          target_person_type: string | null
+          text: string
+        }
+        Insert: {
+          activity?: string | null
+          activity_type?: string | null
+          created_at?: string
+          direction: Database["public"]["Enums"]["goal_signal_direction_type"]
+          goal_template_id: string
+          id?: string
+          is_current?: boolean
+          tag?: string | null
+          target_person_type?: string | null
+          text: string
+        }
+        Update: {
+          activity?: string | null
+          activity_type?: string | null
+          created_at?: string
+          direction?: Database["public"]["Enums"]["goal_signal_direction_type"]
+          goal_template_id?: string
+          id?: string
+          is_current?: boolean
+          tag?: string | null
+          target_person_type?: string | null
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_signal_templates_goal_template_id_fkey"
+            columns: ["goal_template_id"]
+            isOneToOne: false
+            referencedRelation: "goal_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       goal_signals: {
         Row: {
           activity: string | null
@@ -695,6 +757,41 @@ export type Database = {
           },
         ]
       }
+      goal_templates: {
+        Row: {
+          context: string | null
+          created_at: string
+          id: string
+          is_current: boolean
+          skill_id: string
+          text: string
+        }
+        Insert: {
+          context?: string | null
+          created_at?: string
+          id?: string
+          is_current?: boolean
+          skill_id: string
+          text: string
+        }
+        Update: {
+          context?: string | null
+          created_at?: string
+          id?: string
+          is_current?: boolean
+          skill_id?: string
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_templates_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       goals: {
         Row: {
           completed_at: string | null
@@ -707,6 +804,7 @@ export type Database = {
           previous_goal_id: string | null
           profile_id: string
           progress: number
+          skill_id: string
           text: string
           user_provided_context: string | null
         }
@@ -721,6 +819,7 @@ export type Database = {
           previous_goal_id?: string | null
           profile_id: string
           progress?: number
+          skill_id: string
           text: string
           user_provided_context?: string | null
         }
@@ -735,6 +834,7 @@ export type Database = {
           previous_goal_id?: string | null
           profile_id?: string
           progress?: number
+          skill_id?: string
           text?: string
           user_provided_context?: string | null
         }
@@ -760,6 +860,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "goals_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
         ]
       }
       group_report_processing_status: {
@@ -768,6 +875,7 @@ export type Database = {
           goal_ids: string[] | null
           id: string
           profile_id: string | null
+          skill_id: string | null
           status: Database["public"]["Enums"]["processing_status"] | null
         }
         Insert: {
@@ -775,6 +883,7 @@ export type Database = {
           goal_ids?: string[] | null
           id: string
           profile_id?: string | null
+          skill_id?: string | null
           status?: Database["public"]["Enums"]["processing_status"] | null
         }
         Update: {
@@ -782,6 +891,7 @@ export type Database = {
           goal_ids?: string[] | null
           id?: string
           profile_id?: string | null
+          skill_id?: string | null
           status?: Database["public"]["Enums"]["processing_status"] | null
         }
         Relationships: [
@@ -797,6 +907,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_report_processing_status_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
             referencedColumns: ["id"]
           },
         ]
@@ -1779,6 +1896,7 @@ export type Database = {
           date: string | null
           db_created_at: string | null
           duration_in_ms: number | null
+          duration_in_seconds: number | null
           meeting_baas_original_json: Json | null
           name: string | null
           original_vtt_file: string | null
@@ -1801,6 +1919,7 @@ export type Database = {
           date?: string | null
           db_created_at?: string | null
           duration_in_ms?: number | null
+          duration_in_seconds?: number | null
           meeting_baas_original_json?: Json | null
           name?: string | null
           original_vtt_file?: string | null
@@ -1823,6 +1942,7 @@ export type Database = {
           date?: string | null
           db_created_at?: string | null
           duration_in_ms?: number | null
+          duration_in_seconds?: number | null
           meeting_baas_original_json?: Json | null
           name?: string | null
           original_vtt_file?: string | null
@@ -3051,7 +3171,13 @@ export type Database = {
           created_at: string
           end_date: string | null
           id: string
+          personality_badges: string[] | null
+          personality_color: string | null
+          personality_description: string | null
+          personality_icon: string | null
+          personality_text: string | null
           profile_id: string | null
+          skill_id: string | null
           start_date: string | null
           summary: string | null
           updated_at: string | null
@@ -3060,7 +3186,13 @@ export type Database = {
           created_at?: string
           end_date?: string | null
           id?: string
+          personality_badges?: string[] | null
+          personality_color?: string | null
+          personality_description?: string | null
+          personality_icon?: string | null
+          personality_text?: string | null
           profile_id?: string | null
+          skill_id?: string | null
           start_date?: string | null
           summary?: string | null
           updated_at?: string | null
@@ -3069,7 +3201,13 @@ export type Database = {
           created_at?: string
           end_date?: string | null
           id?: string
+          personality_badges?: string[] | null
+          personality_color?: string | null
+          personality_description?: string | null
+          personality_icon?: string | null
+          personality_text?: string | null
           profile_id?: string | null
+          skill_id?: string | null
           start_date?: string | null
           summary?: string | null
           updated_at?: string | null
@@ -3087,6 +3225,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
             referencedColumns: ["id"]
           },
         ]
@@ -3201,6 +3346,65 @@ export type Database = {
           vad_word_count?: number | null
           video_api_id?: string | null
           word_count?: number | null
+        }
+        Relationships: []
+      }
+      skill_scales: {
+        Row: {
+          id: string
+          negative_tag_description: string | null
+          negative_tag_title: string
+          positive_tag_description: string | null
+          positive_tag_title: string
+          skill_id: string
+        }
+        Insert: {
+          id?: string
+          negative_tag_description?: string | null
+          negative_tag_title: string
+          positive_tag_description?: string | null
+          positive_tag_title: string
+          skill_id: string
+        }
+        Update: {
+          id?: string
+          negative_tag_description?: string | null
+          negative_tag_title?: string
+          positive_tag_description?: string | null
+          positive_tag_title?: string
+          skill_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skill_scales_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      skills: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          title?: string
         }
         Relationships: []
       }
@@ -3826,6 +4030,7 @@ export type Database = {
           date: string | null
           db_created_at: string | null
           duration_in_ms: number | null
+          duration_in_seconds: number | null
           meeting_baas_original_json: Json | null
           name: string | null
           original_vtt_file: string | null

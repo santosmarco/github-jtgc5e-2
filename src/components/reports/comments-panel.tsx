@@ -91,7 +91,7 @@ export const CommentsPanel = ({
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="absolute -top-2 right-0 z-30 h-[calc(100vh-12rem)] w-[300px] rounded-sm border bg-background shadow-lg"
+            className="absolute -top-2 right-0 z-30 h-[calc(100vh-28rem)] w-[300px] rounded-sm border bg-background shadow-lg"
           >
             <motion.div
               initial={{ opacity: 0, y: -10 }}

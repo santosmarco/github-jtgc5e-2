@@ -6,14 +6,13 @@ import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
 import { GoalAnimation } from "~/components/goals/goal-animation";
-import { GoalCard } from "~/components/goals/goal-card";
+import { SkillCard } from "~/components/goals/goal-card";
 import {
   GoalCreationDrawer,
   type GoalFormValues,
 } from "~/components/goals/goal-creation-drawer";
 import { GoalSuccess } from "~/components/goals/goal-success";
 import { GoalsEmptyState } from "~/components/goals/goals-empty-state";
-import { NewGoalForm } from "~/components/goals/new-goal-form";
 import { useProfile } from "~/hooks/use-profile";
 import { createClient } from "~/lib/supabase/client";
 import type { Tables, TablesInsert } from "~/lib/supabase/database.types";
@@ -30,6 +29,30 @@ const staggerAnimation = {
   },
 } as const;
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.3,
+    },
+  },
+  exit: {
+    opacity: 0,
+    transition: {
+      staggerChildren: 0.05,
+      staggerDirection: -1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -20 },
+};
+
 export default function GoalsPage() {
   const supabase = createClient();
   const { profile } = useProfile();
@@ -37,7 +60,7 @@ export default function GoalsPage() {
 
   const [isEditingGoalId, setIsEditingGoalId] = useState<string | null>(null);
   const [pendingGoal, setPendingGoal] = useState<
-    | (Pick<Tables<"goals">, "text" | "user_provided_context"> & {
+    | (Pick<Tables<"goals">, "text" | "user_provided_context" | "skill_id"> & {
         signals?: Tables<"goal_signals">[];
       })
     | null
@@ -64,6 +87,11 @@ export default function GoalsPage() {
       },
     );
 
+  const { data: skills, isLoading: isSkillsLoading } =
+    api.skills.getAllSkills.useQuery({
+      profileId: profile?.id ?? user?.id ?? "",
+    });
+
   const [completedGoal, setCompletedGoal] = useState<string | null>(null);
 
   const handleAddGoal = useCallback(async (values: { text: string }) => {
@@ -71,6 +99,7 @@ export default function GoalsPage() {
       text: values.text,
       user_provided_context: "",
       signals: [],
+      skill_id: "", // @todo: fix this
     });
   }, []);
 
@@ -136,13 +165,17 @@ export default function GoalsPage() {
         text: goal.text,
         user_provided_context: goal.user_provided_context,
         signals: goal.signals,
+        skill_id: goal.skill_id,
       });
     },
     [],
   );
 
   const handleGoalSubmit = useCallback(
-    async (values: GoalFormValues, mode: "create" | "edit") => {
+    async (
+      values: GoalFormValues & { skillId: string },
+      mode: "create" | "edit",
+    ) => {
       if (!profile?.id || !pendingGoal?.text) {
         toast.error("Failed to add goal");
         return;
@@ -198,6 +231,7 @@ export default function GoalsPage() {
           hidden_text: values.text,
           user_provided_context: values.context,
           is_current: true,
+          skill_id: values.skillId,
         })
         .select("*")
         .single();
@@ -247,7 +281,15 @@ export default function GoalsPage() {
     ],
   );
 
-  if (!profile || !user || !goals || isUserLoading || isGoalsLoading) {
+  if (
+    !profile ||
+    !user ||
+    !goals ||
+    !skills ||
+    isUserLoading ||
+    isGoalsLoading ||
+    isSkillsLoading
+  ) {
     return (
       <div className="mt-20 flex items-center justify-center">
         <motion.div
@@ -266,14 +308,14 @@ export default function GoalsPage() {
             transition={{ delay: 0.2 }}
             className="text-sm font-medium text-muted-foreground"
           >
-            Loading your goals...
+            Loading skill library...
           </motion.p>
         </motion.div>
       </div>
     );
   }
 
-  const hasGoals = goals.length > 0;
+  const hasSkills = skills.length > 0;
 
   return (
     <motion.div
@@ -282,26 +324,38 @@ export default function GoalsPage() {
       variants={staggerAnimation}
       className="container mx-auto space-y-6 py-6"
     >
-      {hasGoals ? (
+      {hasSkills ? (
         <>
-          <div className="flex items-center gap-x-8 pb-6">
-            <h1 className="text-2xl font-semibold tracking-tight">My Goals</h1>
-            <div className="max-w-xl flex-1">
-              <NewGoalForm onSubmit={handleAddGoal} />
-            </div>
+          <div className="flex flex-col gap-4 pb-6">
+            <h1 className="text-2xl font-semibold tracking-tight">Skills</h1>
+            <p className="text-muted-foreground">
+              Browse our curated collection of high-impact skills. Toggle any
+              skill to generate personalized assessments and track your
+              progress.
+            </p>
           </div>
 
-          <AnimatePresence mode="popLayout">
-            {goals.map((goal) => (
-              <GoalCard
-                key={goal.id}
-                goal={goal}
-                onGoalComplete={handleGoalComplete}
-                onGoalUncomplete={handleGoalUncomplete}
-                onGoalEdit={handleGoalEdit}
-              />
-            ))}
-          </AnimatePresence>
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+            exit="exit"
+            className="space-y-6"
+          >
+            <AnimatePresence mode="popLayout">
+              {skills.map((skill) => (
+                <motion.div key={skill.id} variants={itemVariants} layout>
+                  <SkillCard
+                    profileId={profile.id ?? user.id ?? ""}
+                    skill={skill}
+                    onSkillEnabled={() => {
+                      apiUtils.skills.getAllSkills.invalidate();
+                    }}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
         </>
       ) : (
         <GoalsEmptyState onSubmit={handleAddGoal} />
@@ -309,7 +363,12 @@ export default function GoalsPage() {
 
       <GoalCreationDrawer
         mode={isEditingGoalId ? "edit" : "create"}
-        goal={pendingGoal}
+        goal={
+          pendingGoal &&
+          skills.find((skill) => skill.id === pendingGoal.skill_id)
+            ? pendingGoal
+            : null
+        }
         setGoal={(goal) => {
           setPendingGoal(goal);
           if (!goal) {

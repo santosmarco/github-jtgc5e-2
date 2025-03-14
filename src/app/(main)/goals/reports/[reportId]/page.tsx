@@ -1,32 +1,30 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import _ from "lodash";
-import { FileX2Icon, Loader2 } from "lucide-react";
+import { ArrowUpRight, FileX2Icon, GoalIcon, Loader2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { z } from "zod";
 
-import { GoalHeader } from "~/components/reports/goal-header";
-import { SectionsList } from "~/components/reports/sections-list";
-import { CommentsPanel } from "~/components/reports/comments-panel";
 import {
   GoalCreationDrawer,
   type GoalFormValues,
 } from "~/components/goals/goal-creation-drawer";
 import { MomentsPlayer } from "~/components/player/moments-player";
-import { Progress } from "~/components/ui/progress";
-import { cn } from "~/lib/utils";
+import { CommentsPanel } from "~/components/reports/comments-panel";
+import { GoalHeader } from "~/components/reports/goal-header";
+import { PersonalityProfile } from "~/components/reports/personality-profile";
+import { ReportMetrics } from "~/components/reports/report-metrics";
+import { SectionsList } from "~/components/reports/sections-list";
+import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { transformMoment } from "~/lib/db/moments";
 import { createClient } from "~/lib/supabase/client";
 import type { Tables } from "~/lib/supabase/database.types";
-import type {
-  ReportMoment,
-  ReportComment,
-  ReportSection,
-} from "~/types/reports";
+import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
+import type { ReportComment } from "~/types/reports";
 
 export default function ReportPage({
   params,
@@ -57,6 +55,10 @@ export default function ReportPage({
     hasJustUpdatedCurrentMomentIndex,
     setHasJustUpdatedCurrentMomentIndex,
   ] = useState(false);
+  const [currentTab, setCurrentTab] = useState<"positive" | "negative">(
+    "positive",
+  );
+  const [isLargeScreen, setIsLargeScreen] = useState(false);
 
   const utils = api.useUtils();
   const { data: user } = api.auth.getUser.useQuery();
@@ -77,6 +79,23 @@ export default function ReportPage({
   });
 
   const supabase = createClient();
+
+  useEffect(() => {
+    // Check screen size on mount and when window resizes
+    const checkScreenSize = () => {
+      // 1600px is roughly the width of a large MacBook Pro
+      setIsLargeScreen(window.innerWidth > 1600);
+    };
+
+    // Initial check
+    checkScreenSize();
+
+    // Add resize listener
+    window.addEventListener("resize", checkScreenSize);
+
+    // Cleanup
+    return () => window.removeEventListener("resize", checkScreenSize);
+  }, []);
 
   const handleSubmitComment = (reportId: string, content: string) => {
     if (!content.trim()) return;
@@ -142,6 +161,7 @@ export default function ReportPage({
           profile_id: groupReports.reports[0].report_goals[0].goal.profile_id,
           is_current: true,
           previous_goal_id: isEditingGoalId,
+          skill_id: groupReports.reports[0]?.skill?.id ?? values.skillId,
         })
         .select("*")
         .single();
@@ -349,6 +369,39 @@ export default function ReportPage({
     setHasJustUpdatedCurrentMomentIndex(true);
   };
 
+  const feedbackMetrics = [
+    {
+      id: "fault-finding",
+      leftLabel: "Fault-Finding",
+      rightLabel: "Problem-Solving",
+      value: 70,
+    },
+    {
+      id: "indirect",
+      leftLabel: "Indirect",
+      rightLabel: "Direct",
+      value: 80,
+    },
+    {
+      id: "ambiguous",
+      leftLabel: "Ambiguous",
+      rightLabel: "Clear",
+      value: 75,
+    },
+    {
+      id: "specific",
+      leftLabel: "Specific",
+      rightLabel: "Vague",
+      value: 65,
+    },
+    {
+      id: "critical",
+      leftLabel: "Critical",
+      rightLabel: "Supportive",
+      value: 60,
+    },
+  ];
+
   if (isLoading) {
     return (
       <div className="grid min-h-[calc(100vh-4rem)] place-items-center">
@@ -400,6 +453,38 @@ export default function ReportPage({
         );
         const goal = report.report_goals[0]?.goal;
         const isExpanded = !!(goal && expandedGoals[goal.id]);
+        const reportSkillPositiveScaleTags =
+          report.skill?.scales.map((s) => s.positive_tag_title) ?? [];
+        const reportSkillNegativeScaleTags =
+          report.skill?.scales.map((s) => s.negative_tag_title) ?? [];
+        const reportSkillScaleTags = [
+          ...reportSkillPositiveScaleTags,
+          ...reportSkillNegativeScaleTags,
+        ];
+        const momentSubtagFrequencies = _.countBy(
+          reportMoments.flatMap((rm) =>
+            rm.moment.subtags
+              .map((s) => s.tag)
+              .filter((t) => t && reportSkillScaleTags.includes(t)),
+          ),
+        );
+        const momentSubtagFrequenciesTotal = _.sum(
+          Object.values(momentSubtagFrequencies),
+        );
+
+        const metrics = reportSkillPositiveScaleTags.map((pt, i) => {
+          const nt = reportSkillNegativeScaleTags[i];
+          const total =
+            (momentSubtagFrequencies[pt] ?? 0) +
+              (momentSubtagFrequencies[nt!] ?? 0) || 1;
+
+          return {
+            id: `${pt}-${nt}`,
+            leftLabel: pt!,
+            rightLabel: nt!,
+            value: 100 * ((momentSubtagFrequencies[pt] ?? 0) / total),
+          };
+        });
 
         // Calculate section scores
         const sectionScores = report.report_sections.map((section) => {
@@ -451,6 +536,13 @@ export default function ReportPage({
           (rm) => rm.report_section_id === selectedReportSectionId,
         );
 
+        // Determine grid layout based on screen size and comments visibility
+        const gridClass = isLargeScreen
+          ? "grid-cols-[1fr,1.5fr,298px]"
+          : isCommentsVisible
+            ? "grid-cols-[1fr,1.5fr,298px]"
+            : "grid-cols-[1fr,1.5fr,0px]";
+
         return (
           <div
             key={report.id}
@@ -471,45 +563,101 @@ export default function ReportPage({
             />
 
             {isExpanded && (
-              <div
-                className={cn("grid h-full grid-cols-[1fr,1.5fr,0px] gap-6")}
-              >
-                <SectionsList
-                  positiveSections={sortedPositiveSections}
-                  negativeSections={sortedNegativeSections}
-                  reportMoments={reportMoments}
-                  selectedSectionId={selectedReportSectionId}
-                  onSectionSelect={handleSectionSelect}
-                  isAdmin={user?.is_admin}
-                  onTabChange={(value) => handleTabChange(value, report)}
-                />
+              <>
+                {/* Personality Profile */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                  className="mb-2"
+                >
+                  <PersonalityProfile report={report} />
+                </motion.div>
 
-                <MomentsPlayer
-                  reportMoments={filteredReportMoments.map((rm, idx) => ({
-                    ...rm,
-                    moment: transformMoment(rm.moment, idx),
-                  }))}
-                  currentMomentIndex={currentMomentIndex}
-                  setCurrentMomentIndex={setCurrentMomentIndex}
-                  hasJustUpdatedCurrentMomentIndex={
-                    hasJustUpdatedCurrentMomentIndex
-                  }
-                  setHasJustUpdatedCurrentMomentIndex={
-                    setHasJustUpdatedCurrentMomentIndex
-                  }
-                />
+                <div className={cn("grid h-full gap-6", gridClass)}>
+                  <div className="flex flex-col gap-4">
+                    <Tabs
+                      defaultValue="positive"
+                      className="w-full"
+                      onValueChange={(value) => {
+                        setCurrentTab(value as "positive" | "negative");
+                        handleTabChange(value, report);
+                      }}
+                    >
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.3 }}
+                        className="mb-8"
+                      >
+                        <ReportMetrics
+                          metrics={metrics}
+                          selectedTab={currentTab}
+                        />
+                      </motion.div>
 
-                <CommentsPanel
-                  reportId={report.id}
-                  comments={report.report_comments as ReportComment[]}
-                  isVisible={isCommentsVisible}
-                  onToggleVisibility={() =>
-                    setIsCommentsVisible(!isCommentsVisible)
-                  }
-                  onSubmitComment={handleSubmitComment}
-                  isPendingSubmit={createComment.isPending}
-                />
-              </div>
+                      <TabsList className="mb-4 flex w-full justify-between gap-2 bg-transparent px-0 pt-4">
+                        <TabsTrigger
+                          value="positive"
+                          className="flex w-full items-center gap-1.5 rounded-md border py-1.5 text-sm font-medium transition-colors hover:bg-accent data-[state=active]:border-primary data-[state=active]:bg-primary/10 data-[state=inactive]:text-muted-foreground"
+                        >
+                          <ArrowUpRight className="h-4 w-4 text-primary" />
+                          Doing Well
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="negative"
+                          className="flex w-full items-center gap-1.5 rounded-md border py-1.5 text-sm font-medium transition-colors hover:bg-accent data-[state=active]:border-amber-500 data-[state=active]:bg-amber-500/10 data-[state=inactive]:text-muted-foreground"
+                        >
+                          <GoalIcon className="h-4 w-4 text-amber-500" />
+                          Growth Areas
+                        </TabsTrigger>
+                      </TabsList>
+
+                      <SectionsList
+                        positiveSections={sortedPositiveSections}
+                        negativeSections={sortedNegativeSections}
+                        reportMoments={reportMoments}
+                        selectedSectionId={selectedReportSectionId}
+                        onSectionSelect={handleSectionSelect}
+                        isAdmin={user?.is_admin}
+                      />
+                    </Tabs>
+                  </div>
+
+                  <div
+                    className={cn(
+                      "flex max-h-20 flex-col gap-6",
+                      isLargeScreen ? "" : "-mr-6",
+                    )}
+                  >
+                    <MomentsPlayer
+                      reportMoments={filteredReportMoments.map((rm, idx) => ({
+                        ...rm,
+                        moment: transformMoment(rm.moment, idx),
+                      }))}
+                      currentMomentIndex={currentMomentIndex}
+                      setCurrentMomentIndex={setCurrentMomentIndex}
+                      hasJustUpdatedCurrentMomentIndex={
+                        hasJustUpdatedCurrentMomentIndex
+                      }
+                      setHasJustUpdatedCurrentMomentIndex={
+                        setHasJustUpdatedCurrentMomentIndex
+                      }
+                    />
+                  </div>
+
+                  <CommentsPanel
+                    reportId={report.id}
+                    comments={report.report_comments as ReportComment[]}
+                    isVisible={isLargeScreen || isCommentsVisible}
+                    onToggleVisibility={() =>
+                      !isLargeScreen && setIsCommentsVisible(!isCommentsVisible)
+                    }
+                    onSubmitComment={handleSubmitComment}
+                    isPendingSubmit={createComment.isPending}
+                  />
+                </div>
+              </>
             )}
           </div>
         );
@@ -517,7 +665,11 @@ export default function ReportPage({
 
       <GoalCreationDrawer
         mode="edit"
-        goal={pendingGoal}
+        goal={
+          pendingGoal && groupReports.group.skill_id
+            ? { ...pendingGoal, skill_id: groupReports.group.skill_id }
+            : null
+        }
         setGoal={(goal) => {
           if (!goal) {
             // Clear both states together to avoid multiple re-renders

@@ -76,9 +76,9 @@ export const VideoCard = React.forwardRef<
           {/* Duration Badge */}
           <div className="absolute bottom-2 right-2 rounded-md bg-black/60 px-2 py-1 text-xs font-medium text-white backdrop-blur-sm">
             {formatDuration(
-              video.details?.encoding?.metadata?.duration ??
-                (video.meeting?.duration_in_ms
-                  ? video.meeting.duration_in_ms / 1000
+              video.details?.encoding?.metadata?.duration /* in seconds */ ??
+                (video.meeting?.duration_in_ms // this is actually in seconds
+                  ? video.meeting.duration_in_ms
                   : 0),
             )}
           </div>

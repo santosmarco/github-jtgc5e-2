@@ -24,7 +24,9 @@ export default function ReportsPage() {
           className="flex flex-col items-center gap-4"
         >
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Loading reports...</p>
+          <p className="text-sm text-muted-foreground">
+            Loading assessments...
+          </p>
         </motion.div>
       </div>
     );
@@ -40,7 +42,7 @@ export default function ReportsPage() {
           className="flex flex-col items-center gap-4"
         >
           <FileX2Icon className="h-10 w-10 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">No reports found</p>
+          <p className="text-sm text-muted-foreground">No assessments found</p>
         </motion.div>
       </div>
     );
@@ -54,17 +56,17 @@ export default function ReportsPage() {
 
   return (
     <div className="container mx-auto space-y-8 py-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Assessments</h1>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
       >
         {sortedReports.map((report, index) => (
           <Link
             key={report.id}
             href={`/goals/reports/${report.id}`}
-            className="block h-full"
+            className="flex h-full"
             tabIndex={0}
           >
             <ReportCard
@@ -72,6 +74,7 @@ export default function ReportsPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
+              className="h-full w-full"
             />
           </Link>
         ))}

@@ -1,127 +1,191 @@
 "use client";
 
-import { motion } from "framer-motion";
+import dayjs from "dayjs";
+import { AnimatePresence, motion } from "framer-motion";
+import _ from "lodash";
+import type { LucideProps } from "lucide-react";
 import {
-  ArrowUpRight,
+  ArrowRight,
+  CalendarCheck,
   Check,
-  Goal,
-  Pencil,
-  PlusCircle,
-  Undo2,
+  CheckCircle2,
+  ClipboardCheck,
+  Clock,
+  TrendingUp,
 } from "lucide-react";
-import React, { useRef, useState } from "react";
-
-import { Button } from "~/components/ui/button";
+import dynamic from "next/dynamic";
+import React, { useMemo } from "react";
+import { toast } from "sonner";
+import { Badge } from "~/components/ui/badge";
 import { Card } from "~/components/ui/card";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "~/components/ui/tooltip";
-import { createConfettiEmitter } from "~/lib/confetti";
-import type { Tables } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
-import { api, type RouterOutputs } from "~/trpc/react";
+import { type RouterOutputs, api } from "~/trpc/react";
+import { SkillProgressCard } from "./goal-progress-card";
 
-import { GoalProgressCard } from "./goal-progress-card";
-
-export type GoalCardProps = {
-  goal: RouterOutputs["goals"]["getGoals"][number];
-  onGoalComplete?: (goalId: string) => Promise<void>;
-  onGoalUncomplete?: (goalId: string) => Promise<void>;
-  onGoalEdit?: (
-    goal: Tables<"goals"> & { signals: Tables<"goal_signals">[] },
-  ) => Promise<void>;
-  className?: string;
+export type SkillCardProps = {
+  skill: RouterOutputs["skills"]["getAllSkills"][number];
+  profileId: string;
+  onSkillEnabled?: () => void;
 };
 
+// Refined animations for a more elegant feel
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.4,
-      ease: "easeOut",
-      staggerChildren: 0.1,
+      type: "spring",
+      stiffness: 70,
+      damping: 18,
+      mass: 1,
+      staggerChildren: 0.08,
     },
   },
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 10 },
+  hidden: { opacity: 0, x: -10 },
   visible: {
     opacity: 1,
-    y: 0,
+    x: 0,
     transition: {
-      duration: 0.3,
+      type: "spring",
+      stiffness: 80,
+      damping: 12,
     },
   },
 };
 
-const iconVariants = {
-  hidden: { scale: 0, opacity: 0 },
+const iconContainerVariants = {
+  hidden: { scale: 0.9, opacity: 0 },
   visible: {
     scale: 1,
     opacity: 1,
     transition: {
       type: "spring",
-      stiffness: 200,
-      damping: 20,
+      stiffness: 100,
+      damping: 15,
     },
   },
 };
 
-export const GoalCard = React.forwardRef<HTMLDivElement, GoalCardProps>(
-  function GoalCard(
-    { goal, onGoalComplete, onGoalUncomplete, onGoalEdit, className },
-    ref,
-  ) {
-    const [isCompleting, setIsCompleting] = useState(false);
-    const [isUncompleting, setIsUncompleting] = useState(false);
-    const completeButtonRef = useRef<HTMLButtonElement>(null);
+// Stats animations
+const statsVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring",
+      stiffness: 80,
+      damping: 12,
+      delay: 0.2,
+    },
+  },
+};
 
-    const isCompleted = Boolean(goal.completed_at);
-    const utils = api.useUtils();
+// Subtle pattern animation
+const patternAnimation = {
+  scale: [1, 1.05, 1],
+  opacity: [0.2, 0.3, 0.2],
+  transition: {
+    duration: 6,
+    repeat: Number.POSITIVE_INFINITY,
+    ease: "easeInOut",
+  },
+};
 
-    const handleComplete = async () => {
-      setIsCompleting(true);
-
-      try {
-        await onGoalComplete?.(goal.id);
-
-        const button = completeButtonRef.current;
-        if (button) {
-          const rect = button.getBoundingClientRect();
-          const x = (rect.left + rect.width / 2) / window.innerWidth;
-          const y = (rect.top + rect.height / 2) / window.innerHeight;
-
-          const confetti = createConfettiEmitter({ x, y });
-          void confetti.fireDefault();
-        }
-      } finally {
-        setIsCompleting(false);
-      }
-    };
-
-    const handleUncomplete = async () => {
-      setIsUncompleting(true);
-
-      try {
-        await onGoalUncomplete?.(goal.id);
-      } finally {
-        setIsUncompleting(false);
-      }
-    };
-
-    const signalCounts = goal.signals.reduce(
-      (acc, signal) => {
-        if (signal.direction === "positive") acc.positive++;
-        if (signal.direction === "negative") acc.negative++;
-        return acc;
-      },
-      { positive: 0, negative: 0 },
+export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
+  function SkillCard({ skill, profileId, onSkillEnabled }, ref) {
+    const Icon = useMemo(
+      () =>
+        dynamic<LucideProps>(
+          () =>
+            import("lucide-react").then(
+              (mod) =>
+                mod.icons[
+                  skill.icon && skill.icon in mod.icons
+                    ? (skill.icon as keyof typeof mod.icons)
+                    : "Target"
+                ],
+            ),
+          {
+            loading: () => (
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{
+                  duration: 2,
+                  repeat: Number.POSITIVE_INFINITY,
+                  ease: "linear",
+                }}
+                className="border-3 h-12 w-12 rounded-full border-primary/30 border-t-primary"
+              />
+            ),
+            ssr: false,
+          },
+        ),
+      [skill.icon],
     );
+
+    const { mutate: enableSkill, isPending: isEnablingSkill } =
+      api.skills.enableSkill.useMutation({
+        onSuccess: () => {
+          toast.success(`"${skill.title}" enabled`, {
+            description: "You can now track your skill progress",
+          });
+          onSkillEnabled?.();
+        },
+        onError: (error) => {
+          toast.error(error.message);
+        },
+      });
+
+    const handleSkillEnable = () => {
+      enableSkill({
+        skillId: skill.id,
+        profileId: profileId,
+      });
+    };
+
+    const isEnabled = skill.goals.some((goal) => goal.is_default);
+
+    const isCompleted =
+      skill.goals && skill.goals.length > 0
+        ? skill.goals.every((goal) => Boolean(goal.completed_at))
+        : false;
+    const completedAt = _.maxBy(
+      skill.goals.filter((x) => x.completed_at),
+      (x) => dayjs(x.completed_at),
+    )?.completed_at;
+
+    // Calculate statistics about reviews and assessments
+    const skillAssessments = skill.reports || [];
+    const reviewedAssessments =
+      skill.report_goals.filter((rg) => rg.is_reviewed) || [];
+    const totalReviews = reviewedAssessments.length;
+    const latestReview =
+      skillAssessments.length > 0 ? skillAssessments[0] : null;
+
+    const hasAssessments = skillAssessments.length > 0;
+
+    // Determine status for display
+    const getStatus = () => {
+      // Check if there's a processing status on the first goal
+      const processingStatus = _.maxBy(skill.statuses, (status) =>
+        dayjs(status.created_at).toDate(),
+      )?.status;
+
+      if (processingStatus === "pending") {
+        return "Processing";
+      }
+
+      if (totalReviews > 0) {
+        return "Reviewed";
+      }
+
+      return "Pending Review";
+    };
 
     return (
       <motion.div
@@ -129,238 +193,234 @@ export const GoalCard = React.forwardRef<HTMLDivElement, GoalCardProps>(
         variants={cardVariants}
         initial="hidden"
         animate="visible"
-        className="grid grid-cols-[1fr,350px] gap-4 overflow-visible border-b border-border pb-4"
+        className="h-full overflow-visible border-b border-border/40 pb-5"
       >
-        <motion.div
-          className={cn(
-            "group relative h-full overflow-visible transition-all",
-            className,
-          )}
-        >
-          <Card className="flex h-full flex-col overflow-visible border-none bg-transparent pb-6 pl-0 pr-6">
-            <div className="flex h-full flex-col justify-between space-y-4 overflow-visible">
-              <div className="space-y-4 overflow-visible">
+        <div className="flex h-60 items-stretch justify-between gap-x-4 overflow-visible">
+          <Card className="relative flex h-full w-full flex-col overflow-visible border border-border/40 bg-gradient-to-br from-background to-muted/20 shadow-sm backdrop-blur-sm">
+            <div className="flex h-full w-full flex-col justify-between overflow-visible">
+              <div className="flex flex-col justify-between overflow-visible">
                 <motion.div
                   variants={itemVariants}
-                  className="flex items-center justify-between"
+                  className="flex items-start justify-between gap-5 p-5"
                 >
-                  <div className="flex items-center gap-2">
-                    <motion.div variants={iconVariants}>
-                      <Goal
-                        className={cn(
-                          "h-5 w-5 shrink-0",
-                          isCompleted
-                            ? "text-muted-foreground/60"
-                            : "text-primary",
-                        )}
-                      />
-                    </motion.div>
-                    <motion.h3
-                      variants={itemVariants}
+                  <div className="flex items-start gap-5">
+                    <motion.div
+                      variants={iconContainerVariants}
                       className={cn(
-                        "text-lg font-semibold",
-                        isCompleted && "text-muted-foreground/60",
+                        "relative flex shrink-0 items-center justify-center overflow-hidden rounded-2xl border shadow-sm transition-all duration-300",
+                        isCompleted
+                          ? "border-muted/50 from-muted/40 to-background"
+                          : "border-primary/20 from-primary/5 to-background",
                       )}
+                      style={{ height: "100px", width: "100px" }}
                     >
-                      {goal.text}
-                    </motion.h3>
-                  </div>
-                </motion.div>
-
-                {goal.user_provided_context ? (
-                  <motion.p
-                    variants={itemVariants}
-                    className={cn(
-                      "text-sm",
-                      isCompleted
-                        ? "text-muted-foreground/60"
-                        : "text-muted-foreground",
-                    )}
-                  >
-                    {goal.user_provided_context}
-                  </motion.p>
-                ) : (
-                  !goal.completed_at &&
-                  !goal.is_default && (
-                    <motion.button
-                      onClick={() => onGoalEdit?.(goal)}
-                      variants={itemVariants}
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
-                      className="group/add-context relative -ml-[0.34375rem] flex w-[calc(100%+0.6875rem)] cursor-pointer items-center gap-2 rounded-md border border-dashed bg-muted/5 px-3 py-2 transition-colors hover:border-primary/25 hover:bg-primary/5"
-                      style={{
-                        borderColor: "hsl(var(--muted))",
-                      }}
-                    >
-                      <motion.div
-                        className="absolute inset-0 rounded-md bg-primary/10"
-                        animate={{
-                          opacity: [0, 0.5, 0],
-                        }}
-                        transition={{
-                          duration: 2,
-                          repeat: Number.POSITIVE_INFINITY,
-                          ease: "easeInOut",
-                        }}
-                      />
-                      <motion.div
-                        className="absolute inset-0 rounded-md border border-dashed border-primary/80"
-                        animate={{
-                          opacity: [0.2, 1, 0.2],
-                        }}
-                        transition={{
-                          duration: 2,
-                          repeat: Number.POSITIVE_INFINITY,
-                          ease: "easeInOut",
-                          delay: 0.5,
-                        }}
-                      />
-                      <PlusCircle className="relative h-4 w-4 text-muted-foreground transition-colors group-hover/add-context:text-primary" />
-                      <span className="relative text-sm text-muted-foreground transition-colors group-hover/add-context:text-primary">
-                        Add context to help track this goal
-                      </span>
-                    </motion.button>
-                  )
-                )}
-              </div>
-
-              <motion.div
-                variants={itemVariants}
-                className="flex items-center justify-between"
-              >
-                <div className="flex items-center gap-4">
-                  <motion.div
-                    variants={itemVariants}
-                    className="flex items-center gap-1.5 text-sm"
-                  >
-                    <div className="flex items-center gap-0.5">
-                      <ArrowUpRight
-                        className={cn(
-                          "-mb-0.5 h-4 w-4 text-emerald-500",
-                          isCompleted && "text-emerald-500/60",
-                        )}
-                      />
-                      <span
-                        className={cn(
-                          "font-medium text-emerald-500",
-                          isCompleted && "text-emerald-500/60",
-                        )}
-                      >
-                        {signalCounts.positive}
-                      </span>
-                    </div>
-                    <span
-                      className={cn(
-                        "text-muted-foreground",
-                        isCompleted && "text-muted-foreground/60",
-                      )}
-                    >
-                      positive signal{signalCounts.positive === 1 ? "" : "s"}
-                    </span>
-                  </motion.div>
-                  <motion.div
-                    variants={itemVariants}
-                    className="flex items-center gap-1.5 text-sm"
-                  >
-                    <div className="flex items-center gap-0.5">
-                      <ArrowUpRight
-                        className={cn(
-                          "-mb-0.5 h-4 w-4 rotate-90 text-red-500",
-                          isCompleted && "text-red-500/60",
-                        )}
-                      />
-                      <span
-                        className={cn(
-                          "font-medium text-red-500",
-                          isCompleted && "text-red-500/60",
-                        )}
-                      >
-                        {signalCounts.negative}
-                      </span>
-                    </div>
-                    <span
-                      className={cn(
-                        "text-muted-foreground",
-                        isCompleted && "text-muted-foreground/60",
-                      )}
-                    >
-                      negative signal{signalCounts.negative === 1 ? "" : "s"}
-                    </span>
-                  </motion.div>
-                </div>
-
-                {isCompleted ? (
-                  <motion.div
-                    variants={itemVariants}
-                    className="flex items-center gap-4"
-                  >
-                    <motion.span
-                      variants={itemVariants}
-                      className="text-sm text-muted-foreground/60"
-                    >
-                      Completed at{" "}
-                      {new Date(goal.completed_at ?? "").toLocaleDateString()}
-                    </motion.span>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="icon"
-                          variant="secondary"
-                          onClick={handleUncomplete}
+                      {/* Animated background patterns */}
+                      <motion.div className="absolute inset-0">
+                        <motion.div
                           className={cn(
-                            "h-8 w-8 text-foreground",
-                            isUncompleting && "animate-pulse",
+                            "absolute inset-0",
+                            isCompleted
+                              ? "bg-[radial-gradient(circle_at_50%_50%,rgba(161,161,170,0.08),transparent)]"
+                              : "bg-[radial-gradient(circle_at_50%_50%,rgba(45.3,121,245,0.08),transparent)]",
+                          )}
+                          animate={patternAnimation}
+                        />
+                      </motion.div>
+
+                      <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 100,
+                          damping: 15,
+                          delay: 0.1,
+                        }}
+                      >
+                        <Icon
+                          className={cn(
+                            "relative h-12 w-12 transition-all duration-300",
+                            isCompleted
+                              ? "text-muted-foreground/60"
+                              : "text-primary drop-shadow-sm",
+                          )}
+                        />
+                      </motion.div>
+
+                      {isCompleted && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 200,
+                            damping: 15,
+                          }}
+                          className="absolute bottom-3 right-3 rounded-full bg-background/70 p-1 backdrop-blur-sm"
+                        >
+                          <Check className="h-5 w-5 text-emerald-500" />
+                        </motion.div>
+                      )}
+                    </motion.div>
+
+                    <div className="space-y-1 pt-1">
+                      <div className="flex items-center gap-2">
+                        <motion.h3
+                          variants={itemVariants}
+                          className={cn(
+                            "text-xl font-medium tracking-tight",
+                            isCompleted
+                              ? "text-muted-foreground/70"
+                              : "text-foreground",
                           )}
                         >
-                          <Undo2 className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Undo completion</TooltipContent>
-                    </Tooltip>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    variants={itemVariants}
-                    className="flex items-center gap-2"
-                  >
-                    {!goal.is_default && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => onGoalEdit?.(goal)}
-                            className="h-8 w-8"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Edit goal</TooltipContent>
-                      </Tooltip>
-                    )}
+                          {skill.title}
+                        </motion.h3>
 
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          ref={completeButtonRef}
-                          size="icon"
-                          variant="secondary"
-                          onClick={handleComplete}
-                          className="h-8 w-8"
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Mark as complete</TooltipContent>
-                    </Tooltip>
-                  </motion.div>
-                )}
-              </motion.div>
+                        {totalReviews > 0 && (
+                          <motion.div
+                            variants={itemVariants}
+                            initial="hidden"
+                            animate="visible"
+                          >
+                            <Badge
+                              variant="secondary"
+                              className="ml-1 flex items-center gap-1 bg-primary/10 text-xs font-normal text-primary"
+                            >
+                              <ClipboardCheck className="h-3 w-3" />
+                              <span>
+                                {totalReviews}{" "}
+                                {totalReviews === 1 ? "review" : "reviews"}
+                              </span>
+                            </Badge>
+                          </motion.div>
+                        )}
+                      </div>
+
+                      <AnimatePresence mode="wait">
+                        {skill.description && (
+                          <motion.p
+                            key="context"
+                            variants={itemVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="hidden"
+                            className={cn(
+                              "text-sm leading-relaxed",
+                              isCompleted
+                                ? "text-muted-foreground/60"
+                                : "text-muted-foreground/80",
+                            )}
+                          >
+                            {skill.description}
+                          </motion.p>
+                        )}
+                      </AnimatePresence>
+
+                      {/* Enhanced Stats section with improved visual hierarchy */}
+
+                      <motion.div
+                        variants={statsVariants}
+                        className="mt-2 flex flex-col gap-3 pl-1 pt-2"
+                      >
+                        <div className="flex items-center gap-8">
+                          {latestReview ? (
+                            <>
+                              <div className="flex flex-col rounded-md bg-muted/5 p-2 transition-colors hover:bg-muted/10">
+                                <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground/80">
+                                  <CalendarCheck className="-mt-0.5 h-3.5 w-3.5 text-primary/70" />
+                                  <span>Latest Review</span>
+                                </div>
+                                <p className="mt-1 pl-5 text-xs font-medium">
+                                  {dayjs(latestReview.end_date).format(
+                                    "MMM D, YYYY",
+                                  )}
+                                </p>
+                              </div>
+
+                              <div className="flex flex-col rounded-md bg-muted/5 p-2 transition-colors hover:bg-muted/10">
+                                <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground/80">
+                                  {getStatus() === "Processing" ? (
+                                    <Clock className="h-3.5 w-3.5 text-amber-500/70" />
+                                  ) : getStatus() === "Reviewed" ? (
+                                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500/70" />
+                                  ) : (
+                                    <ArrowRight className="h-3.5 w-3.5 text-primary/70" />
+                                  )}
+                                  <span>Status</span>
+                                </div>
+                                <p className="mt-1 pl-5 text-xs font-medium">
+                                  {getStatus()}
+                                </p>
+                              </div>
+
+                              <div className="flex flex-col rounded-md bg-muted/5 p-2 transition-colors hover:bg-muted/10">
+                                <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground/80">
+                                  <TrendingUp className="h-3.5 w-3.5 text-primary/70" />
+                                  <span>Progress</span>
+                                </div>
+                                <p className="mt-1 pl-5 text-xs font-medium">
+                                  {skillAssessments.length > 1
+                                    ? "Improving"
+                                    : "Initial"}
+                                </p>
+                              </div>
+                            </>
+                          ) : isEnabled ? (
+                            <div className="col-span-3 flex items-center justify-center rounded-md bg-muted/5 p-3 pl-0">
+                              <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{
+                                  duration: 1.5,
+                                  repeat: Number.POSITIVE_INFINITY,
+                                  ease: "linear",
+                                }}
+                                className="mr-2 h-3 w-3 rounded-full border-2 border-primary/30 border-t-primary"
+                              />
+                              <p className="text-center text-xs text-muted-foreground/80">
+                                Waiting for your first skill assessment...
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="col-span-3 -ml-1 flex items-center justify-center rounded-md bg-primary/5 p-3">
+                              <p className="text-center text-xs font-medium text-primary/90">
+                                Enable skill tracking to see progress statistics
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
             </div>
           </Card>
-        </motion.div>
 
-        <GoalProgressCard goal={goal} />
+          <AnimatePresence mode="wait">
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{
+                type: "spring",
+                stiffness: 70,
+                damping: 18,
+                delay: 0.1,
+              }}
+              className="right-0 top-0 w-1/3"
+            >
+              <SkillProgressCard
+                skill={skill}
+                disabled={!isEnabled}
+                loading={isEnablingSkill}
+                completed={isCompleted}
+                completedAt={completedAt ?? undefined}
+                onEnable={handleSkillEnable}
+              />
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </motion.div>
     );
   },

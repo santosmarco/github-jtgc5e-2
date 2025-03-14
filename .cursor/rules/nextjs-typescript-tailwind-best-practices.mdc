@@ -1,0 +1,711 @@
+---
+description: Next.js Code with TypeScript, Tailwind CSS, and Best Practices
+globs: **/*.{ts,tsx,js,jsx}
+---
+# Next.js Project Rules & Development Guidelines - Titan MVP
+
+## Objective & Core Principles
+
+Build Next.js solutions that exceed standards in terms of performance, maintainability, and security while providing users with a smooth and intuitive experience. Establish a codebase that is scalable and adaptable to future changes.
+
+### 1. Server-First Architecture
+
+- **Default to Server Components**
+- Only use `'use client'` directive for components that need interactivity
+- Keep client-side JavaScript minimal
+
+```tsx
+// ✅ Good: Server component (default, no directive needed)
+export default function DashboardPage() {
+  return <div>Dashboard content</div>;
+}
+```
+
+```tsx
+// ✅ Good: Client component (only when needed)
+"use client";
+
+export function InteractiveWidget() {
+  const [isOpen, setIsOpen] = useState(false);
+  // Interactive code here
+}
+```
+
+### 2. Strict Type Safety
+
+- Use TypeScript with strict mode enabled (`strict: true` in @tsconfig.json)
+- Enable `noUncheckedIndexedAccess` for safer array/object access
+- Define explicit interfaces for all props and state
+- Prefer immutability using **Readonly**, **Record**, and **Pick** types
+- Avoid type assertions (`as`) and `any` types
+
+```tsx
+// ✅ Good: Strong typing with immutability
+type User = Readonly<{
+  id: string;
+  name: string;
+  email: string;
+}>;
+```
+
+```tsx
+// ✅ Good: Type-safe function
+const fetchUser = async (id: string): Promise<User> => {
+  const response = await fetch(`/api/users/${id}`);
+  const data = await response.json();
+  return data;
+};
+```
+
+### 3. Component Architecture
+
+- Create small, focused components with single responsibilities
+- Document props with descriptive interfaces
+- Keep components under 20 lines when possible
+- Use atomic design principles
+
+```tsx
+// ✅ Good: Single responsibility with clear props interface
+type ButtonProps = {
+  label: string;
+  onClick: () => void;
+  variant?: "primary" | "secondary" | "destructive";
+  isDisabled?: boolean;
+};
+
+export function Button({
+  label,
+  onClick,
+  variant = "primary",
+  isDisabled = false,
+}: ButtonProps) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={isDisabled}
+      className={cn(
+        "btn",
+        variant === "primary"
+          ? "btn-primary"
+          : variant === "secondary"
+          ? "btn-secondary"
+          : "btn-destructive",
+        isDisabled && "opacity-50 cursor-not-allowed"
+      )}
+    >
+      {label}
+    </button>
+  );
+}
+```
+
+## Project Structure
+
+```sh
+src/
+├── app/                # Routes and layouts (Next.js App Router)
+│   ├── (auth)/         # Auth-related routes (login, register)
+│   ├── api/            # API routes and webhooks
+│   │   ├── trpc/       # tRPC API endpoint
+│   │   └── webhooks/   # External service webhooks
+│   ├── dashboard/      # Dashboard routes
+│   └── layout.tsx      # Root layout
+├── components/         # UI components
+│   ├── ui/             # Base UI components (Shadcn/Radix)
+│   └── features/       # Feature-specific components
+├── email/              # Email templates for React Email
+├── hooks/              # Custom React hooks
+├── lib/                # Shared utilities and logic
+│   ├── ai/             # AI-related utilities (Langchain, OpenAI)
+│   ├── supabase/       # Supabase client & database types
+│   └── utils/          # Utility functions
+├── server/             # Server-side code
+│   └── api/            # tRPC routers and procedures
+└── types/              # Global TypeScript type definitions
+```
+
+### File Placement Guidelines
+
+1. **Routes/Pages**: Place in `src/app/` directory following Next.js App Router pattern
+2. **UI Components**:
+   - Common/reusable: `src/components/ui/`
+   - Feature-specific: `src/components/features/{feature-name}/`
+3. **API Handlers**:
+   - API Routes: `src/app/api/`
+   - tRPC Procedures: `src/server/api/`
+4. **Utility Functions**: `src/lib/`
+5. **Custom Hooks**: `src/hooks/`
+6. **Global Types**: `src/types/`
+
+## Naming Conventions
+
+- **Files**: Use kebab-case for files: `user-profile.tsx`
+- **Components**: Use PascalCase: `UserProfile`
+- **Functions/Hooks**: Use camelCase with descriptive names:
+  - `useUserProfile`
+  - `fetchUserData`
+  - `isUserLoggedIn`
+- **Types/Interfaces**: Use PascalCase: `UserProfileProps`
+- **Constants**: Use UPPER_SNAKE_CASE: `MAX_UPLOAD_SIZE`
+
+## Technology Stack & Core Libraries
+
+### 1. Framework & UI
+
+- **Next.js**: App Router for routing and layouts
+- **Tailwind CSS**: For styling with utility classes
+- **Shadcn UI/Radix UI**: For accessible UI components
+- **Framer Motion**: For animations and transitions
+- **Sonner**: For toast notifications
+
+### 2. Data Management
+
+- **tRPC**: For type-safe API communication
+- **Supabase**: For database, authentication, and storage
+- **React Query/SWR**: For server state management
+- **Zustand**: For client state management
+- **Zod**: For runtime validation
+
+### 3. Form Handling
+
+- **React Hook Form**: For form state management
+- **Zod**: For form validation
+
+### 4. AI/ML Integration
+
+- **Langchain**: For AI workflows
+- **OpenAI API**: For AI completions
+- **Anthropic API**: For Claude integration
+
+## Data Layer Implementation
+
+### 1. Database Access with Supabase
+
+- Use server-side Supabase client for database operations
+- Use client-side Supabase for real-time updates and auth
+- Leverage generated database types from [database.types.ts](mdc:src/lib/supabase/database.types.ts)
+
+```tsx
+// ✅ Good: Server-side Supabase
+import { createClient } from "~/lib/supabase/server";
+import type { Database } from "~/lib/supabase/database.types";
+
+export async function getProjects(userId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("projects")
+    .select("*")
+    .eq("user_id", userId);
+
+  if (error) throw error;
+  return data as Database["public"]["Tables"]["projects"]["Row"][];
+}
+```
+
+### 2. API Design with tRPC
+
+- Define tRPC procedures in `@[src/server/api/routers/]`
+- Export router in `@[src/server/api/root.ts]`
+- Access tRPC client via `api` import from `@[src/trpc/server]` or `@[src/trpc/client]`
+
+```typescript
+// ✅ Good: tRPC router definition
+import { z } from "zod";
+import { createTRPCRouter, publicProcedure, protectedProcedure } from "../trpc";
+
+export const projectsRouter = createTRPCRouter({
+  list: protectedProcedure.query(async ({ ctx }) => {
+    const { data, error } = await ctx.supabase
+      .from("projects")
+      .select("*")
+      .eq("user_id", ctx.session.user.id);
+    if (error) throw error;
+    return data;
+  }),
+
+  create: protectedProcedure
+    .input(
+      z.object({
+        name: z.string().min(1),
+        description: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { data, error } = await ctx.supabase
+        .from("projects")
+        .insert({
+          name: input.name,
+          description: input.description,
+          user_id: ctx.session.user.id,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    }),
+});
+```
+
+## State Management
+
+### 1. Server State
+
+- Use tRPC with React Query for server state management
+- Follow the pattern in `@[src/trpc/client.ts]` for client-side queries
+- Use SWR as an alternative for simpler cases
+
+```tsx
+// ✅ Good: Using tRPC with React Query
+"use client";
+
+import { api } from "~/trpc/client";
+
+export function ProjectList() {
+  const { data: projects, isLoading, error } = api.projects.list.useQuery();
+
+  if (isLoading) return <div>Loading projects...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+
+  return (
+    <ul>
+      {projects?.map((project) => (
+        <li key={project.id}>{project.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+### 2. Client State
+
+- Use React's `useState` and `useReducer` for simple component state
+- Use Zustand for global state management
+- Avoid context for global state when possible
+
+```tsx
+// ✅ Good: Zustand store
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+
+type ThemeMode = "light" | "dark" | "system";
+
+type SettingsState = {
+  theme: ThemeMode;
+  setTheme: (theme: ThemeMode) => void;
+  sidebarCollapsed: boolean;
+  toggleSidebar: () => void;
+};
+
+export const useSettingsStore = create<SettingsState>()(
+  persist(
+    (set) => ({
+      theme: "system",
+      setTheme: (theme) => set({ theme }),
+      sidebarCollapsed: false,
+      toggleSidebar: () =>
+        set((state) => ({
+          sidebarCollapsed: !state.sidebarCollapsed,
+        })),
+    }),
+    { name: "settings-storage" }
+  )
+);
+```
+
+## UI Components
+
+### 1. Shadcn UI/Radix UI
+
+- Use Shadcn UI components from `@[src/components/ui/]`
+- Follow Shadcn UI patterns for component customization
+- Use Tailwind utility classes for styling
+- Use the class-variance-authority (cva) pattern for variants
+
+```tsx
+// ✅ Good: Using Shadcn UI with custom styling
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { cn } from "~/lib/utils";
+
+type StatCardProps = {
+  title: string;
+  value: string | number;
+  icon?: React.ReactNode;
+  trend?: number;
+  className?: string;
+};
+
+export function StatCard({
+  title,
+  value,
+  icon,
+  trend,
+  className,
+}: StatCardProps) {
+  return (
+    <Card className={cn("overflow-hidden", className)}>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        {icon && <div className="h-4 w-4 text-muted-foreground">{icon}</div>}
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+        {trend !== undefined && (
+          <p
+            className={cn(
+              "text-xs",
+              trend > 0 ? "text-green-500" : "text-red-500"
+            )}
+          >
+            {trend > 0 ? "↑" : "↓"} {Math.abs(trend)}%
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+### 2. Animations with Framer Motion
+
+- Use Framer Motion for complex animations
+- Keep animations accessible and performance-optimized
+- Create reusable animation components
+
+```typescript
+// ✅ Good: Reusable animation component
+"use client";
+import { motion, type Variants } from "framer-motion";
+
+type AnimatedContainerProps = {
+  children: React.ReactNode;
+  delay?: number;
+  className?: string;
+};
+
+const containerVariants: Variants = {
+  hidden: {
+    opacity: 0,
+    y: 20,
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.4,
+      ease: "easeOut",
+    },
+  },
+};
+
+export function AnimatedContainer({
+  children,
+  delay = 0,
+  className,
+}: AnimatedContainerProps) {
+  return (
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+      transition={{ delay }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+```
+
+## Form Handling
+
+- Use React Hook Form with Zod for form validation
+- Create reusable form components
+- Implement proper error handling and feedback
+- Use the pattern in `@[src/hooks/use-validated-form.ts]`
+
+```tsx
+// ✅ Good: Form with React Hook Form and Zod
+"use client";
+
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Button } from "~/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "~/components/ui/form";
+import { Input } from "~/components/ui/input";
+import { toast } from "sonner";
+
+const LoginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+type LoginValues = z.infer<typeof LoginSchema>;
+
+export function LoginForm() {
+  const form = useForm<LoginValues>({
+    resolver: zodResolver(LoginSchema),
+    defaultValues: { email: "", password: "" },
+  });
+
+  const onSubmit = async (values: LoginValues) => {
+    try {
+      // Handle login logic
+      toast.success("Successfully logged in");
+    } catch (error) {
+      toast.error("Failed to login");
+    }
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input placeholder="email@example.com" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Password</FormLabel>
+              <FormControl>
+                <Input type="password" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit" className="w-full">
+          Login
+        </Button>
+      </form>
+    </Form>
+  );
+}
+```
+
+## Error Handling
+
+- Use try/catch for async operations
+- Implement proper error logging with Logtail
+- Use toast notifications for user feedback with Sonner
+- Create consistent error handling patterns
+
+```tsx
+// ✅ Good: Error handling pattern
+import { toast } from "sonner";
+import { logger } from "~/lib/logging";
+
+export function handleApiError(error: unknown, context?: string) {
+  // Log error for developers
+  logger.error("API Error", {
+    error,
+    context,
+    timestamp: new Date().toISOString(),
+  });
+
+  // User-friendly message
+  let message = "An unexpected error occurred";
+
+  if (error instanceof Error) {
+    message = error.message;
+  }
+
+  // Show toast notification
+  toast.error(message);
+
+  // Return for rendering in UI if needed
+  return {
+    message,
+    success: false,
+  };
+}
+```
+
+## Performance Optimization
+
+- Use React Server Components for static/content-heavy pages
+- Implement proper loading states with `loading.tsx` in the App Router
+- Use Next.js Image component for optimized images
+- Leverage code splitting with `next/dynamic`
+- Cache API responses with React Query/SWR
+- Use Suspense boundaries for progressive loading
+
+```typescript
+// ✅ Good: Dynamic import with loading state
+// @[src/components/features/analytics/dashboard.tsx]
+import dynamic from "next/dynamic";
+import { Skeleton } from "~/components/ui/skeleton";
+
+const AnalyticsChart = dynamic(
+  () => import("~/components/features/analytics/chart"),
+  {
+    loading: () => (
+      <div className="h-80 w-full">
+        <Skeleton className="h-full w-full" />
+      </div>
+    ),
+    ssr: false, // Use for components with browser-only APIs
+  }
+);
+
+export function AnalyticsDashboard() {
+  return (
+    <div className="space-y-4">
+      <h2 className="text-2xl font-bold">Analytics</h2>
+      <AnalyticsChart />
+    </div>
+  );
+}
+```
+
+## Security
+
+- Validate all inputs with Zod
+- Use environment variables for sensitive data
+- Implement proper authorization checks
+- Use Supabase RLS policies for database access control
+- Sanitize user-generated content
+- Set appropriate security headers in `@[next.config.js]`
+
+```typescript
+// ✅ Good: Input validation pattern
+// @[src/app/api/webhooks/stripe/route.ts]
+import { NextResponse } from "next/server";
+import { z } from "zod";
+
+const WebhookSchema = z.object({
+  event_type: z.string(),
+  data: z.record(z.unknown()),
+  created_at: z.string().datetime(),
+});
+
+export async function POST(request: Request) {
+  try {
+    // Validate signature
+    const signature = request.headers.get("stripe-signature");
+    if (!signature) {
+      return NextResponse.json({ error: "Missing signature" }, { status: 401 });
+    }
+
+    // Validate payload
+    const payload = await request.json();
+    const result = WebhookSchema.safeParse(payload);
+
+    if (!result.success) {
+      return NextResponse.json(
+        { error: "Invalid payload", details: result.error.format() },
+        { status: 400 }
+      );
+    }
+
+    // Process valid webhook
+    const data = result.data;
+    // Handle webhook logic
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Webhook error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+## Testing and Documentation
+
+### Unit and Functional Tests
+
+- Use Jest for unit tests
+- Use React Testing Library for UI tests
+- Focus on testing business logic and critical user flows
+- Aim for thorough coverage of core features
+
+### Documentation
+
+- Add JSDoc comments for complex functions and types
+- Document API endpoints with clear input/output definitions
+- Create README files for key directories
+- Keep documentation updated with code changes
+
+## Development Process
+
+### Methodological Steps
+
+1. **Initial Analysis**:
+
+   - Understand requirements
+   - Identify edge cases
+   - Assess potential risks
+
+2. **Design and Architecture**:
+
+   - Plan components and data flows
+   - Choose appropriate patterns
+   - Define interfaces and types
+
+3. **Modular Development**:
+
+   - Build isolated components
+   - Implement feature logic
+   - Connect to data sources
+
+4. **Testing and Review**:
+   - Verify against requirements
+   - Test edge cases
+   - Optimize performance
+
+### Development Workflow
+
+1. **Starting Development**: `pnpm dev`
+2. **Type Checking**: `pnpm typecheck`
+3. **Linting**: `pnpm lint`
+4. **Formatting**: `pnpm format`
+5. **Building**: `pnpm build`
+6. **Email Development**: `pnpm dev:email`
+
+## Command Reference
+
+```bash
+# Development
+pnpm dev                # Start Next.js development server
+pnpm dev:email          # Start email preview server
+
+# Build/Deploy
+pnpm build              # Build for production
+pnpm start              # Start production server
+
+# Code Quality
+pnpm lint               # Run ESLint
+pnpm format             # Run Prettier
+pnpm typecheck          # TypeScript type checking
+
+# Database
+pnpm db:generate        # Generate new Supabase migration
+pnpm db:migrate         # Run migrations
+pnpm db:push            # Push local schema to Supabase
+pnpm db:typegen:prod    # Generate types from production DB
+```
+
+Remember: The quality of your code directly impacts maintainability and team productivity. When in doubt, favor simplicity and readability over cleverness.

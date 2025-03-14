@@ -53,15 +53,15 @@ export const SectionCard = ({
     initial: {
       scaleY: 0,
       backgroundColor: isPositive
-        ? "rgba(16, 185, 129, 0.2)"
-        : "rgba(245, 158, 11, 0.2)",
+        ? "hsl(217.2 91.2% 57%)"
+        : "hsl(37.7deg, 92.1%, 50.2%)",
       originY: 0,
     },
     hover: {
       scaleY: 1,
       backgroundColor: isPositive
-        ? "rgba(16, 185, 129, 1)"
-        : "rgba(245, 158, 11, 1)",
+        ? "hsl(217.2 91.2% 57%)"
+        : "hsl(37.7deg, 92.1%, 50.2%)",
       transition: {
         duration: 0.3,
         ease: [0.25, 0.1, 0.25, 1], // Cubic bezier for more natural motion
@@ -70,8 +70,8 @@ export const SectionCard = ({
     selected: {
       scaleY: 1,
       backgroundColor: isPositive
-        ? "rgba(16, 185, 129, 1)"
-        : "rgba(245, 158, 11, 1)",
+        ? "hsl(217.2 91.2% 57%)"
+        : "hsl(37.7deg, 92.1%, 50.2%)",
     },
   };
 
@@ -99,11 +99,11 @@ export const SectionCard = ({
           className={cn(
             "relative w-full cursor-pointer overflow-hidden rounded-lg border px-5 py-3 text-left shadow-sm transition-all hover:shadow-md",
             isPositive
-              ? "hover:border-emerald-500/70"
+              ? "hover:border-primary/70"
               : "hover:border-amber-500/70",
             isSelected &&
               (isPositive
-                ? "border-emerald-500/70 bg-emerald-500/5"
+                ? "border-primary/70 bg-primary/5"
                 : "border-amber-500/70 bg-amber-500/5"),
           )}
         >
@@ -111,8 +111,8 @@ export const SectionCard = ({
           <motion.div
             variants={borderVariants}
             className={cn(
-              "absolute bottom-0 left-0 top-0 w-1 border-l-emerald-500",
-              isPositive && "border-l-amber-500",
+              "absolute bottom-0 left-0 top-0 w-1 border-l-amber-500",
+              isPositive && "border-l-primary",
             )}
           />
 
@@ -127,11 +127,11 @@ export const SectionCard = ({
                 className={cn(
                   "text-left font-semibold transition-all",
                   isPositive
-                    ? "group-hover:text-emerald-500"
+                    ? "group-hover:text-primary"
                     : "group-hover:text-amber-500",
                   isSelected &&
                     (isPositive
-                      ? "font-semibold text-emerald-500"
+                      ? "font-semibold text-primary"
                       : "font-semibold text-amber-500"),
                 )}
               >

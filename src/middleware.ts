@@ -1,4 +1,5 @@
 import { type LogtailRequest, withLogtail } from "@logtail/next";
+import type { MiddlewareConfig } from "next/server";
 
 import { updateSession } from "~/lib/supabase/middleware";
 
@@ -39,6 +40,6 @@ export const middleware = withLogtail(async (request: LogtailRequest) => {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|embed|api/webhooks|api/emails|_zoom|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|embed|api/webhooks|api/emails|api/processing|_zoom|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
-};
+} satisfies MiddlewareConfig;

@@ -66,7 +66,7 @@ export function NavigationBar() {
     },
   );
 
-  if (!goals?.length) return null;
+  // if (!goals?.length) return null;
 
   const handleTabClick = (tab: string) => {
     setActiveTab(tab);
@@ -146,7 +146,7 @@ export function NavigationBar() {
                     >
                       <GoalIcon className="h-4 w-4" />
                     </motion.div>
-                    Goals
+                    Skills
                     {activeTab === "goals" && (
                       <motion.div
                         className="absolute -bottom-2 left-0 right-0 h-0.5 rounded-full bg-primary"
@@ -189,7 +189,7 @@ export function NavigationBar() {
                     >
                       <BarChart3Icon className="h-4 w-4" />
                     </motion.div>
-                    Reports
+                    Assessments
                     {activeTab === "reports" && (
                       <motion.div
                         className="absolute -bottom-2 left-0 right-0 h-0.5 rounded-full bg-primary"
@@ -208,7 +208,7 @@ export function NavigationBar() {
           </Tabs>
         </motion.div>
 
-        {goals && (pathname === "/goals" || pathname === "/goals/reports") && (
+        {/* {goals && (pathname === "/goals" || pathname === "/goals/reports") && (
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -216,7 +216,7 @@ export function NavigationBar() {
           >
             <GenerateReportButton goals={goals} isEnabled={false} />
           </motion.div>
-        )}
+        )} */}
       </div>
     </motion.div>
   );

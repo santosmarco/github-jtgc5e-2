@@ -41,7 +41,7 @@ import { api } from "~/trpc/react";
 export type GoalCreationDrawerProps = {
   mode: "create" | "edit";
   goal:
-    | (Pick<Tables<"goals">, "text" | "user_provided_context"> & {
+    | (Pick<Tables<"goals">, "text" | "user_provided_context" | "skill_id"> & {
         signals?: Tables<"goal_signals">[];
       })
     | null;
@@ -61,6 +61,7 @@ export const GoalFormValues = z.object({
       (signals) => signals.every((signal) => signal.text.trim().length > 0),
       "Each signal must have at least 1 character",
     ),
+  skillId: z.string(),
 });
 export type GoalFormValues = z.infer<typeof GoalFormValues>;
 
@@ -85,6 +86,7 @@ export function GoalCreationDrawer({
       text: "",
       context: "",
       signals: [],
+      skillId: "",
     },
   });
 
@@ -146,6 +148,7 @@ export function GoalCreationDrawer({
   const initializeGoal = useCallback(
     (goalToInit: NonNullable<typeof goal>) => {
       goalForm.setValue("text", goalToInit.text);
+      goalForm.setValue("skillId", goalToInit.skill_id);
       if (!goalToInit.user_provided_context) {
         generateGoalContextQuestions.mutate({ goal_text: goalToInit.text });
       } else {

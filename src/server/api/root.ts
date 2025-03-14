@@ -8,15 +8,16 @@ import { clientsRouter } from "./routers/clients";
 import { coachingFrameworksRouter } from "./routers/coaching-frameworks";
 import { feedbacksRouter } from "./routers/feedbacks";
 import { goalsRouter } from "./routers/goals";
+import { meetingTopicsRouter } from "./routers/meeting-topics";
 import { meetingsRouter } from "./routers/meetings";
 import { momentsRouter } from "./routers/moments";
 import { onboardingRouter } from "./routers/onboarding";
 import { reportsRouter } from "./routers/reports";
 import { settingsRouter } from "./routers/settings";
+import { skillsRouter } from "./routers/skills";
 import { transcriptsRouter } from "./routers/transcripts";
 import { userInvitesRouter } from "./routers/user-invites";
 import { videosRouter } from "./routers/videos";
-import { meetingTopicsRouter } from "./routers/meeting-topics";
 
 export const appRouter = createTRPCRouter({
   auth: authRouter,
@@ -36,6 +37,7 @@ export const appRouter = createTRPCRouter({
   reports: reportsRouter,
   actionItems: actionItemsRouter,
   meetingTopics: meetingTopicsRouter,
+  skills: skillsRouter,
 });
 
 export type AppRouter = typeof appRouter;
