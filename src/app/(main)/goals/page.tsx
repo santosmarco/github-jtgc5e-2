@@ -1,6 +1,8 @@
 "use client";
 
+import dayjs from "dayjs";
 import { AnimatePresence, motion } from "framer-motion";
+import _ from "lodash";
 import { GoalIcon, Loader2Icon } from "lucide-react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
@@ -343,17 +345,81 @@ export default function GoalsPage() {
             className="space-y-6"
           >
             <AnimatePresence mode="popLayout">
-              {skills.map((skill) => (
-                <motion.div key={skill.id} variants={itemVariants} layout>
-                  <SkillCard
-                    profileId={profile.id ?? user.id ?? ""}
-                    skill={skill}
-                    onSkillEnabled={() => {
-                      apiUtils.skills.getAllSkills.invalidate();
-                    }}
-                  />
-                </motion.div>
-              ))}
+              {skills
+                .sort((a, b) => {
+                  // Get the most recent report for each skill based on creation date
+                  const aLatestReport = _.maxBy(a.reports, (report) =>
+                    dayjs(report.created_at).valueOf(),
+                  );
+                  const bLatestReport = _.maxBy(b.reports, (report) =>
+                    dayjs(report.created_at).valueOf(),
+                  );
+
+                  // Determine if skills have unreviewed goals in their latest reports
+                  const aHasUnreviewedGoals = Boolean(
+                    aLatestReport?.report_goals.some(
+                      (reportGoal) => !reportGoal.is_reviewed,
+                    ),
+                  );
+                  const bHasUnreviewedGoals = Boolean(
+                    bLatestReport?.report_goals.some(
+                      (reportGoal) => !reportGoal.is_reviewed,
+                    ),
+                  );
+
+                  // Priority 1: Skills with unreviewed goals appear first
+                  if (aHasUnreviewedGoals !== bHasUnreviewedGoals) {
+                    return aHasUnreviewedGoals ? -1 : 1;
+                  }
+
+                  // Get the most recent status for each skill
+                  const aLatestReportStatus = _.maxBy(a.statuses, (status) =>
+                    dayjs(status.created_at).valueOf(),
+                  );
+                  const bLatestReportStatus = _.maxBy(b.statuses, (status) =>
+                    dayjs(status.created_at).valueOf(),
+                  );
+
+                  // Determine completion status
+                  const aIsComplete =
+                    aLatestReportStatus?.status === "completed";
+                  const bIsComplete =
+                    bLatestReportStatus?.status === "completed";
+
+                  // Priority 2: Skills with completed reports appear next
+                  if (aIsComplete !== bIsComplete) {
+                    return aIsComplete ? -1 : 1;
+                  }
+
+                  // Priority 3: Skills with pending processing status
+                  const aIsPending = aLatestReportStatus?.status === "pending";
+                  const bIsPending = bLatestReportStatus?.status === "pending";
+
+                  if (aIsPending !== bIsPending) {
+                    return aIsPending ? -1 : 1;
+                  }
+
+                  // Priority 4: Sort by recency of reports
+                  const aLatestTimestamp = aLatestReport
+                    ? dayjs(aLatestReport.created_at).valueOf()
+                    : 0;
+                  const bLatestTimestamp = bLatestReport
+                    ? dayjs(bLatestReport.created_at).valueOf()
+                    : 0;
+
+                  return bLatestTimestamp - aLatestTimestamp;
+                })
+                .map((skill) => (
+                  <motion.div key={skill.id} variants={itemVariants} layout>
+                    <SkillCard
+                      profileId={profile.id ?? user.id ?? ""}
+                      skill={skill}
+                      onSkillEnabled={() => {
+                        apiUtils.skills.getAllSkills.invalidate();
+                      }}
+                    />
+                  </motion.div>
+                ))}
             </AnimatePresence>
           </motion.div>
         </>
