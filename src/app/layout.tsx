@@ -1,11 +1,13 @@
 import "~/styles/globals.css";
 
+import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
 import { ProfileProvider } from "~/components/profile-provider";
+import { PostHogProvider } from "~/components/providers/posthog";
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import { TRPCReactProvider } from "~/trpc/react";
@@ -33,9 +35,12 @@ export default function RootLayout({
           <TRPCReactProvider>
             <ProfileProvider>
               <TooltipProvider delayDuration={0}>
-                {children}
-                <Toaster />
+                <PostHogProvider>
+                  {children}
+                  <Toaster />
+                  <Analytics />
                   <SpeedInsights />
+                </PostHogProvider>
               </TooltipProvider>
             </ProfileProvider>
           </TRPCReactProvider>
