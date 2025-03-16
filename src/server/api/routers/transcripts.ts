@@ -120,4 +120,98 @@ export const transcriptsRouter = createTRPCRouter({
 
       return uniqueTranscriptSlices;
     }),
+
+  getMinimalTranscript: publicProcedure
+    .input(
+      z.object({
+        videoId: z.string(),
+        limit: z.number().min(1).max(50).default(10),
+      }),
+    )
+    .query(async ({ input }) => {
+      const { videoId, limit } = input;
+      const supabase = await createClient();
+
+      try {
+        // Find the relevant meeting bot
+        const { data: meetingBotV1 } = await supabase
+          .from("meeting_bots")
+          .select("id")
+          .eq("api_video_id", videoId)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        let botId = meetingBotV1?.[0]?.id;
+        let isV1 = !!botId;
+
+        if (!botId) {
+          const { data: meetingBotV2 } = await supabase
+            .from("meeting_bots_v2")
+            .select("id")
+            .eq("api_video_id", videoId)
+            .order("created_at", { ascending: false })
+            .limit(1);
+
+          botId = meetingBotV2?.[0]?.id;
+          isV1 = false;
+        }
+
+        if (!botId) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Unable to find transcript for video",
+          });
+        }
+
+        // Get basic transcript content with simplified word data
+        const { data: slices, error } = await (
+          isV1
+            ? supabase.from("transcript_slices").select(
+                `
+                id, 
+                index,
+                speaker_name,
+                words:transcript_words(
+                  id,
+                  index,
+                  start_time,
+                  end_time,
+                  content
+                )
+                `,
+              )
+            : supabase.from("transcript_slices_v2").select(
+                `
+                id, 
+                index,
+                speaker_name,
+                words:transcript_words_v2(
+                  id,
+                  index,
+                  start_time,
+                  end_time,
+                  content
+                )
+                `,
+              )
+        )
+          .eq("bot_id", botId)
+          .order("index")
+          .limit(limit);
+
+        if (error) throw error;
+
+        return {
+          slices: slices || [],
+          isComplete: (slices || []).length < limit,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to get minimal transcript: ${(error as Error).message}`,
+          cause: error,
+        });
+      }
+    }),
 });
