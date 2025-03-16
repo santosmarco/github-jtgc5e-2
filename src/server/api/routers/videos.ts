@@ -203,6 +203,93 @@ export const videosRouter = createTRPCRouter({
       }
     }),
 
+  listForInsights: publicProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+        limit: z.number().min(1).max(100).default(36),
+        cursor: z.number().nullish(),
+      }),
+    )
+    .query(async ({ input }) => {
+      try {
+        const { userId, limit, cursor } = input;
+        const supabase = await createClient();
+
+        // Fetch videos without full enrichment
+        const videos = await listVideos({
+          pageSize: limit,
+          currentPage: cursor ? Math.floor(cursor / limit) + 1 : 1,
+          sortBy: "createdAt",
+          sortOrder: "desc",
+          tags: [userId],
+        });
+
+        // Get minimal video data
+        const lightVideos = await Promise.all(
+          videos.map(async (video) => {
+            // Only fetch basic video info and meeting data, not all moments
+            const meetingResult = await supabase
+              .from("meetings")
+              .select("summary")
+              .eq("video_api_id", video.videoId)
+              .maybeSingle();
+
+            // Get distinct activities
+            const { data: activitiesData } = await supabase
+              .from("moments")
+              .select("activity")
+              .eq("video_api_id", video.videoId)
+              .eq("latest", true)
+              .eq("relevant", true);
+
+            const topics = activitiesData
+              ? Array.from(new Set(activitiesData.map((m) => m.activity)))
+              : [];
+
+            let videoSrc = `https://vod.api.video/vod/${video.videoId}/mp4/source.mp4`;
+            const videoFetch = await fetch(videoSrc);
+            if (videoFetch.status !== 200) {
+              const { data: meetingBots } = await supabase
+                .from("meeting_bots")
+                .select("mp4_source_url")
+                .eq("api_video_id", video.videoId)
+                .not("mp4_source_url", "is", null)
+                .order("created_at", { ascending: false })
+                .limit(1);
+              videoSrc = meetingBots?.[0]?.mp4_source_url ?? videoSrc;
+            }
+
+            // Create a lighter version of the video object
+            return {
+              ...video,
+              videoSrc,
+              summary: (meetingResult.data?.summary ?? "").replace(
+                /^"|"$/g,
+                "",
+              ),
+              topics: topics,
+              // Don't include full moments data
+            };
+          }),
+        );
+
+        const nextCursor =
+          lightVideos.length === limit ? (cursor ?? 0) + limit : undefined;
+
+        return {
+          videos: lightVideos,
+          nextCursor,
+        };
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to list videos for insights: ${(error as Error).message}`,
+          cause: error,
+        });
+      }
+    }),
+
   getOne: publicProcedure
     .input(
       z.object({

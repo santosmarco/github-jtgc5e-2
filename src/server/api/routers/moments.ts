@@ -245,4 +245,84 @@ export const momentsRouter = createTRPCRouter({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", cause: error });
       return { success: true };
     }),
+
+  listForInsights: publicProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+        videoId: z.string().optional(),
+        topic: z.string().optional(),
+        limit: z.number().min(1).max(100).default(50),
+        cursor: z.number().nullish(),
+      }),
+    )
+    .query(async ({ input }) => {
+      try {
+        const { userId, videoId, topic, limit, cursor } = input;
+        const supabase = await createClient();
+
+        // Build query with filters
+        let query = supabase
+          .from("moments")
+          .select("*, subtags:moment_subtags(*)")
+          .eq("latest", true)
+          .eq("relevant", true);
+
+        // Filter by video if specified
+        if (videoId && videoId !== "all") {
+          query = query.eq("video_api_id", videoId);
+        }
+
+        // Filter by topic if specified and not "Coach"
+        if (topic && topic !== "Coach") {
+          query = query.eq("activity", topic);
+        }
+
+        // Apply pagination
+        if (cursor) {
+          query = query.range(cursor, cursor + limit - 1);
+        } else {
+          query = query.limit(limit);
+        }
+
+        // Execute query
+        const { data, error } = await query;
+
+        if (error) throw error;
+
+        // Transform moments
+        const moments = data.map((moment, idx) => transformMoment(moment, idx));
+
+        // Get reactions for the moments
+        const momentIds = moments.map((m) => m.id);
+
+        if (momentIds.length > 0) {
+          const { data: reactions } = await supabase
+            .from("moment_reactions")
+            .select("*")
+            .in("moment_id", momentIds);
+
+          if (reactions) {
+            // Add reactions to moments
+            for (const moment of moments) {
+              moment.reactions = reactions.filter(
+                (r) => r.moment_id === moment.id,
+              );
+            }
+          }
+        }
+
+        return {
+          moments,
+          nextCursor:
+            moments.length === limit ? (cursor ?? 0) + limit : undefined,
+        };
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to list moments for insights: ${(error as Error).message}`,
+          cause: error,
+        });
+      }
+    }),
 });

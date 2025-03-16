@@ -458,8 +458,8 @@ export default function ReportPage({
         const reportSkillNegativeScaleTags =
           report.skill?.scales.map((s) => s.negative_tag_title) ?? [];
         const reportSkillScaleTags = [
-          ...reportSkillPositiveScaleTags,
-          ...reportSkillNegativeScaleTags,
+          ...reportSkillPositiveScaleTags.flatMap((t) => t.split(",")),
+          ...reportSkillNegativeScaleTags.flatMap((t) => t.split(",")),
         ];
         const momentSubtagFrequencies = _.countBy(
           reportMoments.flatMap((rm) =>
@@ -473,16 +473,16 @@ export default function ReportPage({
         );
 
         const metrics = reportSkillPositiveScaleTags.map((pt, i) => {
-          const nt = reportSkillNegativeScaleTags[i];
-          const total =
-            (momentSubtagFrequencies[pt] ?? 0) +
-              (momentSubtagFrequencies[nt!] ?? 0) || 1;
+          const nt = reportSkillNegativeScaleTags[i] ?? "";
+          const positiveCount = momentSubtagFrequencies[pt ?? ""] ?? 0;
+          const negativeCount = momentSubtagFrequencies[nt] ?? 0;
+          const total = positiveCount + negativeCount || 1;
 
           return {
-            id: `${pt}-${nt}`,
-            leftLabel: pt!,
-            rightLabel: nt!,
-            value: 100 * ((momentSubtagFrequencies[pt] ?? 0) / total),
+            id: `${pt ?? ""}-${nt}`,
+            leftLabel: pt ?? "",
+            rightLabel: nt,
+            value: 100 * (positiveCount / total),
           };
         });
 
