@@ -16,7 +16,7 @@ import { SlashCommand } from "~/lib/commands/schemas";
 import { searchSimilar } from "~/lib/pinecone/search";
 import { UIMessage } from "~/lib/schemas/ai";
 import { Video } from "~/lib/schemas/video";
-import { VideoMoment } from "~/lib/schemas/video-moment";
+import { VideoMomentPartial } from "~/lib/schemas/video-moment";
 import { createClient } from "~/lib/supabase/server";
 import type { toVideoOutput } from "~/lib/videos";
 import { api } from "~/trpc/server";
@@ -30,8 +30,8 @@ export const ChatRequestBody = z
     userId: z.string(),
     selectedActivity: z.string(),
     messages: z.array(UIMessage.passthrough()),
-    selectedMoments: z.array(VideoMoment).default([]),
-    selectedVideos: z.array(Video).default([]),
+    selectedMoments: z.array(VideoMomentPartial).default([]),
+    selectedVideos: z.array(Video.partial()).default([]),
   })
   .partial()
   .passthrough();
@@ -103,11 +103,15 @@ export async function POST(request: NextRequest) {
 
     const listMeetingsTool = createListMeetingsTool(
       userId,
-      selectedVideoIds?.length ? selectedVideoIds : undefined,
+      selectedVideoIds?.length
+        ? selectedVideoIds.filter((id): id is NonNullable<typeof id> => !!id)
+        : undefined,
     );
     const searchMomentsTool = createSearchMomentsTool(
       userId,
-      selectedVideoIds?.length ? selectedVideoIds : undefined,
+      selectedVideoIds?.length
+        ? selectedVideoIds.filter((id): id is NonNullable<typeof id> => !!id)
+        : undefined,
     );
 
     const observationPrompt = observationPrompts?.[0];
