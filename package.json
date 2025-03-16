@@ -93,6 +93,7 @@
     "@types/hast": "^3.0.4",
     "@types/uuid": "^10.0.0",
     "@vercel/otel": "^1.10.1",
+    "@vercel/speed-insights": "^1.2.0",
     "@vidstack/react": "^1.12.12",
     "@voctrolabs/node-webvtt": "^1.1.0",
     "@zodios/core": "^10.9.6",
