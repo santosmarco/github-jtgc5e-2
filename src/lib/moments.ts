@@ -16,7 +16,9 @@ export type MomentStyles = {
   activityTypeBadge?: React.ComponentProps<typeof Badge>;
 };
 
-export function getMomentStyles(moment: VideoMoment) {
+export function getMomentStyles(
+  moment: Pick<VideoMoment, "activity" | "activity_type">,
+) {
   const styles: MomentStyles = {};
 
   if (moment.activity === "Emotion") {
@@ -44,10 +46,12 @@ function getColorFromRanking(ranking: string | null | undefined) {
   return "destructive";
 }
 
-export function getMomentIcon(moment: VideoMoment): LucideIcon;
+export function getMomentIcon(
+  moment: Pick<VideoMoment, "activity">,
+): LucideIcon;
 export function getMomentIcon(activity: string): LucideIcon;
 export function getMomentIcon(
-  momentOrActivity: VideoMoment | string,
+  momentOrActivity: Pick<VideoMoment, "activity"> | string,
 ): LucideIcon {
   return (
     {
