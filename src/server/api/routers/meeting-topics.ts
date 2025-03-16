@@ -38,6 +38,45 @@ export const meetingTopicsRouter = createTRPCRouter({
       return topics satisfies MeetingTopicWithSegments[];
     }),
 
+  getBasicTopicsByVideoId: publicProcedure
+    .input(
+      z.object({
+        videoId: z.string(),
+        includeSegmentIds: z.boolean().default(false),
+      }),
+    )
+    .query(async ({ input }) => {
+      const supabase = await createClient();
+
+      let query = (
+        input.includeSegmentIds
+          ? supabase
+              .from("meeting_topics")
+              .select("id, title, summary, vtt_start_segment_id")
+          : supabase.from("meeting_topics").select("id, title, summary")
+      ).eq("api_video_id", input.videoId);
+
+      if (input.includeSegmentIds) {
+        query = query.order("vtt_start_segment_id", { ascending: true });
+      }
+
+      const { data: topics, error } = await query;
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to fetch basic meeting topics: ${error.message}`,
+          cause: error,
+        });
+      }
+
+      if (topics.length <= 0) {
+        return null;
+      }
+
+      return topics;
+    }),
+
   create: publicProcedure
     .input(
       z.object({
