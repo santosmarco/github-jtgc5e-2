@@ -1,11 +1,40 @@
+import type { SetOptional } from "type-fest";
 import type { VideoMoment, VideoMoments } from "~/lib/schemas/video-moment";
 import type { Tables } from "~/lib/supabase/database.types";
 import { createClient } from "~/lib/supabase/server";
 
 export function transformMoment(
-  moment: Tables<"moments"> & {
-    subtags: Tables<"moment_subtags">[];
-  },
+  moment: SetOptional<
+    Pick<
+      Tables<"moments"> & {
+        subtags?: Tables<"moment_subtags">[];
+      },
+      | "activity"
+      | "activity_reasoning"
+      | "activity_type"
+      | "id"
+      | "relevant"
+      | "segment_end_timestamp"
+      | "segment_end_timestamp_in_seconds"
+      | "segment_id_sequence_end"
+      | "segment_id_sequence_start"
+      | "segment_start_timestamp"
+      | "segment_start_timestamp_in_seconds"
+      | "segment_start_timestamp_in_seconds_ideal"
+      | "subtags"
+      | "summary"
+      | "target_person_type"
+      | "title"
+      | "video_api_id"
+    >,
+    | "activity_reasoning"
+    | "activity_type"
+    | "segment_end_timestamp"
+    | "segment_id_sequence_end"
+    | "segment_id_sequence_start"
+    | "segment_start_timestamp"
+    | "target_person_type"
+  >,
   idx: number,
 ): VideoMoment {
   return {
@@ -32,7 +61,7 @@ export function transformMoment(
     activity: moment.activity ?? "",
     relevant: moment.relevant,
     reactions: [],
-    subtags: moment.subtags,
+    subtags: moment.subtags ?? [],
   };
 }
 
