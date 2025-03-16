@@ -3,8 +3,7 @@ import { z } from "zod";
 
 import { deleteMeeting } from "~/lib/api/meetings";
 import { getVideo, listVideos } from "~/lib/api-video/videos";
-import type { VideoMoment } from "~/lib/schemas/video-moment";
-import type { Tables } from "~/lib/supabase/database.types";
+import { transformMoment } from "~/lib/db/moments";
 import { createClient } from "~/lib/supabase/server";
 import { toVideoOutput } from "~/lib/videos";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
@@ -19,40 +18,6 @@ export const VideoOptions = z.object({
     .default({}),
 });
 export type VideoOptions = z.infer<typeof VideoOptions>;
-
-function transformMoment(
-  moment: Tables<"moments"> & {
-    subtags: Tables<"moment_subtags">[];
-  },
-  idx: number,
-) {
-  return {
-    id: moment.id,
-    index: `${moment.video_api_id}_${moment.activity}_${idx}`,
-    sequence_id: idx ?? "",
-    segment_id_sequence_start: moment.segment_id_sequence_start ?? 0,
-    segment_id_sequence_end: moment.segment_id_sequence_end ?? 0,
-    title: (moment.title ?? "").replace(/^"|"$/g, ""),
-    summary: (moment.summary ?? "").replace(/^"|"$/g, ""),
-    segment_start_timestamp: moment.segment_start_timestamp ?? "",
-    segment_end_timestamp: moment.segment_end_timestamp ?? "",
-    segment_start_timestamp_in_seconds:
-      moment.segment_start_timestamp_in_seconds ?? 0,
-    segment_end_timestamp_in_seconds:
-      moment.segment_end_timestamp_in_seconds ?? 0,
-    segment_ideal_timestamp_in_seconds:
-      moment.segment_start_timestamp_in_seconds_ideal,
-    video_id: moment.video_api_id ?? "",
-    activity_type: moment.activity_type ?? "",
-    activity_reasoning: (moment.activity_reasoning ?? "").replace(/^"|"$/g, ""),
-    target_person_type: moment.target_person_type ?? "",
-    target_person_reasoning: null,
-    activity: moment.activity ?? "",
-    relevant: moment.relevant,
-    reactions: [],
-    subtags: moment.subtags,
-  } satisfies VideoMoment;
-}
 
 async function fetchVideoData(
   videoId: string,
@@ -308,6 +273,54 @@ export const videosRouter = createTRPCRouter({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: `Failed to get video: ${(error as Error).message}`,
+          cause: error,
+        });
+      }
+    }),
+
+  getBasicInfo: publicProcedure
+    .input(
+      z.object({
+        videoId: z.string(),
+      }),
+    )
+    .query(async ({ input }) => {
+      try {
+        const video = await getVideo(input.videoId);
+        const supabase = await createClient();
+
+        // Only fetch essential metadata, not all moments
+        const { data: meetingData } = await supabase
+          .from("meetings")
+          .select("summary, clean_vtt_file")
+          .eq("video_api_id", input.videoId)
+          .maybeSingle();
+
+        // Get video source URL
+        let videoSrc = `https://vod.api.video/vod/${input.videoId}/mp4/source.mp4`;
+        const videoFetch = await fetch(videoSrc, { method: "HEAD" });
+        if (videoFetch.status !== 200) {
+          const { data: meetingBots } = await supabase
+            .from("meeting_bots")
+            .select("mp4_source_url")
+            .eq("api_video_id", input.videoId)
+            .not("mp4_source_url", "is", null)
+            .order("created_at", { ascending: false })
+            .limit(1);
+          videoSrc = meetingBots?.[0]?.mp4_source_url ?? videoSrc;
+        }
+
+        return {
+          ...video,
+          videoSrc,
+          summary: (meetingData?.summary ?? "").replace(/^"|"$/g, ""),
+          vtt: meetingData?.clean_vtt_file ?? "",
+          // No moments included
+        };
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to get video basic info: ${(error as Error).message}`,
           cause: error,
         });
       }
