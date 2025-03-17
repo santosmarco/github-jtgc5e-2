@@ -33,7 +33,16 @@ export const SectionsList = ({
 }: SectionsListProps) => {
   return (
     <>
-      <TabsContent value="positive" className="mt-6 space-y-4">
+      <TabsContent
+        value="positive"
+        className="mt-4 space-y-2 px-1 sm:mt-6 sm:space-y-4 sm:px-0"
+      >
+        {positiveSections.length === 0 && (
+          <div className="py-6 text-center text-sm text-muted-foreground">
+            No positive sections available
+          </div>
+        )}
+
         {positiveSections.map((section, index) => {
           const sectionMoments = reportMoments.filter(
             (rm) => rm.report_section_id === section.id,
@@ -56,7 +65,16 @@ export const SectionsList = ({
         })}
       </TabsContent>
 
-      <TabsContent value="negative" className="mt-6 space-y-4">
+      <TabsContent
+        value="negative"
+        className="mt-4 space-y-2 px-1 sm:mt-6 sm:space-y-4 sm:px-0"
+      >
+        {negativeSections.length === 0 && (
+          <div className="py-6 text-center text-sm text-muted-foreground">
+            No growth areas available
+          </div>
+        )}
+
         {negativeSections.map((section, index) => {
           const sectionMoments = reportMoments.filter(
             (rm) => rm.report_section_id === section.id,
