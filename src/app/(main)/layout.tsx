@@ -21,7 +21,9 @@ export default async function MainLayout({
     redirect("/login");
   }
 
-  const meetings = await api.meetings.getForProfile(user.id).catch(() => []);
+  const meetings = await api.meetings
+    .getForProfile({ profileId: user.id, limit: 11 })
+    .catch(() => []);
 
   return (
     <>
