@@ -58,7 +58,6 @@ export default function ReportPage({
   const [currentTab, setCurrentTab] = useState<"positive" | "negative">(
     "positive",
   );
-  const [isLargeScreen, setIsLargeScreen] = useState(false);
 
   const utils = api.useUtils();
   const { data: user } = api.auth.getUser.useQuery();
@@ -79,23 +78,6 @@ export default function ReportPage({
   });
 
   const supabase = createClient();
-
-  useEffect(() => {
-    // Check screen size on mount and when window resizes
-    const checkScreenSize = () => {
-      // 1600px is roughly the width of a large MacBook Pro
-      setIsLargeScreen(window.innerWidth > 1600);
-    };
-
-    // Initial check
-    checkScreenSize();
-
-    // Add resize listener
-    window.addEventListener("resize", checkScreenSize);
-
-    // Cleanup
-    return () => window.removeEventListener("resize", checkScreenSize);
-  }, []);
 
   const handleSubmitComment = (reportId: string, content: string) => {
     if (!content.trim()) return;
@@ -369,39 +351,6 @@ export default function ReportPage({
     setHasJustUpdatedCurrentMomentIndex(true);
   };
 
-  const feedbackMetrics = [
-    {
-      id: "fault-finding",
-      leftLabel: "Fault-Finding",
-      rightLabel: "Problem-Solving",
-      value: 70,
-    },
-    {
-      id: "indirect",
-      leftLabel: "Indirect",
-      rightLabel: "Direct",
-      value: 80,
-    },
-    {
-      id: "ambiguous",
-      leftLabel: "Ambiguous",
-      rightLabel: "Clear",
-      value: 75,
-    },
-    {
-      id: "specific",
-      leftLabel: "Specific",
-      rightLabel: "Vague",
-      value: 65,
-    },
-    {
-      id: "critical",
-      leftLabel: "Critical",
-      rightLabel: "Supportive",
-      value: 60,
-    },
-  ];
-
   if (isLoading) {
     return (
       <div className="grid min-h-[calc(100vh-4rem)] place-items-center">
@@ -536,13 +485,6 @@ export default function ReportPage({
           (rm) => rm.report_section_id === selectedReportSectionId,
         );
 
-        // Determine grid layout based on screen size and comments visibility
-        const gridClass = isLargeScreen
-          ? "grid-cols-[1fr,1.5fr,298px]"
-          : isCommentsVisible
-            ? "grid-cols-[1fr,1.5fr,298px]"
-            : "grid-cols-[1fr,1.5fr,0px]";
-
         return (
           <div
             key={report.id}
@@ -574,7 +516,14 @@ export default function ReportPage({
                   <PersonalityProfile report={report} />
                 </motion.div>
 
-                <div className={cn("grid h-full gap-6", gridClass)}>
+                {/* Use responsive classes directly in the grid - automatically show comments on 2xl screens */}
+                <div
+                  className={cn(
+                    "grid h-full gap-6",
+                    "grid-cols-[1fr,1.5fr,0px]", // Default for small screens with comments hidden
+                    isCommentsVisible && "grid-cols-[1fr,1.5fr,298px]", // When comments toggled on small screens
+                  )}
+                >
                   <div className="flex flex-col gap-4">
                     <Tabs
                       defaultValue="positive"
@@ -626,8 +575,8 @@ export default function ReportPage({
 
                   <div
                     className={cn(
-                      "flex max-h-20 flex-col gap-6",
-                      isLargeScreen ? "" : "-mr-6",
+                      "-mr-6 flex max-h-20 flex-col gap-6",
+                      isCommentsVisible && "mr-0",
                     )}
                   >
                     <MomentsPlayer
@@ -649,12 +598,13 @@ export default function ReportPage({
                   <CommentsPanel
                     reportId={report.id}
                     comments={report.report_comments as ReportComment[]}
-                    isVisible={isLargeScreen || isCommentsVisible}
+                    isVisible={isCommentsVisible}
                     onToggleVisibility={() =>
-                      !isLargeScreen && setIsCommentsVisible(!isCommentsVisible)
+                      setIsCommentsVisible((prev) => !prev)
                     }
                     onSubmitComment={handleSubmitComment}
                     isPendingSubmit={createComment.isPending}
+                    className="2xl:block 2xl:[&_button[variant='outline']]:hidden"
                   />
                 </div>
               </>

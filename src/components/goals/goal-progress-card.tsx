@@ -1,7 +1,7 @@
 "use client";
 
 import dayjs from "dayjs";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import _ from "lodash";
 import {
   ArrowRight,
@@ -11,6 +11,7 @@ import {
   Trophy,
   XCircle,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { Button } from "~/components/ui/button";
 import { Card, CardHeader } from "~/components/ui/card";
@@ -18,6 +19,16 @@ import { cn } from "~/lib/utils";
 import type { RouterOutputs } from "~/trpc/react";
 import { Link } from "../ui/link";
 import { Separator } from "../ui/separator";
+
+// Loading states for skill enablement animation
+const skillEnablingStates = [
+  "Analyzing core moments...",
+  "Calibrating skill metrics...",
+  "Setting up tracking parameters...",
+  "Connecting to knowledge base...",
+  "Preparing insights engine...",
+  "Almost ready...",
+];
 
 export type SkillProgressCardProps = {
   skill: RouterOutputs["skills"]["getAllSkills"][number];
@@ -87,8 +98,26 @@ export function SkillProgressCard({
   completedAt,
   onEnable,
 }: SkillProgressCardProps) {
+  const [enablingStateIndex, setEnablingStateIndex] = useState(0);
+
+  // Effect to cycle through enabling states
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (loading) {
+      interval = setInterval(() => {
+        setEnablingStateIndex((prev) =>
+          prev >= skillEnablingStates.length - 1 ? 0 : prev + 1,
+        );
+      }, 2000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+      setEnablingStateIndex(0);
+    };
+  }, [loading]);
+
   const baseCardClasses =
-    "relative h-60 w-[350px] bg-gradient-to-br from-background to-muted/20 " +
+    "relative h-full w-full bg-gradient-to-br from-background to-muted/20 " +
     "transition-all duration-300 hover:from-primary/5 hover:to-background " +
     "border border-border/40 backdrop-blur-sm";
 
@@ -98,7 +127,7 @@ export function SkillProgressCard({
         variants={cardVariants}
         initial="hidden"
         animate="visible"
-        className="relative overflow-hidden"
+        className="relative h-full w-full overflow-hidden"
       >
         <Card className={baseCardClasses}>
           <motion.div
@@ -106,42 +135,95 @@ export function SkillProgressCard({
             animate={backgroundAnimation}
           />
 
-          <CardHeader className="relative flex h-full items-center justify-center">
-            <motion.div className="flex flex-col items-center justify-center">
+          <CardHeader className="relative flex h-full items-center justify-center py-0">
+            <motion.div className="flex h-full flex-col items-center justify-center">
               <motion.h3
                 variants={contentVariants}
-                className="text-center text-lg font-medium"
+                className="flex items-center gap-x-3 text-center text-lg font-medium transition-all"
               >
-                Enable Skill Tracking
+                <AnimatePresence mode="wait">
+                  {loading ? (
+                    <motion.span
+                      key="loading"
+                      initial={{ y: 20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      exit={{ y: -20, opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="animate-pulse transition-all [animation-duration:3s]"
+                    >
+                      Working on it...
+                    </motion.span>
+                  ) : (
+                    <motion.span
+                      key="enable"
+                      initial={{ y: 20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      exit={{ y: -20, opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      Enable Skill Tracking
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </motion.h3>
+
               <motion.p
                 variants={contentVariants}
-                className="mt-2 text-center text-sm text-muted-foreground/80"
+                className={cn(
+                  "mt-2 text-center text-sm text-muted-foreground/80 transition-all",
+                  loading && "animate-pulse [animation-duration:3s]",
+                )}
               >
-                Get insights and feedback on your development
+                Track your progress and receive personalized insights on your
+                development
               </motion.p>
 
               <motion.div variants={contentVariants} className="mt-5">
                 <Button
                   onClick={onEnable}
-                  className="bg-primary/90 transition-all duration-300 hover:bg-primary"
+                  className={cn(
+                    "relative min-w-[260px] overflow-hidden transition-all duration-300",
+                    loading
+                      ? "bg-primary/70 hover:bg-primary/80"
+                      : "bg-primary/90 hover:bg-primary",
+                  )}
                   size="sm"
                   disabled={loading}
                 >
-                  {loading ? (
+                  {loading && (
                     <motion.div
-                      animate={{ rotate: 360 }}
+                      className="absolute inset-0 -z-10 bg-gradient-to-r from-primary/20 via-primary/40 to-primary/20"
+                      animate={{
+                        x: ["-100%", "100%"],
+                      }}
                       transition={{
-                        duration: 1.5,
+                        duration: 2,
                         repeat: Number.POSITIVE_INFINITY,
                         ease: "linear",
                       }}
-                      className="mr-2 h-4 w-4 rounded-full border-2 border-background border-t-transparent"
                     />
-                  ) : (
-                    <Sparkles className="mr-2 h-4 w-4" />
                   )}
-                  {loading ? "Enabling..." : "Enable"}
+                  {loading ? (
+                    <div className="z-10 flex w-full items-center justify-between px-2">
+                      <AnimatePresence mode="wait">
+                        <motion.span
+                          key={enablingStateIndex}
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -5 }}
+                          transition={{ duration: 0.2 }}
+                          className="flex-1 text-center"
+                        >
+                          {skillEnablingStates[enablingStateIndex]}
+                        </motion.span>
+                      </AnimatePresence>
+                    </div>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      Enable
+                    </>
+                  )}
                 </Button>
               </motion.div>
             </motion.div>
@@ -157,7 +239,7 @@ export function SkillProgressCard({
         variants={cardVariants}
         initial="hidden"
         animate="visible"
-        className="relative overflow-hidden"
+        className="relative h-full w-full overflow-hidden"
       >
         <Card className={`${baseCardClasses} border-emerald-500/10`}>
           <motion.div
@@ -165,8 +247,8 @@ export function SkillProgressCard({
             animate={backgroundAnimation}
           />
 
-          <CardHeader className="relative flex h-full items-center justify-center">
-            <motion.div className="flex flex-col items-center justify-center">
+          <CardHeader className="relative flex h-full items-center justify-center py-0">
+            <motion.div className="flex h-full flex-col items-center justify-center">
               <motion.div
                 variants={iconContainerVariants}
                 className="from-emerald-500/8 relative flex h-20 w-20 items-center justify-center rounded-full border border-emerald-500/20 bg-gradient-to-br to-background shadow-sm"
@@ -235,7 +317,7 @@ export function SkillProgressCard({
         variants={cardVariants}
         initial="hidden"
         animate="visible"
-        className="relative overflow-hidden"
+        className="relative h-full w-full overflow-hidden"
       >
         <Card className={baseCardClasses}>
           <motion.div
@@ -243,18 +325,18 @@ export function SkillProgressCard({
             animate={backgroundAnimation}
           />
 
-          <CardHeader className="relative flex h-full items-center justify-center">
-            <motion.div className="flex flex-col items-center justify-center">
+          <CardHeader className="relative flex h-full items-center justify-center py-0">
+            <motion.div className="flex h-full flex-col items-center justify-center">
               <motion.div
                 variants={iconContainerVariants}
-                className="relative flex h-20 w-20 items-center justify-center rounded-full border border-muted/50 bg-gradient-to-br from-muted/10 to-background shadow-sm"
+                className="relative flex h-20 w-20 items-center justify-center rounded-full border border-border/50 bg-gradient-to-br from-muted/10 to-background shadow-sm"
               >
                 <Goal className="h-10 w-10 text-muted-foreground/60" />
               </motion.div>
 
               <motion.h3
                 variants={contentVariants}
-                className="mt-5 text-center text-lg font-medium"
+                className="mt-4 text-center text-lg font-medium"
               >
                 No Assessment Yet
               </motion.h3>
@@ -277,7 +359,7 @@ export function SkillProgressCard({
         variants={cardVariants}
         initial="hidden"
         animate="visible"
-        className="relative overflow-hidden"
+        className="relative h-full w-full overflow-hidden"
       >
         <Card className={baseCardClasses}>
           <motion.div
@@ -285,8 +367,8 @@ export function SkillProgressCard({
             animate={backgroundAnimation}
           />
 
-          <CardHeader className="relative flex h-full items-center justify-center">
-            <motion.div className="flex flex-col items-center justify-center">
+          <CardHeader className="relative flex h-full items-center justify-center py-0">
+            <motion.div className="flex h-full flex-col items-center justify-center">
               <motion.div
                 variants={iconContainerVariants}
                 className="from-primary/8 relative flex h-20 w-20 items-center justify-center rounded-full border border-primary/20 bg-gradient-to-br to-background shadow-sm"
@@ -328,7 +410,7 @@ export function SkillProgressCard({
         variants={cardVariants}
         initial="hidden"
         animate="visible"
-        className="relative overflow-hidden"
+        className="relative h-full w-full overflow-hidden"
       >
         <Card className={baseCardClasses}>
           <motion.div
@@ -336,8 +418,8 @@ export function SkillProgressCard({
             animate={backgroundAnimation}
           />
 
-          <CardHeader className="relative flex h-full items-center justify-center">
-            <motion.div className="flex flex-col items-center justify-center">
+          <CardHeader className="relative flex h-full items-center justify-center py-0">
+            <motion.div className="flex h-full flex-col items-center justify-center">
               <motion.div
                 variants={iconContainerVariants}
                 className="relative flex h-20 w-20 items-center justify-center rounded-full border border-destructive/20 bg-gradient-to-br from-destructive/5 to-background shadow-sm"
@@ -369,15 +451,10 @@ export function SkillProgressCard({
       variants={cardVariants}
       initial="hidden"
       animate="visible"
-      className="relative overflow-hidden"
+      className="relative h-full w-full overflow-hidden"
     >
       <Card className={baseCardClasses}>
-        <motion.div
-          className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(var(--primary-rgb),0.08),transparent_70%)]"
-          animate={backgroundAnimation}
-        />
-
-        <div className="flex h-full flex-col justify-between p-6">
+        <div className="flex h-full flex-col justify-between p-5">
           <div className="space-y-3">
             <motion.div
               variants={contentVariants}

@@ -160,13 +160,37 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
     )?.completed_at;
 
     // Calculate statistics about reviews and assessments
-    const skillAssessments = skill.reports || [];
+    const skillAssessments =
+      skill.reports.filter((r) =>
+        r.report_goals
+          .map((rg) => rg.goal_id)
+          .some((goalId) =>
+            skill.goals
+              .filter((g) => g.is_default)
+              .some((g) => g.id === goalId),
+          ),
+      ) || [];
     const reviewedAssessments =
-      skill.report_goals.filter((rg) => rg.is_reviewed) || [];
+      skillAssessments.filter((r) =>
+        r.report_goals.every((rg) => rg.is_reviewed),
+      ) || [];
     const totalReviews = reviewedAssessments.length;
+    const latestAssessment =
+      skillAssessments.length > 0
+        ? _.orderBy(
+            skillAssessments,
+            [(r) => dayjs(r.created_at).toDate()],
+            ["desc"],
+          )[0]
+        : null;
     const latestReview =
-      skillAssessments.length > 0 ? skillAssessments[0] : null;
-
+      reviewedAssessments.length > 0
+        ? _.orderBy(
+            reviewedAssessments,
+            [(r) => dayjs(r.created_at).toDate()],
+            ["desc"],
+          )[0]
+        : null;
     const hasAssessments = skillAssessments.length > 0;
 
     // Determine status for display
@@ -195,8 +219,8 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
         animate="visible"
         className="h-full overflow-visible border-b border-border/40 pb-5"
       >
-        <div className="flex h-60 items-stretch justify-between gap-x-4 overflow-visible">
-          <Card className="relative flex h-full w-full flex-col overflow-visible border border-border/40 bg-gradient-to-br from-background to-muted/20 shadow-sm backdrop-blur-sm">
+        <div className="grid h-full grid-cols-4 gap-x-4 overflow-visible">
+          <Card className="relative col-span-3 flex h-full flex-col overflow-visible border border-border/40 bg-gradient-to-br from-background to-muted/20 shadow-sm backdrop-blur-sm">
             <div className="flex h-full w-full flex-col justify-between overflow-visible">
               <div className="flex flex-col justify-between overflow-visible">
                 <motion.div
@@ -263,7 +287,7 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
                       )}
                     </motion.div>
 
-                    <div className="space-y-1 pt-1">
+                    <div>
                       <div className="flex items-center gap-2">
                         <motion.h3
                           variants={itemVariants}
@@ -306,7 +330,7 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
                             animate="visible"
                             exit="hidden"
                             className={cn(
-                              "text-sm leading-relaxed",
+                              "mt-1 text-sm leading-relaxed",
                               isCompleted
                                 ? "text-muted-foreground/60"
                                 : "text-muted-foreground/80",
@@ -321,73 +345,130 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
 
                       <motion.div
                         variants={statsVariants}
-                        className="mt-2 flex flex-col gap-3 pl-1 pt-2"
+                        className="mt-3 flex flex-col gap-3"
                       >
                         <div className="flex items-center gap-8">
-                          {latestReview ? (
-                            <>
-                              <div className="flex flex-col rounded-md bg-muted/5 p-2 transition-colors hover:bg-muted/10">
-                                <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground/80">
-                                  <CalendarCheck className="-mt-0.5 h-3.5 w-3.5 text-primary/70" />
-                                  <span>Latest Review</span>
-                                </div>
-                                <p className="mt-1 pl-5 text-xs font-medium">
-                                  {dayjs(latestReview.end_date).format(
-                                    "MMM D, YYYY",
-                                  )}
-                                </p>
-                              </div>
-
-                              <div className="flex flex-col rounded-md bg-muted/5 p-2 transition-colors hover:bg-muted/10">
-                                <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground/80">
-                                  {getStatus() === "Processing" ? (
-                                    <Clock className="h-3.5 w-3.5 text-amber-500/70" />
-                                  ) : getStatus() === "Reviewed" ? (
-                                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500/70" />
-                                  ) : (
-                                    <ArrowRight className="h-3.5 w-3.5 text-primary/70" />
-                                  )}
-                                  <span>Status</span>
-                                </div>
-                                <p className="mt-1 pl-5 text-xs font-medium">
-                                  {getStatus()}
-                                </p>
-                              </div>
-
-                              <div className="flex flex-col rounded-md bg-muted/5 p-2 transition-colors hover:bg-muted/10">
-                                <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground/80">
-                                  <TrendingUp className="h-3.5 w-3.5 text-primary/70" />
-                                  <span>Progress</span>
-                                </div>
-                                <p className="mt-1 pl-5 text-xs font-medium">
-                                  {skillAssessments.length > 1
-                                    ? "Improving"
-                                    : "Initial"}
-                                </p>
-                              </div>
-                            </>
-                          ) : isEnabled ? (
-                            <div className="col-span-3 flex items-center justify-center rounded-md bg-muted/5 p-3 pl-0">
+                          <AnimatePresence mode="wait">
+                            {latestAssessment || latestReview ? (
                               <motion.div
-                                animate={{ rotate: 360 }}
+                                className="flex w-full items-center gap-10 pb-4"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
                                 transition={{
-                                  duration: 1.5,
-                                  repeat: Number.POSITIVE_INFINITY,
-                                  ease: "linear",
+                                  type: "spring",
+                                  stiffness: 100,
+                                  damping: 15,
+                                  staggerChildren: 0.05,
+                                  delayChildren: 0.1,
                                 }}
-                                className="mr-2 h-3 w-3 rounded-full border-2 border-primary/30 border-t-primary"
-                              />
-                              <p className="text-center text-xs text-muted-foreground/80">
-                                Waiting for your first skill assessment...
-                              </p>
-                            </div>
-                          ) : (
-                            <div className="col-span-3 -ml-1 flex items-center justify-center rounded-md bg-primary/5 p-3">
-                              <p className="text-center text-xs font-medium text-primary/90">
-                                Enable skill tracking to see progress statistics
-                              </p>
-                            </div>
-                          )}
+                              >
+                                <motion.div
+                                  className="flex flex-col rounded-md bg-muted/5 transition-colors hover:bg-muted/10"
+                                  initial={{ scale: 0.9, opacity: 0 }}
+                                  animate={{ scale: 1, opacity: 1 }}
+                                  transition={{ duration: 0.2, delay: 0.1 }}
+                                >
+                                  <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground/80">
+                                    <CalendarCheck className="-mt-0.5 h-3.5 w-3.5 text-primary/70" />
+                                    <span>
+                                      Latest{" "}
+                                      {latestReview ? "Review" : "Assessment"}
+                                    </span>
+                                  </div>
+                                  <p className="mt-1 pl-5 text-xs font-medium">
+                                    {(latestReview
+                                      ? dayjs(latestReview.created_at)
+                                      : dayjs(latestAssessment?.created_at)
+                                    ).format("MMM D, YYYY")}
+                                  </p>
+                                </motion.div>
+
+                                <motion.div
+                                  className="flex flex-col rounded-md bg-muted/5 transition-colors hover:bg-muted/10"
+                                  initial={{ scale: 0.9, opacity: 0 }}
+                                  animate={{ scale: 1, opacity: 1 }}
+                                  transition={{ duration: 0.2, delay: 0.15 }}
+                                >
+                                  <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground/80">
+                                    {getStatus() === "Processing" ? (
+                                      <Clock className="h-3.5 w-3.5 text-amber-500/70" />
+                                    ) : getStatus() === "Reviewed" ? (
+                                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500/70" />
+                                    ) : (
+                                      <ArrowRight className="h-3.5 w-3.5 text-primary/70" />
+                                    )}
+                                    <span>Status</span>
+                                  </div>
+                                  <p className="mt-1 pl-5 text-xs font-medium">
+                                    {getStatus()}
+                                  </p>
+                                </motion.div>
+
+                                <motion.div
+                                  className="flex flex-col rounded-md bg-muted/5 transition-colors hover:bg-muted/10"
+                                  initial={{ scale: 0.9, opacity: 0 }}
+                                  animate={{ scale: 1, opacity: 1 }}
+                                  transition={{ duration: 0.2, delay: 0.2 }}
+                                >
+                                  <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground/80">
+                                    <TrendingUp className="h-3.5 w-3.5 text-primary/70" />
+                                    <span>Progress</span>
+                                  </div>
+                                  <p className="mt-1 pl-5 text-xs font-medium">
+                                    {skillAssessments.length > 1
+                                      ? "Improving"
+                                      : "Initial"}
+                                  </p>
+                                </motion.div>
+                              </motion.div>
+                            ) : isEnabled ? (
+                              <motion.div
+                                className="p col-span-3 flex w-full items-center rounded-md bg-muted/5 pb-9 pl-0"
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                transition={{
+                                  type: "spring",
+                                  stiffness: 100,
+                                  damping: 15,
+                                }}
+                              >
+                                <motion.div
+                                  animate={{ rotate: 360 }}
+                                  transition={{
+                                    duration: 1.5,
+                                    repeat: Number.POSITIVE_INFINITY,
+                                    ease: "linear",
+                                  }}
+                                  className="mr-2 h-3 w-3 rounded-full border-2 border-primary/30 border-t-primary"
+                                />
+                                <p className="text-xs text-muted-foreground/80">
+                                  Waiting for your first skill assessment...
+                                </p>
+                              </motion.div>
+                            ) : (
+                              <motion.div
+                                className="col-span-3 mb-[1.625rem] flex items-center justify-center rounded-md border border-primary/20 bg-primary/5 px-2 py-1"
+                                initial={{ opacity: 0, y: 5 }}
+                                animate={{
+                                  opacity: 1,
+                                  y: 0,
+                                  transition: {
+                                    type: "spring",
+                                    stiffness: 100,
+                                    damping: 15,
+                                  },
+                                }}
+                                exit={{ opacity: 0, y: -5 }}
+                              >
+                                <p className="text-center text-xs font-medium text-primary/90">
+                                  Enable skill tracking to see progress
+                                  statistics
+                                </p>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
                       </motion.div>
                     </div>
@@ -408,7 +489,7 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
                 damping: 18,
                 delay: 0.1,
               }}
-              className="right-0 top-0 w-1/3"
+              className="col-span-1 h-full w-full"
             >
               <SkillProgressCard
                 skill={skill}

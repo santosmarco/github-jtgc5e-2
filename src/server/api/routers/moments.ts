@@ -382,22 +382,28 @@ export const momentsRouter = createTRPCRouter({
       z.object({
         videoId: z.string(),
         includeReactions: z.boolean().default(false),
+        includeNonRelevant: z.boolean().default(false),
       }),
     )
     .query(async ({ input }) => {
       try {
-        const { videoId, includeReactions } = input;
+        const { videoId, includeReactions, includeNonRelevant } = input;
         const supabase = await createClient();
 
         // Only fetch essential fields needed for display
-        const { data, error } = await supabase
+        let query = supabase
           .from("moments")
           .select(
             "id, activity, activity_type, activity_reasoning, title, summary, segment_start_timestamp_in_seconds, segment_end_timestamp_in_seconds, segment_start_timestamp_in_seconds_ideal, relevant, video_api_id",
           )
           .eq("video_api_id", videoId)
-          .eq("latest", true)
-          .eq("relevant", true);
+          .eq("latest", true);
+
+        if (!includeNonRelevant) {
+          query = query.eq("relevant", true);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
 

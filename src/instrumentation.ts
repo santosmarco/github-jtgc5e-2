@@ -1,7 +1,8 @@
 import { registerOTel } from "@vercel/otel";
-import { LangfuseExporter } from "langfuse-vercel";
 
-export function register() {
+export async function register() {
+  const { LangfuseExporter } = await import("langfuse-vercel");
+
   registerOTel({
     serviceName: "langfuse-vercel-ai-nextjs-example",
     traceExporter: new LangfuseExporter(),

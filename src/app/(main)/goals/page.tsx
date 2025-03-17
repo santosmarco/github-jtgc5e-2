@@ -347,67 +347,186 @@ export default function GoalsPage() {
             <AnimatePresence mode="popLayout">
               {skills
                 .sort((a, b) => {
-                  // Get the most recent report for each skill based on creation date
-                  const aLatestReport = _.maxBy(a.reports, (report) =>
-                    dayjs(report.created_at).valueOf(),
-                  );
-                  const bLatestReport = _.maxBy(b.reports, (report) =>
-                    dayjs(report.created_at).valueOf(),
-                  );
+                  // 1. Check if skills are enabled (have default goals)
+                  const aIsEnabled = a.goals.some((goal) => goal.is_default);
+                  const bIsEnabled = b.goals.some((goal) => goal.is_default);
 
-                  // Determine if skills have unreviewed goals in their latest reports
-                  const aHasUnreviewedGoals = Boolean(
-                    aLatestReport?.report_goals.some(
-                      (reportGoal) => !reportGoal.is_reviewed,
-                    ),
-                  );
-                  const bHasUnreviewedGoals = Boolean(
-                    bLatestReport?.report_goals.some(
-                      (reportGoal) => !reportGoal.is_reviewed,
-                    ),
-                  );
-
-                  // Priority 1: Skills with unreviewed goals appear first
-                  if (aHasUnreviewedGoals !== bHasUnreviewedGoals) {
-                    return aHasUnreviewedGoals ? -1 : 1;
+                  // If one is enabled and the other isn't, the enabled one comes first
+                  if (aIsEnabled !== bIsEnabled) {
+                    return aIsEnabled ? -1 : 1;
                   }
 
-                  // Get the most recent status for each skill
-                  const aLatestReportStatus = _.maxBy(a.statuses, (status) =>
-                    dayjs(status.created_at).valueOf(),
-                  );
-                  const bLatestReportStatus = _.maxBy(b.statuses, (status) =>
-                    dayjs(status.created_at).valueOf(),
-                  );
-
-                  // Determine completion status
-                  const aIsComplete =
-                    aLatestReportStatus?.status === "completed";
-                  const bIsComplete =
-                    bLatestReportStatus?.status === "completed";
-
-                  // Priority 2: Skills with completed reports appear next
-                  if (aIsComplete !== bIsComplete) {
-                    return aIsComplete ? -1 : 1;
+                  // If both are disabled, sort by name
+                  if (!aIsEnabled && !bIsEnabled) {
+                    return a.title.localeCompare(b.title);
                   }
 
-                  // Priority 3: Skills with pending processing status
-                  const aIsPending = aLatestReportStatus?.status === "pending";
-                  const bIsPending = bLatestReportStatus?.status === "pending";
+                  // Get the latest assessment for each skill
+                  const aLatestAssessment = _.orderBy(
+                    a.reports.filter((r) =>
+                      r.report_goals
+                        .map((rg) => rg.goal_id)
+                        .some((goalId) =>
+                          a.goals
+                            .filter((g) => g.is_default)
+                            .some((g) => g.id === goalId),
+                        ),
+                    ),
+                    [(report) => dayjs(report.created_at).toDate()],
+                    ["desc"],
+                  )[0];
+                  const bLatestAssessment = _.orderBy(
+                    b.reports.filter((r) =>
+                      r.report_goals
+                        .map((rg) => rg.goal_id)
+                        .some((goalId) =>
+                          b.goals
+                            .filter((g) => g.is_default)
+                            .some((g) => g.id === goalId),
+                        ),
+                    ),
+                    [(report) => dayjs(report.created_at).toDate()],
+                    ["desc"],
+                  )[0];
 
+                  // Check if one has assessments and the other doesn't
+                  const aHasAssessment = Boolean(aLatestAssessment);
+                  const bHasAssessment = Boolean(bLatestAssessment);
+
+                  if (aHasAssessment !== bHasAssessment) {
+                    // Skills with assessments come before those without
+                    return aHasAssessment ? -1 : 1;
+                  }
+
+                  // If neither has assessments, they are both group 5 (enabled skills with no assessments)
+                  // Sort by creation date
+                  if (!aHasAssessment && !bHasAssessment) {
+                    // Sort by created_at desc if available, otherwise alphabetically
+                    if (a.created_at && b.created_at) {
+                      return dayjs(b.created_at).isAfter(dayjs(a.created_at))
+                        ? 1
+                        : -1;
+                    }
+                    return a.title.localeCompare(b.title);
+                  }
+
+                  // Get the latest assessment status for each skill
+                  const aLatestStatus = _.last(
+                    _.orderBy(
+                      a.statuses,
+                      [(s) => dayjs(s.created_at).toDate()],
+                      ["desc"],
+                    ).filter((s) =>
+                      s.goal_ids?.some((id) =>
+                        a.report_goals.some((rg) => rg.goal_id === id),
+                      ),
+                    ),
+                  );
+                  const bLatestStatus = _.last(
+                    _.orderBy(
+                      b.statuses,
+                      [(s) => dayjs(s.created_at).toDate()],
+                      ["desc"],
+                    ).filter((s) =>
+                      s.goal_ids?.some((id) =>
+                        b.report_goals.some((rg) => rg.goal_id === id),
+                      ),
+                    ),
+                  );
+
+                  // At this point, both have assessments
+                  // Check for pending status (processing)
+                  const aIsPending = aLatestStatus?.status === "pending";
+                  const bIsPending = bLatestStatus?.status === "pending";
+
+                  // Pending assessments (group 4)
                   if (aIsPending !== bIsPending) {
                     return aIsPending ? -1 : 1;
                   }
 
-                  // Priority 4: Sort by recency of reports
-                  const aLatestTimestamp = aLatestReport
-                    ? dayjs(aLatestReport.created_at).valueOf()
-                    : 0;
-                  const bLatestTimestamp = bLatestReport
-                    ? dayjs(bLatestReport.created_at).valueOf()
-                    : 0;
+                  if (aIsPending && bIsPending) {
+                    // Both have pending assessments, sort by created_at desc
+                    return dayjs(bLatestStatus.created_at).isAfter(
+                      dayjs(aLatestStatus.created_at),
+                    )
+                      ? 1
+                      : -1;
+                  }
 
-                  return bLatestTimestamp - aLatestTimestamp;
+                  // Calculate review status for non-pending assessments
+                  // Count how many report_goals are reviewed for each assessment
+                  const aReviewedCount =
+                    aLatestAssessment?.report_goals.filter(
+                      (rg) => rg.is_reviewed,
+                    ).length || 0;
+                  const bReviewedCount =
+                    bLatestAssessment?.report_goals.filter(
+                      (rg) => rg.is_reviewed,
+                    ).length || 0;
+
+                  const aTotalGoals =
+                    aLatestAssessment?.report_goals.length || 0;
+                  const bTotalGoals =
+                    bLatestAssessment?.report_goals.length || 0;
+
+                  // Calculate if totally unreviewed (group 1), partially reviewed (group 2), or totally reviewed (group 3)
+                  const aIsUnreviewed = aReviewedCount === 0;
+                  const bIsUnreviewed = bReviewedCount === 0;
+
+                  const aIsPartiallyReviewed =
+                    aReviewedCount > 0 && aReviewedCount < aTotalGoals;
+                  const bIsPartiallyReviewed =
+                    bReviewedCount > 0 && bReviewedCount < bTotalGoals;
+
+                  const aIsFullyReviewed =
+                    aReviewedCount === aTotalGoals && aTotalGoals > 0;
+                  const bIsFullyReviewed =
+                    bReviewedCount === bTotalGoals && bTotalGoals > 0;
+
+                  // 1. Totally unreviewed first (group 1)
+                  if (aIsUnreviewed !== bIsUnreviewed) {
+                    return aIsUnreviewed ? -1 : 1;
+                  }
+
+                  if (aIsUnreviewed && bIsUnreviewed) {
+                    // Both unreviewed, sort by created_at desc
+                    return dayjs(bLatestAssessment?.created_at).isAfter(
+                      dayjs(aLatestAssessment?.created_at),
+                    )
+                      ? 1
+                      : -1;
+                  }
+
+                  // 2. Partially reviewed second (group 2)
+                  if (aIsPartiallyReviewed !== bIsPartiallyReviewed) {
+                    return aIsPartiallyReviewed ? -1 : 1;
+                  }
+
+                  if (aIsPartiallyReviewed && bIsPartiallyReviewed) {
+                    // Both partially reviewed, sort by created_at desc
+                    return dayjs(bLatestAssessment?.created_at).isAfter(
+                      dayjs(aLatestAssessment?.created_at),
+                    )
+                      ? 1
+                      : -1;
+                  }
+
+                  // 3. Fully reviewed third (group 3)
+                  if (aIsFullyReviewed !== bIsFullyReviewed) {
+                    return aIsFullyReviewed ? -1 : 1;
+                  }
+
+                  if (aIsFullyReviewed && bIsFullyReviewed) {
+                    // Both fully reviewed, sort by created_at desc
+                    return dayjs(bLatestAssessment?.created_at).isAfter(
+                      dayjs(aLatestAssessment?.created_at),
+                    )
+                      ? 1
+                      : -1;
+                  }
+
+                  // Fallback: sort by name (should not reach here in most cases)
+                  return a.title.localeCompare(b.title);
                 })
                 .map((skill) => (
                   <motion.div key={skill.id} variants={itemVariants} layout>

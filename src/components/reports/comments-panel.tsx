@@ -13,6 +13,7 @@ type CommentsPanelProps = {
   onToggleVisibility: () => void;
   onSubmitComment: (reportId: string, content: string) => void;
   isPendingSubmit: boolean;
+  className?: string;
 };
 
 export const CommentsPanel = ({
@@ -22,6 +23,7 @@ export const CommentsPanel = ({
   onToggleVisibility,
   onSubmitComment,
   isPendingSubmit,
+  className,
 }: CommentsPanelProps) => {
   const [commentContent, setCommentContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -82,7 +84,7 @@ export const CommentsPanel = ({
   };
 
   return (
-    <div className="relative">
+    <div className={cn("relative mt-2", className)}>
       <AnimatePresence mode="wait">
         {isVisible ? (
           <motion.div
