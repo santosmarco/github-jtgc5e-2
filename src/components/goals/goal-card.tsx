@@ -12,6 +12,10 @@ import {
   ClipboardCheck,
   Clock,
   TrendingUp,
+  AlertTriangle,
+  FileWarning,
+  Eye,
+  CheckCheckIcon,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import React, { useMemo } from "react";
@@ -193,6 +197,11 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
         : null;
     const hasAssessments = skillAssessments.length > 0;
 
+    const skillAssessmentGoal = latestAssessment?.report_goals.find(
+      (reportGoal) =>
+        skill.goals.some((goal) => goal.id === reportGoal.goal_id),
+    );
+
     // Determine status for display
     const getStatus = () => {
       // Check if there's a processing status on the first goal
@@ -204,12 +213,42 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
         return "Processing";
       }
 
-      if (totalReviews > 0) {
+      if (processingStatus === "failed") {
+        return "Failed";
+      }
+
+      if (latestAssessment?.report_goals.every((rg) => rg.is_reviewed)) {
         return "Reviewed";
       }
 
-      return "Pending Review";
+      if (latestAssessment?.report_goals.every((rg) => !rg.is_reviewed)) {
+        return "Pending Review";
+      }
+
+      return "In Review";
     };
+
+    // Get status icon and color based on status
+    const getStatusIconAndColor = () => {
+      const status = getStatus();
+
+      switch (status) {
+        case "Processing":
+          return { icon: Clock, color: "text-amber-500/70" };
+        case "Failed":
+          return { icon: AlertTriangle, color: "text-rose-500/80" };
+        case "Reviewed":
+          return { icon: CheckCircle2, color: "text-emerald-500/70" };
+        case "Pending Review":
+          return { icon: FileWarning, color: "text-amber-500/70" };
+        case "In Review":
+          return { icon: Eye, color: "text-indigo-500/80" };
+        default:
+          return { icon: ArrowRight, color: "text-primary/70" };
+      }
+    };
+
+    const { icon: StatusIcon, color: statusColor } = getStatusIconAndColor();
 
     return (
       <motion.div
@@ -301,7 +340,7 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
                           {skill.title}
                         </motion.h3>
 
-                        {totalReviews > 0 && (
+                        {/* {totalReviews > 0 && (
                           <motion.div
                             variants={itemVariants}
                             initial="hidden"
@@ -318,7 +357,7 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
                               </span>
                             </Badge>
                           </motion.div>
-                        )}
+                        )} */}
                       </div>
 
                       <AnimatePresence mode="wait">
@@ -391,13 +430,9 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
                                   transition={{ duration: 0.2, delay: 0.15 }}
                                 >
                                   <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground/80">
-                                    {getStatus() === "Processing" ? (
-                                      <Clock className="h-3.5 w-3.5 text-amber-500/70" />
-                                    ) : getStatus() === "Reviewed" ? (
-                                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500/70" />
-                                    ) : (
-                                      <ArrowRight className="h-3.5 w-3.5 text-primary/70" />
-                                    )}
+                                    <StatusIcon
+                                      className={`h-3.5 w-3.5 ${statusColor}`}
+                                    />
                                     <span>Status</span>
                                   </div>
                                   <p className="mt-1 pl-5 text-xs font-medium">
