@@ -60,13 +60,13 @@ export function PersonalityProfile({ report }: PersonalityProfileProps) {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.5 }}
-        className="absolute right-10 top-6 z-20 text-lg font-bold"
+        className="absolute right-4 top-4 z-20 text-base font-bold sm:right-10 sm:top-6 sm:text-lg"
       >
         Your Persona
       </motion.div>
 
       {/* Animated Background pattern with repeated icons */}
-      <div className="absolute -right-6 -top-6 grid rotate-45 grid-cols-6 gap-4 overflow-hidden">
+      <div className="absolute -right-6 -top-6 grid rotate-45 grid-cols-4 gap-4 overflow-hidden sm:grid-cols-6">
         {Array.from({ length: 42 }).map((_, i) => {
           const randomId = `bg-icon-${Math.random().toString(36).substr(2, 9)}`;
           return (
@@ -80,18 +80,18 @@ export function PersonalityProfile({ report }: PersonalityProfileProps) {
               }}
               className="flex items-center justify-center"
             >
-              <Icon className="h-24 w-24 text-indigo-600/20" />
+              <Icon className="h-16 w-16 text-indigo-600/20 sm:h-24 sm:w-24" />
             </motion.div>
           );
         })}
       </div>
 
-      <div className="relative z-10 max-w-full px-6 py-8">
+      <div className="relative z-10 max-w-full px-4 py-6 sm:px-6 sm:py-8">
         <div className="flex flex-col md:flex-row">
           <div className="mb-6 md:mb-0 md:w-2/3">
             {report.personality_badges &&
               report.personality_badges.length > 0 && (
-                <div className="mb-4 flex flex-wrap gap-2">
+                <div className="mb-3 flex flex-wrap gap-1.5 sm:mb-4 sm:gap-2">
                   {report.personality_badges.map((badge, index) => (
                     <motion.span
                       key={badge}
@@ -99,7 +99,7 @@ export function PersonalityProfile({ report }: PersonalityProfileProps) {
                       variants={badgeVariants}
                       initial="hidden"
                       animate="visible"
-                      className="rounded-full bg-black/20 px-3 py-1 text-xs font-medium text-foreground"
+                      className="max-w-[150px] truncate rounded-full bg-black/20 px-2 py-0.5 text-xs font-medium text-foreground sm:px-3 sm:py-1"
                     >
                       {badge}
                     </motion.span>
@@ -111,7 +111,7 @@ export function PersonalityProfile({ report }: PersonalityProfileProps) {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3, duration: 0.5 }}
-              className="mb-4 text-4xl font-bold text-foreground"
+              className="mb-3 text-2xl font-bold text-foreground sm:mb-4 sm:text-3xl md:text-4xl"
             >
               {report.personality_text}
             </motion.h2>
@@ -120,7 +120,7 @@ export function PersonalityProfile({ report }: PersonalityProfileProps) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5, duration: 0.5 }}
-              className="max-w-2xl text-lg text-foreground"
+              className="max-w-2xl text-base text-foreground sm:text-lg"
             >
               {report.personality_description}
             </motion.p>
