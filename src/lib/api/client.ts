@@ -1,4 +1,5 @@
 import axios, { type AxiosError } from "axios";
+import axiosRetry from "axios-retry";
 
 import { env } from "~/env";
 
@@ -7,6 +8,20 @@ export const client = axios.create({
   headers: {
     "Content-Type": "application/json",
     "X-API-Key": env.INTERNAL_API_KEY,
+  },
+  timeout: 15000, // 15 second timeout
+});
+
+// Configure retry behavior
+axiosRetry(client, {
+  retries: 3,
+  retryDelay: axiosRetry.exponentialDelay,
+  retryCondition: (error) => {
+    // Retry on network errors or 5xx server errors
+    return (
+      axiosRetry.isNetworkOrIdempotentRequestError(error) ||
+      (error.response?.status ?? 0) >= 500
+    );
   },
 });
 
