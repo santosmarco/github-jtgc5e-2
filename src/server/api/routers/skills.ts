@@ -48,7 +48,7 @@ export const skillsRouter = createTRPCRouter({
       const { data: skills, error: skillsError } = await supabase
         .from("skills")
         .select(
-          "*, goals(*), reports(*, report_goals(*)), statuses:group_report_processing_status(*)",
+          "*, goal_templates(*), goals(*), reports(*, report_goals(*)), statuses:group_report_processing_status(*)",
         );
 
       if (skillsError) {

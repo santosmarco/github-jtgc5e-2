@@ -359,9 +359,13 @@ export default function GoalsPage() {
                   if (!aIsEnabled) aScore += 100;
                   if (!bIsEnabled) bScore += 100;
 
-                  // If both are disabled, just sort by name
+                  // Skills with no goal templates should be at the very end (lowest priority - group 7)
+                  if (a.goal_templates?.length === 0) aScore += 200;
+                  if (b.goal_templates?.length === 0) bScore += 200;
+
+                  // If both are disabled, sort by name
                   if (!aIsEnabled && !bIsEnabled) {
-                    return a.title.localeCompare(b.title);
+                    return aScore - bScore;
                   }
 
                   // Get the latest assessment for each skill

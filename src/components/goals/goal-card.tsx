@@ -532,7 +532,11 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
                 loading={isEnablingSkill}
                 completed={isCompleted}
                 completedAt={completedAt ?? undefined}
-                onEnable={handleSkillEnable}
+                onEnable={
+                  skill.goal_templates.length > 0
+                    ? handleSkillEnable
+                    : undefined
+                }
               />
             </motion.div>
           </AnimatePresence>

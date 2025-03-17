@@ -10,6 +10,7 @@ import {
   Sparkles,
   Trophy,
   XCircle,
+  Clock,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -179,52 +180,63 @@ export function SkillProgressCard({
               </motion.p>
 
               <motion.div variants={contentVariants} className="mt-5">
-                <Button
-                  onClick={onEnable}
-                  className={cn(
-                    "relative min-w-[260px] overflow-hidden transition-all duration-300",
-                    loading
-                      ? "bg-primary/70 hover:bg-primary/80"
-                      : "bg-primary/90 hover:bg-primary",
-                  )}
-                  size="sm"
-                  disabled={loading}
-                >
-                  {loading && (
-                    <motion.div
-                      className="absolute inset-0 -z-10 bg-gradient-to-r from-primary/20 via-primary/40 to-primary/20"
-                      animate={{
-                        x: ["-100%", "100%"],
-                      }}
-                      transition={{
-                        duration: 2,
-                        repeat: Number.POSITIVE_INFINITY,
-                        ease: "linear",
-                      }}
-                    />
-                  )}
-                  {loading ? (
-                    <div className="z-10 flex w-full items-center justify-between px-2">
-                      <AnimatePresence mode="wait">
-                        <motion.span
-                          key={enablingStateIndex}
-                          initial={{ opacity: 0, y: 5 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -5 }}
-                          transition={{ duration: 0.2 }}
-                          className="flex-1 text-center"
-                        >
-                          {skillEnablingStates[enablingStateIndex]}
-                        </motion.span>
-                      </AnimatePresence>
-                    </div>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4" />
-                      Enable
-                    </>
-                  )}
-                </Button>
+                {onEnable ? (
+                  <Button
+                    onClick={onEnable}
+                    className={cn(
+                      "relative min-w-[260px] overflow-hidden transition-all duration-300",
+                      loading
+                        ? "bg-primary/70 hover:bg-primary/80"
+                        : "bg-primary/90 hover:bg-primary",
+                    )}
+                    size="sm"
+                    disabled={loading}
+                  >
+                    {loading && (
+                      <motion.div
+                        className="absolute inset-0 -z-10 bg-gradient-to-r from-primary/20 via-primary/40 to-primary/20"
+                        animate={{
+                          x: ["-100%", "100%"],
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Number.POSITIVE_INFINITY,
+                          ease: "linear",
+                        }}
+                      />
+                    )}
+                    {loading ? (
+                      <div className="z-10 flex w-full items-center justify-between px-2">
+                        <AnimatePresence mode="wait">
+                          <motion.span
+                            key={enablingStateIndex}
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -5 }}
+                            transition={{ duration: 0.2 }}
+                            className="flex-1 text-center"
+                          >
+                            {skillEnablingStates[enablingStateIndex]}
+                          </motion.span>
+                        </AnimatePresence>
+                      </div>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4" />
+                        Enable
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    className="relative min-w-[260px] bg-muted/80 text-foreground transition-all duration-300"
+                    size="sm"
+                    disabled
+                  >
+                    <Clock className="h-4 w-4" />
+                    Coming Soon
+                  </Button>
+                )}
               </motion.div>
             </motion.div>
           </CardHeader>
