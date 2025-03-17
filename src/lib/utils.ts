@@ -42,3 +42,48 @@ export async function exponentialBackoff<T>(
 
   throw new Error("Max attempts reached");
 }
+
+export interface FetchWithTimeoutOptions extends RequestInit {
+  timeout?: number;
+  retries?: number;
+  initialDelay?: number;
+}
+
+export async function fetchWithTimeout(
+  url: string,
+  options: FetchWithTimeoutOptions = {},
+): Promise<Response> {
+  const {
+    timeout = 10000, // 10 second default timeout
+    retries = 3,
+    initialDelay = 1000,
+    ...fetchOptions
+  } = options;
+
+  return exponentialBackoff(
+    async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+      try {
+        const response = await fetch(url, {
+          ...fetchOptions,
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        return response;
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    },
+    {
+      maxAttempts: retries,
+      initialDelay,
+      maxDelay: 10000, // 10 second max delay between retries
+    },
+  );
+}

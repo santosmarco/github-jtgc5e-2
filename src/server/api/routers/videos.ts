@@ -7,6 +7,7 @@ import { transformMoment } from "~/lib/db/moments";
 import { createClient } from "~/lib/supabase/server";
 import { toVideoOutput } from "~/lib/videos";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { fetchWithTimeout } from "~/lib/utils";
 
 export const VideoOptions = z.object({
   tags: z.array(z.string()).optional(),
@@ -63,7 +64,11 @@ async function fetchVideoData(
       }));
 
     let videoSrc = `https://vod.api.video/vod/${videoId}/mp4/source.mp4`;
-    const videoFetch = await fetch(videoSrc);
+    const videoFetch = await fetchWithTimeout(videoSrc, {
+      method: "HEAD",
+      timeout: 15000, // 15 second timeout for video checks
+      retries: 3,
+    });
     if (videoFetch.status !== 200) {
       // if not, check accross all meeting_bots table
       const { data: meetingBots } = await supabase
@@ -213,7 +218,11 @@ export const videosRouter = createTRPCRouter({
               : [];
 
             let videoSrc = `https://vod.api.video/vod/${video.videoId}/mp4/source.mp4`;
-            const videoFetch = await fetch(videoSrc);
+            const videoFetch = await fetchWithTimeout(videoSrc, {
+              method: "HEAD",
+              timeout: 15000, // 15 second timeout for video checks
+              retries: 3,
+            });
             if (videoFetch.status !== 200) {
               const { data: meetingBots } = await supabase
                 .from("meeting_bots")
@@ -298,7 +307,11 @@ export const videosRouter = createTRPCRouter({
 
         // Get video source URL
         let videoSrc = `https://vod.api.video/vod/${input.videoId}/mp4/source.mp4`;
-        const videoFetch = await fetch(videoSrc, { method: "HEAD" });
+        const videoFetch = await fetchWithTimeout(videoSrc, {
+          method: "HEAD",
+          timeout: 15000, // 15 second timeout for video checks
+          retries: 3,
+        });
         if (videoFetch.status !== 200) {
           const { data: meetingBots } = await supabase
             .from("meeting_bots")
@@ -338,7 +351,11 @@ export const videosRouter = createTRPCRouter({
       const video = await getVideo(input.videoId);
 
       let videoSrc = `https://vod.api.video/vod/${video.videoId}/mp4/source.mp4`;
-      const videoFetch = await fetch(videoSrc);
+      const videoFetch = await fetchWithTimeout(videoSrc, {
+        method: "HEAD",
+        timeout: 15000, // 15 second timeout for video checks
+        retries: 3,
+      });
       if (videoFetch.status !== 200) {
         // if not, check accross all meeting_bots table
         const { data: meetingBots } = await supabase
