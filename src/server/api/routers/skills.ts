@@ -106,6 +106,30 @@ export const skillsRouter = createTRPCRouter({
       }));
     }),
 
+  getGoalsForSkillForProfile: publicProcedure
+    .input(z.object({ skillId: z.string(), profileId: z.string() }))
+    .query(async ({ input }) => {
+      const supabase = await createClient();
+
+      const { data: goals, error: goalsError } = await supabase
+        .from("goals")
+        .select("*")
+        .eq("skill_id", input.skillId)
+        .eq("profile_id", input.profileId)
+        .eq("is_current", true)
+        .is("deleted_at", null);
+
+      if (goalsError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: goalsError.message,
+          cause: goalsError,
+        });
+      }
+
+      return goals;
+    }),
+
   enableSkill: publicProcedure
     .input(z.object({ skillId: z.string(), profileId: z.string() }))
     .mutation(async ({ input }) => {
