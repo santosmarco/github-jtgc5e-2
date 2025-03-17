@@ -336,7 +336,7 @@ export function SkillProgressCard({
 
               <motion.h3
                 variants={contentVariants}
-                className="mt-4 text-center text-lg font-medium"
+                className="mt-5 text-center text-lg font-medium"
               >
                 No Assessment Yet
               </motion.h3>
