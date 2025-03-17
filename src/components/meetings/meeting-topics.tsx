@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { ListIcon } from "lucide-react";
+import type { SetOptional } from "type-fest";
 
 import { CollapsibleSection } from "~/components/chat/collapsible-section";
 import {
@@ -14,8 +15,22 @@ import type { Tables } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
 
 export type MeetingTopicsProps = {
-  topics: Tables<"meeting_topics">[];
-  onTopicClick?: (topic: Tables<"meeting_topics">) => void;
+  topics: SetOptional<
+    Pick<
+      Tables<"meeting_topics">,
+      "id" | "title" | "summary" | "vtt_start_segment_id"
+    >,
+    "vtt_start_segment_id"
+  >[];
+  onTopicClick?: (
+    topic: SetOptional<
+      Pick<
+        Tables<"meeting_topics">,
+        "id" | "title" | "summary" | "vtt_start_segment_id"
+      >,
+      "vtt_start_segment_id"
+    >,
+  ) => void;
 };
 
 const itemVariants = {

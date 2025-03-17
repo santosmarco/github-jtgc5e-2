@@ -37,7 +37,13 @@ import { usePlayer } from "./provider";
 
 export type VideoPlayerProps = {
   video: RouterOutputs["videos"]["getFromApiVideo"];
-  momentsShown?: VideoMoment[];
+  momentsShown?: Pick<
+    VideoMoment,
+    | "index"
+    | "segment_end_timestamp_in_seconds"
+    | "segment_start_timestamp_in_seconds"
+    | "title"
+  >[];
   startAt?: number;
   onVideoEnd?: () => void;
   start_time?: number;
@@ -84,10 +90,12 @@ export function VideoPlayer({
     ? end_time - start_time
     : (duration ?? 100);
 
-  const [currentMoment, setCurrentMoment] = useState<VideoMoment | undefined>(
-    undefined,
-  );
-  const [hoveredMoment, setHoveredMoment] = useState<VideoMoment | null>(null);
+  const [currentMoment, setCurrentMoment] = useState<
+    NonNullable<typeof momentsShown>[number] | undefined
+  >(undefined);
+  const [hoveredMoment, setHoveredMoment] = useState<
+    NonNullable<typeof momentsShown>[number] | null
+  >(null);
   const [isVideoLoading, setIsVideoLoading] = useState(true);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [hasInitialSeek, setHasInitialSeek] = useState(false);
