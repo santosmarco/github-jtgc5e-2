@@ -21,6 +21,22 @@ export default async function MainLayout({
     redirect("/login");
   }
 
+  await Promise.all([
+    api.videos.list.prefetch({
+      limit: 12,
+      options: {
+        tags: [user.id],
+      },
+    }),
+    api.moments.listForInsights.prefetch({
+      userId: user.id,
+      videoId: undefined,
+      topic: undefined,
+      limit: 100,
+      includeFullDetails: false,
+    }),
+  ]);
+
   const meetings = await api.meetings
     .getForProfile({ profileId: user.id, limit: 11 })
     .catch(() => []);

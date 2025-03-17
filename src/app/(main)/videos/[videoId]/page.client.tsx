@@ -5,8 +5,7 @@ import _ from "lodash";
 import { CameraIcon, ChevronLeft, Beaker } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
-import { memo } from "react";
-
+import { memo, useState, useCallback } from "react";
 import { ActionItemList } from "~/components/action-items/action-item-list";
 import { DeleteMeetingButton } from "~/components/meetings/delete-meeting-button";
 import { MeetingTopics } from "~/components/meetings/meeting-topics";
@@ -31,15 +30,32 @@ export function VideoPageClient({ videoId }: VideoPageClientProps) {
   const router = useRouter();
   const { profile } = useProfile();
   const { data: user } = api.auth.getUser.useQuery();
-  const { data: video } = api.videos.getOne.useQuery({
-    videoId,
-    options: {
-      moments: {
-        includeNonRelevant:
-          user?.is_admin && (!profile || user.id === profile.id),
-      },
+  // Split data fetching into basic info and moments for better performance
+  const { data: videoBasic, isLoading: isLoadingBasic } =
+    api.videos.getBasicInfo.useQuery({
+      videoId,
+    });
+
+  const { data: moments_ } = api.moments.listBasicByVideo.useQuery(
+    {
+      videoId,
+      includeReactions: true,
+      includeNonRelevant:
+        user?.is_admin && (!profile || user.id === profile.id),
     },
-  });
+    {
+      // Only fetch moments if we have basic video data
+      enabled: !!videoBasic,
+    },
+  );
+
+  // Combine the data to maintain compatibility with existing code
+  const video = videoBasic
+    ? {
+        ...videoBasic,
+        moments: moments_ || [],
+      }
+    : undefined;
   const [category, setCategory] = useQueryState("category", parseAsString);
   const [startAt, setStartAt] = useQueryState("startAt", parseAsInteger);
   const [isQAMode, setIsQAMode] = useQueryState(
@@ -71,7 +87,9 @@ export function VideoPageClient({ videoId }: VideoPageClientProps) {
     void setCategory(category);
   };
 
-  const handleSkipToMoment = (moment: VideoMoment) => {
+  const handleSkipToMoment: React.ComponentProps<
+    typeof VideoMoments
+  >["onSkipToMoment"] = (moment) => {
     void setStartAt(
       moment.segment_ideal_timestamp_in_seconds ??
         moment.segment_start_timestamp_in_seconds,
@@ -220,19 +238,25 @@ type InnerMeetingTopicsProps = {
 const InnerMeetingTopics = memo(function InnerMeetingTopics({
   videoId,
 }: InnerMeetingTopicsProps) {
-  // const { seek } = usePlayer();
-  const { data: topics, error } = api.meetingTopics.getByVideoId.useQuery({
-    videoId,
-  });
+  const { seek } = usePlayer();
+  // Use the optimized endpoint that only returns the fields we need
+  const { data: topics, error } =
+    api.meetingTopics.getBasicTopicsByVideoId.useQuery({
+      videoId,
+      // Only include segment IDs if we want topic navigation
+      includeSegmentIds: true,
+    });
+
   if (error) return null;
+
   return (
     <MeetingTopics
       topics={topics ?? []}
-      // onTopicClick={(topic) => {
-      //   if (topic.vtt_start_segment_id) {
-      //     seek(topic.vtt_start_segment_id);
-      //   }
-      // }}
+      onTopicClick={(topic) => {
+        if ("vtt_start_segment_id" in topic && topic.vtt_start_segment_id) {
+          seek(topic.vtt_start_segment_id);
+        }
+      }}
     />
   );
 });
@@ -245,15 +269,66 @@ const InnerTranscriptView = memo(function InnerTranscriptView({
   videoId,
 }: InnerTranscriptViewProps) {
   const { currentTime, seek } = usePlayer();
-  const { data: transcript, error } = api.transcripts.getOne.useQuery({
-    videoId,
-  });
+  const [isFullTranscriptLoaded, setIsFullTranscriptLoaded] = useState(false);
+
+  // First load minimal transcript for faster initial render
+  const { data: minimalTranscript } =
+    api.transcripts.getMinimalTranscript.useQuery(
+      {
+        videoId,
+        limit: 20,
+      },
+      {
+        // Don't refetch if we've already loaded full transcript
+        enabled: !isFullTranscriptLoaded,
+      },
+    );
+
+  // Load full transcript data only when needed (after user interaction or after minimal is loaded)
+  const { data: fullTranscript, error } = api.transcripts.getOne.useQuery(
+    { videoId },
+    {
+      enabled: isFullTranscriptLoaded,
+      // @ts-ignore
+      onSuccess: () => {
+        setIsFullTranscriptLoaded(true);
+      },
+    },
+  );
+
+  // Function to load full transcript when user interacts
+  const handleLoadFullTranscript = useCallback(() => {
+    setIsFullTranscriptLoaded(true);
+  }, []);
+
   if (error) return null;
+
   return (
-    <TranscriptView
-      transcript={transcript}
-      currentTime={currentTime ?? 0}
-      onWordClick={seek}
-    />
+    <>
+      {isFullTranscriptLoaded ? (
+        <TranscriptView
+          transcript={fullTranscript}
+          currentTime={currentTime ?? 0}
+          onWordClick={seek}
+        />
+      ) : (
+        <div className="space-y-4">
+          <TranscriptView
+            transcript={minimalTranscript?.slices ?? []}
+            currentTime={currentTime ?? 0}
+            onWordClick={seek}
+          />
+          {!minimalTranscript?.isComplete && (
+            <Button
+              variant="outline"
+              className="w-full text-xs"
+              onClick={handleLoadFullTranscript}
+            >
+              Load Full Transcript
+            </Button>
+          )}
+        </div>
+      )}
+    </>
   );
 });

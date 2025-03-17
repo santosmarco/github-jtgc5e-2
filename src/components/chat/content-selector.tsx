@@ -20,14 +20,25 @@ import {
 import { getMomentIcon } from "~/lib/moments";
 import type { VideoMoment } from "~/lib/schemas/video-moment";
 import type { VideoOutput } from "~/lib/videos";
+import type { RouterOutputs } from "~/trpc/react";
 
 export interface ContentSelectorProps {
-  moments?: VideoMoment[];
+  moments?: NonNullable<RouterOutputs["moments"]["listForInsights"]>["moments"];
   videos?: VideoOutput[];
-  selectedMoments: VideoMoment[];
+  selectedMoments: NonNullable<
+    RouterOutputs["moments"]["listForInsights"]
+  >["moments"];
   selectedVideos: VideoOutput[];
-  onSelectMoment: (moment: VideoMoment) => void;
-  onUnselectMoment: (moment: VideoMoment) => void;
+  onSelectMoment: (
+    moment: NonNullable<
+      RouterOutputs["moments"]["listForInsights"]
+    >["moments"][number],
+  ) => void;
+  onUnselectMoment: (
+    moment: NonNullable<
+      RouterOutputs["moments"]["listForInsights"]
+    >["moments"][number],
+  ) => void;
   onSelectVideo: (video: VideoOutput) => void;
   onUnselectVideo: (video: VideoOutput) => void;
   disabled: boolean;
@@ -52,7 +63,7 @@ export function ContentSelector({
 }: ContentSelectorProps) {
   const [open, setOpen] = useState(false);
 
-  const handleMomentSelect = (moment: VideoMoment) => {
+  const handleMomentSelect = (moment: (typeof moments)[number]) => {
     if (selectedMoments.some((m) => m.id === moment.id)) {
       onUnselectMoment(moment);
     } else if (selectedMoments.length + selectedVideos.length < 5) {
@@ -65,7 +76,7 @@ export function ContentSelector({
     }
   };
 
-  const handleVideoSelect = (video: VideoOutput) => {
+  const handleVideoSelect = (video: (typeof videos)[number]) => {
     if (selectedVideos.some((v) => v.videoId === video.videoId)) {
       onUnselectVideo(video);
     } else if (selectedMoments.length + selectedVideos.length < 5) {
@@ -149,7 +160,7 @@ export function ContentSelector({
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 py-0.5 text-xs leading-none text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Icon className="h-3 w-3" />
-                            {moment.activity_type}
+                            {moment.activity}
                           </div>
                           <div className="flex items-center gap-1">
                             <Timer className="h-3 w-3" />
@@ -160,7 +171,9 @@ export function ContentSelector({
                           </div>
                           <div className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {moment.segment_start_timestamp}
+                            {formatDuration(
+                              moment.segment_start_timestamp_in_seconds,
+                            )}
                           </div>
                         </div>
                         <p className="line-clamp-2 text-xs text-muted-foreground">

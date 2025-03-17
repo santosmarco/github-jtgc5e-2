@@ -9,12 +9,17 @@ import { ScrollArea, ScrollBar } from "~/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { VideoMoment } from "~/lib/schemas/video-moment";
 import { handleMomentCategorySort } from "~/lib/videos";
+import type { RouterOutputs } from "~/trpc/react";
 
 export type VideoMomentsProps = {
-  moments: VideoMoment[];
+  moments: NonNullable<RouterOutputs["moments"]["listForInsights"]>["moments"];
   selectedCategory?: string;
   onCategoryChange: (category: string) => void;
-  onSkipToMoment: (moment: VideoMoment) => void;
+  onSkipToMoment: (
+    moment: NonNullable<
+      RouterOutputs["moments"]["listForInsights"]
+    >["moments"][number],
+  ) => void;
   className?: string;
   variant?: "default" | "qa";
 };

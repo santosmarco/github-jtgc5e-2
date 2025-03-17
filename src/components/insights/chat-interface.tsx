@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import _ from "lodash";
 import { AlertCircle, MessageCircleIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, memo } from "react";
 import { toast } from "sonner";
 
 import type { ChatRequestBody } from "~/app/api/chat/route";
@@ -32,7 +32,9 @@ type ChatInterfaceProps = {
   userId: string;
   selectedTopic: string;
   topics: string[];
-  relevantMoments: RouterOutputs["moments"]["listAll"]["moments"];
+  relevantMoments: NonNullable<
+    RouterOutputs["moments"]["listForInsights"]
+  >["moments"];
   relevantVideos: RouterOutputs["videos"]["listAll"];
   initialMessages: CoreMessage[];
   onTopicSelect: (topic: string) => void;
@@ -166,17 +168,20 @@ export function ChatInterface({
   const supabase = createClient();
   const editorRef = useRef<Editor | null>(null);
   const [selectedMoments, setSelectedMoments] = useState<
-    RouterOutputs["moments"]["listAll"]["moments"]
+    typeof relevantMoments
   >([]);
-  const [selectedVideos, setSelectedVideos] = useState<
-    RouterOutputs["videos"]["listAll"]
-  >([]);
+  const [selectedVideos, setSelectedVideos] = useState<typeof relevantVideos>(
+    [],
+  );
 
   const { completeTask } = useOnboardingTasks();
 
   const [followUpQuestions, setFollowUpQuestions] = useState<string[] | null>(
     null,
   );
+
+  // Memoized ChatInput to prevent unnecessary re-renders
+  const MemoizedChatInput = memo(ChatInput);
 
   const generateFollowUpQuestions =
     api.chats.generateFollowUpQuestions.useMutation({
@@ -349,7 +354,7 @@ export function ChatInterface({
                 void onSubmit();
               }}
             >
-              <ChatInput
+              <MemoizedChatInput
                 isLandingPage
                 frameworks={frameworks}
                 onSubmit={onSubmit}
@@ -572,7 +577,7 @@ export function ChatInterface({
             void onSubmit();
           }}
         >
-          <ChatInput
+          <MemoizedChatInput
             frameworks={frameworks}
             onSubmit={onSubmit}
             onEditorReady={onEditorReady}

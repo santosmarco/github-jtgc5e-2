@@ -4,11 +4,11 @@ import { ArrowUp, Square } from "lucide-react";
 
 import { Editor } from "~/components/editor";
 import { Button } from "~/components/ui/button";
-import type { VideoMoment } from "~/lib/schemas/video-moment";
 import type { Tables } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
 import type { VideoOutput } from "~/lib/videos";
 
+import type { RouterOutputs } from "~/trpc/react";
 import { ContentSelector } from "./content-selector";
 import { SelectedContentList } from "./selected-content-list";
 
@@ -18,12 +18,22 @@ export type ChatInputProps = {
   onSubmit: (event?: { preventDefault?: () => void }) => void;
   stop?: () => void;
   isGenerating: boolean;
-  moments?: VideoMoment[];
+  moments?: NonNullable<RouterOutputs["moments"]["listForInsights"]>["moments"];
   videos?: VideoOutput[];
-  selectedMoments: VideoMoment[];
+  selectedMoments: NonNullable<
+    RouterOutputs["moments"]["listForInsights"]
+  >["moments"];
   selectedVideos: VideoOutput[];
-  onSelectMoment: (moment: VideoMoment) => void;
-  onUnselectMoment: (moment: VideoMoment) => void;
+  onSelectMoment: (
+    moment: NonNullable<
+      RouterOutputs["moments"]["listForInsights"]
+    >["moments"][number],
+  ) => void;
+  onUnselectMoment: (
+    moment: NonNullable<
+      RouterOutputs["moments"]["listForInsights"]
+    >["moments"][number],
+  ) => void;
   onSelectVideo: (video: VideoOutput) => void;
   onUnselectVideo: (video: VideoOutput) => void;
   onEditorReady: (editor: TiptapEditor) => void;

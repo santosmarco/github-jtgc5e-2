@@ -8,14 +8,20 @@ import {
   TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { getMomentIcon } from "~/lib/moments";
-import type { VideoMoment } from "~/lib/schemas/video-moment";
 import { cn } from "~/lib/utils";
 import type { VideoOutput } from "~/lib/videos";
+import type { RouterOutputs } from "~/trpc/react";
 
 export interface SelectedContentListProps {
-  selectedMoments: VideoMoment[];
+  selectedMoments: NonNullable<
+    RouterOutputs["moments"]["listForInsights"]
+  >["moments"];
   selectedVideos: VideoOutput[];
-  onUnselectMoment: (moment: VideoMoment) => void;
+  onUnselectMoment: (
+    moment: NonNullable<
+      RouterOutputs["moments"]["listForInsights"]
+    >["moments"][number],
+  ) => void;
   onUnselectVideo: (video: VideoOutput) => void;
 }
 

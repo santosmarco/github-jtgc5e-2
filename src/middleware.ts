@@ -38,8 +38,8 @@ export const middleware = withLogtail(async (request: LogtailRequest) => {
   return response;
 });
 
-export const config = {
+export const config: MiddlewareConfig = {
   matcher: [
     "/((?!_next/static|_next/image|favicon.ico|embed|api/webhooks|api/emails|api/processing|_zoom|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
-} satisfies MiddlewareConfig;
+};

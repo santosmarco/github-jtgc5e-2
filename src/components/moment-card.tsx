@@ -29,9 +29,8 @@ import { Separator } from "~/components/ui/separator";
 import { useOnboardingTasks } from "~/hooks/use-onboarding-tasks";
 import { useValidatedForm } from "~/hooks/use-validated-form";
 import { getMomentStyles } from "~/lib/moments";
-import type { VideoMoment } from "~/lib/schemas/video-moment";
 import { cn } from "~/lib/utils";
-import { api } from "~/trpc/react";
+import { type RouterOutputs, api } from "~/trpc/react";
 
 import {
   Tooltip,
@@ -48,9 +47,15 @@ const commentSchema = z.object({
 });
 
 export type MomentCardProps = {
-  moment: VideoMoment;
+  moment: NonNullable<
+    RouterOutputs["moments"]["listForInsights"]
+  >["moments"][number];
   index?: number;
-  onSkipToMoment?: (moment: VideoMoment) => void;
+  onSkipToMoment?: (
+    moment: NonNullable<
+      RouterOutputs["moments"]["listForInsights"]
+    >["moments"][number],
+  ) => void;
   jumpToLabel?: React.ReactNode;
   noShare?: boolean;
   className?: string;
@@ -302,7 +307,7 @@ export function MomentCard({
               {!hideTimestamp && (
                 <span className="flex items-center gap-x-1.5 text-sm">
                   <ClockIcon className="h-3.5 w-3.5" />
-                  {moment.segment_start_timestamp.replace(/\.\d+/, "")}
+                  {formatDuration(moment.segment_start_timestamp_in_seconds)}
                 </span>
               )}
               {!noShare && (
@@ -604,4 +609,11 @@ export function MomentCard({
       </AnimatePresence>
     </motion.div>
   );
+}
+
+function formatDuration(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = Math.round(seconds % 60);
+  return `${hours}:${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 }

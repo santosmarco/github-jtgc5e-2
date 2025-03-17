@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import type { Except } from "type-fest";
 import { z } from "zod";
 
 import {
@@ -7,6 +8,7 @@ import {
   fetchVideoMoments,
   transformMoment,
 } from "~/lib/db/moments";
+import type { VideoMoment } from "~/lib/schemas/video-moment";
 import { createClient } from "~/lib/supabase/server";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
@@ -254,17 +256,25 @@ export const momentsRouter = createTRPCRouter({
         topic: z.string().optional(),
         limit: z.number().min(1).max(100).default(50),
         cursor: z.number().nullish(),
+        includeFullDetails: z.boolean().default(false),
       }),
     )
     .query(async ({ input }) => {
       try {
-        const { userId, videoId, topic, limit, cursor } = input;
+        const { userId, videoId, topic, limit, cursor, includeFullDetails } =
+          input;
         const supabase = await createClient();
 
         // Build query with filters
-        let query = supabase
-          .from("moments")
-          .select("*, subtags:moment_subtags(*)")
+        let query = (
+          includeFullDetails
+            ? supabase.from("moments").select("*, subtags:moment_subtags(*)")
+            : supabase
+                .from("moments")
+                .select(
+                  "id, activity, activity_type, activity_reasoning, title, summary, segment_start_timestamp_in_seconds, segment_end_timestamp_in_seconds, segment_start_timestamp_in_seconds_ideal, relevant, video_api_id",
+                )
+        )
           .eq("latest", true)
           .eq("relevant", true);
 
@@ -291,19 +301,60 @@ export const momentsRouter = createTRPCRouter({
         if (error) throw error;
 
         // Transform moments
-        const moments = data.map((moment, idx) => transformMoment(moment, idx));
+        const moments = data.map(
+          (
+            moment,
+            idx,
+          ): Except<
+            VideoMoment,
+            | "segment_end_timestamp"
+            | "segment_id_sequence_end"
+            | "segment_id_sequence_start"
+            | "segment_start_timestamp"
+          > => {
+            // Create a transformation function that handles partial data
+            if (includeFullDetails) {
+              return transformMoment(moment, idx);
+            }
 
-        // Get reactions for the moments
-        const momentIds = moments.map((m) => m.id);
+            return {
+              id:
+                moment.id ?? `${moment.video_api_id}_${moment.activity}_${idx}`,
+              index: `${moment.video_api_id}_${moment.activity}_${idx}`,
+              sequence_id: idx ?? "",
+              title: (moment.title ?? "").replace(/^"|"$/g, ""),
+              summary: (moment.summary ?? "").replace(/^"|"$/g, ""),
+              segment_start_timestamp_in_seconds:
+                moment.segment_start_timestamp_in_seconds ?? 0,
+              segment_end_timestamp_in_seconds:
+                moment.segment_end_timestamp_in_seconds ?? 0,
+              segment_ideal_timestamp_in_seconds:
+                moment.segment_start_timestamp_in_seconds_ideal,
+              video_id: moment.video_api_id ?? "",
+              activity_type: moment.activity_type ?? "",
+              activity_reasoning: (moment.activity_reasoning ?? "").replace(
+                /^"|"$/g,
+                "",
+              ),
+              target_person_reasoning: null,
+              activity: moment.activity ?? "",
+              relevant: moment.relevant,
+              reactions: [],
+              subtags: [],
+            };
+          },
+        );
 
-        if (momentIds.length > 0) {
+        // Only fetch reactions if we need full details
+        if (includeFullDetails && moments.length > 0) {
+          const momentIds = moments.map((m) => m.id);
+
           const { data: reactions } = await supabase
             .from("moment_reactions")
             .select("*")
             .in("moment_id", momentIds);
 
           if (reactions) {
-            // Add reactions to moments
             for (const moment of moments) {
               moment.reactions = reactions.filter(
                 (r) => r.moment_id === moment.id,
@@ -321,6 +372,93 @@ export const momentsRouter = createTRPCRouter({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: `Failed to list moments for insights: ${(error as Error).message}`,
+          cause: error,
+        });
+      }
+    }),
+
+  listBasicByVideo: publicProcedure
+    .input(
+      z.object({
+        videoId: z.string(),
+        includeReactions: z.boolean().default(false),
+      }),
+    )
+    .query(async ({ input }) => {
+      try {
+        const { videoId, includeReactions } = input;
+        const supabase = await createClient();
+
+        // Only fetch essential fields needed for display
+        const { data, error } = await supabase
+          .from("moments")
+          .select(
+            "id, activity, activity_type, activity_reasoning, title, summary, segment_start_timestamp_in_seconds, segment_end_timestamp_in_seconds, segment_start_timestamp_in_seconds_ideal, relevant, video_api_id",
+          )
+          .eq("video_api_id", videoId)
+          .eq("latest", true)
+          .eq("relevant", true);
+
+        if (error) throw error;
+
+        // Transform to minimized moment format
+        const moments = data.map(
+          (
+            moment,
+            idx,
+          ): Except<
+            VideoMoment,
+            | "segment_end_timestamp"
+            | "segment_id_sequence_end"
+            | "segment_id_sequence_start"
+            | "segment_start_timestamp"
+          > => ({
+            id: moment.id,
+            index: `${moment.video_api_id}_${moment.activity}_${idx}`,
+            sequence_id: idx,
+            video_id: moment.video_api_id ?? "",
+            activity: moment.activity ?? "",
+            activity_type: moment.activity_type ?? "",
+            activity_reasoning: (moment.activity_reasoning ?? "").replace(
+              /^"|"$/g,
+              "",
+            ),
+            title: (moment.title ?? "").replace(/^"|"$/g, ""),
+            summary: (moment.summary ?? "").replace(/^"|"$/g, ""),
+            segment_start_timestamp_in_seconds:
+              moment.segment_start_timestamp_in_seconds ?? 0,
+            segment_end_timestamp_in_seconds:
+              moment.segment_end_timestamp_in_seconds ?? 0,
+            segment_ideal_timestamp_in_seconds:
+              moment.segment_start_timestamp_in_seconds_ideal ?? 0,
+            relevant: moment.relevant,
+            reactions: [],
+            subtags: [],
+          }),
+        );
+
+        // Optionally include reactions
+        if (includeReactions && moments.length > 0) {
+          const momentIds = moments.map((m) => m.id);
+          const { data: reactions } = await supabase
+            .from("moment_reactions")
+            .select("*")
+            .in("moment_id", momentIds);
+
+          if (reactions) {
+            for (const moment of moments) {
+              moment.reactions = reactions.filter(
+                (r) => r.moment_id === moment.id,
+              );
+            }
+          }
+        }
+
+        return moments;
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to list basic moments: ${(error as Error).message}`,
           cause: error,
         });
       }

@@ -10,7 +10,6 @@ import { useEffect, useState } from "react";
 import { ChatContainer } from "~/components/chat/chat-container";
 import { ChatInterface } from "~/components/insights/chat-interface";
 import { useProfile } from "~/hooks/use-profile";
-import { emotionToMoment, getVideoEmotions } from "~/lib/videos";
 import { api } from "~/trpc/react";
 
 export const maxDuration = 30;
@@ -41,71 +40,47 @@ export default function InsightsPage() {
       refetchOnWindowFocus: false,
     });
 
+  const userId = profile?.id ?? user?.id ?? "";
+
+  // Use the optimized video fetching procedure
   const {
-    data,
+    data: videosData,
     isFetching: videosLoading,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = api.videos.list.useInfiniteQuery(
+    fetchNextPage: fetchNextVideosPage,
+    hasNextPage: hasNextVideosPage,
+    isFetchingNextPage: isFetchingNextVideosPage,
+  } = api.videos.listForInsights.useInfiniteQuery(
     {
+      userId,
       limit: 36,
-      options: {
-        tags:
-          user?.is_admin && (!profile || user.id === profile.id)
-            ? undefined
-            : [profile?.id ?? user?.id ?? ""],
-      },
     },
     {
       getNextPageParam: (lastPage) => lastPage.nextCursor,
       refetchOnWindowFocus: false,
+      enabled: !!userId,
     },
   );
 
-  const filteredVideos =
-    data?.pages.flatMap((page) =>
-      user?.is_admin && (!profile || user.id === profile.id)
-        ? page.videos
-        : page.videos.filter((v) =>
-            v.tags.includes(profile?.id ?? user?.id ?? ""),
-          ),
-    ) ?? [];
-
-  const videosEnriched = filteredVideos.map((video) => {
-    const moments = video.moments ?? [];
-    const emotions = getVideoEmotions(video) ?? [];
-    const emotionMoments = emotions
-      .map((emotion) => video.vtt && emotionToMoment(emotion, video, video.vtt))
-      .filter((m): m is Exclude<typeof m, "" | null | undefined> => !!m);
-    const allMoments = [...moments, ...emotionMoments];
-    return { video, moments, emotions, emotionMoments, allMoments };
-  });
-
-  const moments =
-    selectedVideo === "all"
-      ? videosEnriched.flatMap((v) => v.allMoments)
-      : videosEnriched
-          .filter((v) => v.video.videoId === selectedVideo)
-          .flatMap((v) => v.allMoments);
-
-  const filteredMoments = moments
-    .filter((moment) => {
-      if (selectedVideo === "all") return true;
-      return moment.video_id === selectedVideo;
-    })
-    .filter((moment) => {
-      if (!selectedTopic || selectedTopic === "Coach") return true;
-      return moment.activity === selectedTopic;
-    });
-
-  const topics = _.sortBy(
-    Array.from(new Set(filteredMoments.map((m) => m.activity))),
-    (x) => x,
-  );
-
-  const userId = profile?.id ?? user?.id ?? "";
+  // Only fetch moments when we have a topic selected
   const topic = selectedTopic ?? "";
+
+  // Use the optimized moments query with minimal data
+  const { data: momentsData, isFetching: momentsLoading } =
+    api.moments.listForInsights.useInfiniteQuery(
+      {
+        userId,
+        videoId: selectedVideo !== "all" ? selectedVideo : undefined,
+        topic: selectedTopic || undefined, // Convert empty string to undefined
+        limit: 100,
+        // Don't include full details to improve performance
+        includeFullDetails: false,
+      },
+      {
+        getNextPageParam: (lastPage) => lastPage?.nextCursor,
+        refetchOnWindowFocus: false,
+        enabled: !!userId && !!selectedTopic,
+      },
+    );
 
   const { data: chat, isFetching: chatLoading } = api.chats.get.useQuery(
     {
@@ -114,22 +89,46 @@ export default function InsightsPage() {
     },
     {
       refetchOnWindowFocus: false,
+      enabled: !!userId,
     },
   );
 
+  // Extract data from the queries
+  const filteredVideos = videosData?.pages.flatMap((page) => page.videos) ?? [];
+  const filteredMoments =
+    momentsData?.pages.flatMap((page) => page?.moments ?? []) ?? [];
+
+  // Extract unique topics from videos for topic selection
+  const topics = Array.from(
+    new Set(
+      filteredVideos.flatMap((video) => {
+        // Filter out null values and ensure we have strings
+        return (video.topics || []).filter((t): t is string => !!t);
+      }),
+    ),
+  ).sort();
+
+  // Adapt the new video structure to match what ChatInterface expects
+  const adaptedVideos = filteredVideos.map((video) => ({
+    ...video,
+    meeting: undefined, // ChatInterface expects this property
+    moments: [], // ChatInterface expects this property
+    vtt: "", // ChatInterface expects this property
+  }));
+
   // Load more videos when scrolling near the bottom
   useEffect(() => {
-    if (hasNextPage && !isFetchingNextPage) {
+    if (hasNextVideosPage && !isFetchingNextVideosPage) {
       _.debounce(() => {
         const scrolledToBottom =
           window.innerHeight + window.scrollY >=
           document.documentElement.scrollHeight - 1000;
         if (scrolledToBottom) {
-          void fetchNextPage();
+          void fetchNextVideosPage();
         }
       }, 100)();
     }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [hasNextVideosPage, isFetchingNextVideosPage, fetchNextVideosPage]);
 
   if (userLoading || frameworksLoading || chatLoading || !userId) {
     return (
@@ -198,13 +197,13 @@ export default function InsightsPage() {
         selectedTopic={topic}
         topics={topics}
         relevantMoments={filteredMoments}
-        relevantVideos={filteredVideos}
+        relevantVideos={adaptedVideos}
         initialMessages={
           (chat?.data?.messages as CoreMessage[] | undefined) ?? []
         }
         onTopicSelect={(topic) => void setSelectedTopic(topic)}
         onClick={() => setShouldShowLockScreen(true)}
-        isLoading={hasNextPage}
+        isLoading={hasNextVideosPage}
         disabled={videosLoading && filteredVideos.length < MIN_MEETINGS}
       />
     </ChatContainer>
