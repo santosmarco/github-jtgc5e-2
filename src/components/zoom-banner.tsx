@@ -187,6 +187,7 @@ export function ZoomIntegrationBanner() {
   };
 
   const handleGoToIntegrations = () => {
+    setShowConfirmDialog(false);
     router.push("/integrations");
   };
 
