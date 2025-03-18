@@ -10,6 +10,10 @@ import {
   createAnonymousSessionId,
   isPostHogBlocked,
 } from "~/lib/posthog-utils";
+import { trackPerformanceMetric } from "~/lib/analytics";
+
+// Import web-vitals for performance tracking
+import { onCLS, onFID, onLCP } from "web-vitals";
 
 const PostHogPageView = dynamic(() => import("./posthog-page-view"), {
   ssr: false,
@@ -21,6 +25,32 @@ const PostHogSessionController = dynamic(
     ssr: false,
   },
 );
+
+/**
+ * Sets up performance tracking using web-vitals
+ */
+function setupPerformanceTracking() {
+  onCLS((metric) => {
+    trackPerformanceMetric("cls", metric.value, {
+      id: metric.id,
+      rating: metric.rating,
+    });
+  });
+
+  onFID((metric) => {
+    trackPerformanceMetric("fid", metric.value, {
+      id: metric.id,
+      rating: metric.rating,
+    });
+  });
+
+  onLCP((metric) => {
+    trackPerformanceMetric("lcp", metric.value, {
+      id: metric.id,
+      rating: metric.rating,
+    });
+  });
+}
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
   const [_adBlockerDetected, setAdBlockerDetected] = useState(false);
@@ -71,6 +101,9 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
             // Session recording will be handled by PostHogSessionController
           },
         });
+
+        // Setup performance tracking after PostHog is initialized
+        setupPerformanceTracking();
       } catch (error) {
         console.error("Error setting up PostHog:", error);
       }
