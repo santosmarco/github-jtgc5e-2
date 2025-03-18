@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
 import { ProfileStore } from "~/hooks/use-profile";
+import { identifyUser } from "~/lib/analytics";
 
 function useHydration() {
   const [hydrated, setHydrated] = useState(false);
@@ -34,6 +35,58 @@ function useHydration() {
 
 export function ProfileProvider({ children }: { children: React.ReactNode }) {
   const isHydrated = useHydration();
+
+  // Identify user with PostHog when profile is available
+  useEffect(() => {
+    // Only run once hydration is complete
+    if (!isHydrated) return;
+
+    // Get current profile from store
+    const profile = ProfileStore.getState().profile;
+
+    // If we have a profile, identify the user
+    if (profile?.id) {
+      // Extract relevant user properties
+      const userProperties = {
+        email: profile.email,
+        name: profile.nickname,
+        role: profile.role,
+        created_at: profile.created_at,
+        last_seen_at: new Date().toISOString(),
+      };
+
+      // Identify user in PostHog
+      identifyUser(profile.id, userProperties);
+
+      /*
+      // If user has a team, we could also set group information
+      if (profile.team_id) {
+        // Fetch team info if needed and identify group
+        void api.teams.getTeam
+          .fetch({ id: profile.team_id })
+          .then((team) => {
+            if (team) {
+              try {
+                // Import is inside try-catch to prevent errors if posthog isn't loaded
+                import("~/lib/analytics").then(({ identifyGroup }) => {
+                  identifyGroup("team", team.id, {
+                    name: team.name,
+                    member_count: team.member_count || 1,
+                    created_at: team.created_at,
+                  });
+                });
+              } catch (error) {
+                // Silently fail group identification
+              }
+            }
+          })
+          .catch(() => {
+            // Silently fail team fetch
+          });
+      }
+      */
+    }
+  }, [isHydrated]);
 
   if (!isHydrated) {
     return (
