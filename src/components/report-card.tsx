@@ -16,7 +16,7 @@ import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import type { RouterOutputs } from "~/trpc/shared";
 
-type Report = RouterOutputs["reports"]["listForUser"][number];
+type Report = RouterOutputs["reports"]["listForUser"]["reports"][number];
 
 type ReportCardProps = MotionProps & {
   report: Report;
