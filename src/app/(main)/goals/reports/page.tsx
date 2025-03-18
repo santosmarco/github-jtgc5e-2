@@ -1,18 +1,41 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { FileX2Icon, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileX2Icon, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
+import { Button } from "~/components/ui/button";
 import { ReportCard } from "~/components/report-card";
 import { useProfile } from "~/hooks/use-profile";
 import { api } from "~/trpc/react";
 
 export default function ReportsPage() {
   const { profile } = useProfile();
-  const { data: reports, isLoading } = api.reports.listForUser.useQuery({
+  const [page, setPage] = useState(1);
+  const pageSize = 9;
+  const utils = api.useUtils();
+
+  const { data, isLoading } = api.reports.listForUser.useQuery({
     userId: profile?.id ?? "",
+    page,
+    pageSize,
   });
+
+  const reports = data?.reports;
+  const pagination = data?.pagination;
+
+  // Prefetch next page data when current page changes
+  useEffect(() => {
+    if (pagination && page < pagination.totalPages && profile?.id) {
+      // Prefetch the next page in the background
+      void utils.reports.listForUser.prefetch({
+        userId: profile.id,
+        page: page + 1,
+        pageSize,
+      });
+    }
+  }, [page, pagination, profile?.id, utils.reports.listForUser]);
 
   if (isLoading) {
     return (
@@ -79,6 +102,36 @@ export default function ReportsPage() {
           </Link>
         ))}
       </motion.div>
+
+      {pagination && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 pt-4">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+            disabled={page === 1}
+            aria-label="Previous page"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+
+          <span className="text-sm text-muted-foreground">
+            Page {page} of {pagination.totalPages}
+          </span>
+
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() =>
+              setPage((prev) => Math.min(prev + 1, pagination.totalPages))
+            }
+            disabled={page === pagination.totalPages}
+            aria-label="Next page"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

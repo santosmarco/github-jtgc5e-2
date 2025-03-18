@@ -10,6 +10,7 @@ import dedent from "ts-dedent";
 import { formatReportToMarkdown } from "~/lib/reports/formatting";
 import { ReportPersonality } from "~/lib/reports/schemas";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
+import type { Enums } from "~/lib/supabase/database.types";
 
 export const reportsRouter = createTRPCRouter({
   getOne: publicProcedure
@@ -58,10 +59,28 @@ export const reportsRouter = createTRPCRouter({
     .input(
       z.object({
         userId: z.string(),
+        page: z.number().int().positive().default(1),
+        pageSize: z.number().int().positive().min(1).max(50).default(9),
       }),
     )
     .query(async ({ input }) => {
       const supabase = await createClient();
+      const { page, pageSize } = input;
+      const offset = (page - 1) * pageSize;
+
+      // Get total count for pagination
+      const { count, error: countError } = await supabase
+        .from("group_report_processing_status")
+        .select("*", { count: "exact", head: true })
+        .eq("profile_id", input.userId);
+
+      if (countError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: countError.message,
+          cause: countError,
+        });
+      }
 
       const {
         data: groupReportProcessingStatuses,
@@ -69,7 +88,9 @@ export const reportsRouter = createTRPCRouter({
       } = await supabase
         .from("group_report_processing_status")
         .select("*, skill:skills(*)")
-        .eq("profile_id", input.userId);
+        .eq("profile_id", input.userId)
+        .range(offset, offset + pageSize - 1)
+        .order("created_at", { ascending: false });
 
       if (groupReportProcessingStatusesError) {
         throw new TRPCError({
@@ -114,7 +135,15 @@ export const reportsRouter = createTRPCRouter({
         });
       }
 
-      return result;
+      return {
+        reports: result,
+        pagination: {
+          page,
+          pageSize,
+          totalCount: count || 0,
+          totalPages: Math.ceil((count || 0) / pageSize),
+        },
+      };
     }),
 
   getGroupReports: publicProcedure

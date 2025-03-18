@@ -113,7 +113,7 @@ export function ReportCard({
       initial="hidden"
       animate="visible"
       className={cn(
-        "group relative overflow-hidden rounded-xl border bg-gradient-to-br from-background to-muted/30 p-6 text-card-foreground shadow-lg transition-all duration-300",
+        "group relative min-h-[8.25rem] overflow-hidden rounded-xl border bg-gradient-to-br from-background to-muted/30 p-6 text-card-foreground shadow-lg transition-all duration-300",
         isInteractive &&
           "hover:border-primary hover:from-background hover:to-muted/50 hover:shadow-xl",
         isFailed && "border-destructive/20 bg-destructive/5",
