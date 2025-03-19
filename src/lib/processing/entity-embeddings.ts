@@ -1,12 +1,12 @@
 import { v4 as uuidv4 } from "uuid";
-import { getIndex } from "../pinecone/client";
+import { getEntitiesIndex } from "../pinecone/client";
 import { embedText, embedTexts } from "../pinecone/embeddings";
+import type { Tables } from "../supabase/database.types";
 import type {
   Entity,
-  EntityRelation,
   EntityExtractionOutput,
+  EntityRelation,
 } from "./entity-extraction";
-import type { Tables } from "../supabase/database.types";
 
 /**
  * Metadata for entity vectors in Pinecone
@@ -72,7 +72,7 @@ async function processBatchedObservations<T extends { observations: string[] }>(
   namespace: string,
   batchSize: number = DEFAULT_BATCH_SIZE,
 ): Promise<void> {
-  let index = await getIndex();
+  let index = await getEntitiesIndex();
   index = index.namespace(namespace);
 
   // Create a prefix for all observations related to this entity/relationship
@@ -114,7 +114,7 @@ export async function embedEntity(
   options?: EntityEmbeddingOptions,
 ): Promise<void> {
   const namespace = options?.namespace || "entities";
-  let index = await getIndex();
+  let index = await getEntitiesIndex();
   index = index.namespace(namespace);
 
   // Create a comprehensive text representation of the entity
@@ -176,7 +176,7 @@ export async function embedRelationship(
   options?: EntityEmbeddingOptions,
 ): Promise<void> {
   const namespace = options?.namespace || "relationships";
-  let index = await getIndex();
+  let index = await getEntitiesIndex();
   index = index.namespace(namespace);
 
   // Create a comprehensive text representation of the relationship
@@ -240,7 +240,7 @@ export async function embedObservations(
   options?: EntityEmbeddingOptions,
 ): Promise<void> {
   const namespace = options?.namespace || "observations";
-  let index = await getIndex();
+  let index = await getEntitiesIndex();
   index = index.namespace(namespace);
 
   // Process observations in batches
@@ -349,7 +349,7 @@ export async function searchEntityVectors(
   } = options || {};
 
   const queryEmbedding = await embedText(query);
-  const baseIndex = await getIndex();
+  const baseIndex = await getEntitiesIndex();
 
   // Query entities
   const entitiesIndex = namespace ? baseIndex.namespace("entities") : baseIndex;

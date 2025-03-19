@@ -163,6 +163,48 @@ export type SearchCriterion = {
  * @param options - Search options for filtering and configuration
  * @returns Categorized search results
  */
+/**
+ * Helper function to retry a function with exponential backoff
+ * @param fn The function to retry
+ * @param retries Number of retries
+ * @param baseDelay Base delay in ms
+ * @param timeout Timeout in ms
+ * @returns Promise that resolves with the function result or rejects after all retries
+ */
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  retries = 3,
+  baseDelay = 300,
+  timeout = 5000,
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      // Create a timeout promise
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error(`Operation timed out after ${timeout}ms`));
+        }, timeout);
+      });
+
+      // Race between the function and the timeout
+      return await Promise.race([fn(), timeoutPromise]);
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      // Don't wait on the last attempt
+      if (attempt < retries) {
+        // Exponential backoff with jitter
+        const delay = baseDelay * 2 ** attempt * (0.5 + Math.random() * 0.5);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw lastError || new Error("Operation failed after retries");
+}
+
 export async function searchEntities(
   query: string,
   options?: EntitySearchOptions,
@@ -194,14 +236,19 @@ export async function searchEntities(
     filter.relationship_type = { $in: options.relationshipTypes };
   }
 
-  const results = await searchEntityVectors(query, {
-    filter,
-    topK: options?.topK,
-    minScore: options?.minScore,
-    namespace: "relationships",
-  });
-
-  return results;
+  // Use retry logic with timeout for the search
+  return await withRetry(
+    async () =>
+      searchEntityVectors(query, {
+        filter,
+        topK: options?.topK,
+        minScore: options?.minScore,
+        namespace: "relationships",
+      }),
+    2, // 2 retries (3 attempts total)
+    300, // 300ms base delay
+    10000, // 10 second timeout
+  );
 }
 
 searchEntities(

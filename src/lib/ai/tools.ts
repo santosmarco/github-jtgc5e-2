@@ -50,7 +50,9 @@ export function explainTools<T extends Record<string, Tool>>(
       ([name, tool]) =>
         `- \`${name}\`: ${tool._def.description}\n${JSON.stringify({
           parameters: zodToJsonSchema(tool._def.parameters),
+          ...(tool._def.output && {
           output: zodToJsonSchema(tool._def.output),
+          }),
         })}`,
     )
     .join("\n\n")

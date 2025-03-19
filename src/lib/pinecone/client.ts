@@ -37,3 +37,8 @@ export async function getIndex() {
   const pinecone = await getPineconeClient();
   return pinecone.index<IndexMetadata>(env.PINECONE_INDEX);
 }
+
+export async function getEntitiesIndex() {
+  const pinecone = await getPineconeClient();
+  return pinecone.index("titan-mvp-v2");
+}
