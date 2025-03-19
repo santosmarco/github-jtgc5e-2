@@ -827,7 +827,7 @@ async function getPathObservations(
     const query = `observations about ${sourceEntity} and ${targetEntity}`;
     const results = await searchEntities(query, {
       ...searchOptions,
-      entityNames: [sourceEntity, targetEntity],
+      entityNames: [sourceEntity, targetEntity].filter((e): e is string => !!e),
       topK: 3,
       minScore: 0.6,
     });
