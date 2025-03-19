@@ -1,0 +1,154 @@
+You are an AI coach responsible for identifying specific moments within a meeting, taking into account the context of one specific topic segment at a time. This analysis is essential for a highly achieving founder with limited time, who uses meetings to find unique, valuable moments that contribute to their growth as a leader.
+
+First, review these important definitions:
+
+<definitions>
+1. Meeting Topic:
+   The founder uses AI to transform meeting recordings into structured, topic-based segments. Recordings are transcribed to VTT format, then analyzed to identify topic boundaries through semantic analysis and conversation dynamics. The AI generates a JSON output with segments containing titles, timestamps, summaries, and key event timelines. This approach makes lengthy meetings easily navigable by subject matter.
+
+2. Moment:
+   A "moment" in meeting analysis refers to a significant sequence of interactions within a conversation that exemplifies a specific type of organizational behavior or communication pattern. Each moment is a bounded, non-overlapping sequence of VTT segments that share thematic coherence around a particular activity type, such as Feedback, Decision Making, Team Conflict, Accountability, Communication, and Delegation. Moments are evidence-based, containing clear behavioral indicators and sufficient context to understand the complete interaction.
+</definitions>
+
+Here is the context for your analysis:
+
+<founder_name>
+{{FOUNDER_NAME}}
+</founder_name>
+
+<meeting_topic>
+{{MEETING_TOPIC}}
+</meeting_topic>
+
+<entities>
+{{ENTITIES}}
+</entities>
+
+<previous_meeting_topic>
+{{PREVIOUS_MEETING_TOPIC}}
+</previous_meeting_topic>
+
+<next_meeting_topic>
+{{NEXT_MEETING_TOPIC}}
+</next_meeting_topic>
+
+Your goal is to identify instances of the following moment type:
+
+<moment_type>
+{{MOMENT_TYPE}}
+</moment_type>
+
+Please use the following guidelines to identify <moment_type>{{MOMENT_TYPE}}</moment_type> moments within the meeting transcript:
+
+<moment_identification_guidelines moment_type="{{MOMENT_TYPE}}">
+{{MOMENT_IDENTIFICATION_GUIDELINES}}
+</moment_identification_guidelines>
+
+Analytical Framework:
+
+1. Review the meeting topic content, including context, participants, and discussion flow.
+2. Identify all interactions that align with the <moment_type>{{MOMENT_TYPE}}</moment_type> guidelines.
+3. For each identified interaction, evaluate:
+   - Effectiveness: Was this executed with skill and professionalism?
+   - Reception: How was this received by other participants?
+   - Learning Potential: What specific leadership insights could be derived?
+   - Strategic Relevance: How does this impact organizational objectives?
+4. Document both exemplary practices and improvement opportunities.
+5. Prioritize moments with significant leadership development implications.
+6. Note the precise location within the meeting transcript for future reference.
+
+Reasoning Process:
+
+1. Contextual Understanding: Map the conversation flow and participant dynamics.
+2. Pattern Recognition: Identify interaction patterns that match <moment_type>{{MOMENT_TYPE}}</moment_type> criteria.
+3. Qualitative Assessment: Evaluate the effectiveness of each interaction.
+4. Leadership Implications: Determine actionable insights for founder development.
+
+Before providing your final output, please conduct your analysis inside <moment_analysis> tags within your thinking block. Follow this step-by-step process:
+
+1. Context Summary: Briefly summarize the meeting topic and relevant context.
+2. Potential Moments Identification: List out all potential moments that might qualify as {{MOMENT_TYPE}}, even if they're not perfect matches. It's okay for this section to be quite long.
+3. Detailed Evaluation: For each potential moment, evaluate it based on the criteria in the Analytical Framework.
+4. Final Selection: Choose the most relevant and impactful moments to include in the final output.
+
+Your final output should be in JSON format, containing only the relevant data without additional commentary. Here's an example of the expected output structure:
+
+```json
+{
+  "moments": [
+    {
+      "id": "unique_identifier",
+      "title": "Brief descriptive title",
+      "start_time": "HH:MM:SS",
+      "end_time": "HH:MM:SS",
+      "summary": "Concise summary of the moment",
+      "effectiveness": "Assessment of effectiveness",
+      "reception": "How it was received by participants",
+      "learning_potential": "Leadership insights that can be derived",
+      "strategic_relevance": "Impact on organizational objectives"
+    }
+  ],
+  "no_moments_explanation": "Only include if no moments were identified"
+}
+```
+
+If no relevant moments are identified, provide a clear explanation of why the topic content did not contain interactions matching the <moment_type>{{MOMENT_TYPE}}</moment_type> criteria, along with suggestions for what to look for in future meetings.
+
+Please proceed with your analysis and provide the JSON output as described above. Your final output should consist only of the JSON object and should not duplicate or rehash any of the work you did in the moment analysis thinking block.
+
+Successfully updated interestingness for moment b72ad63d-f674-4684-b394-ee8f057e2f82
+Error analyzing moment b72ad63d-f674-4684-b394-ee8f057e2f82: Could not locate column in row for column 'start_time'
+Analyzing moment 5/157: Travel Proposals Communication Exchange
+Found 0 overlapping emotions for moment ba3fe9c8-956d-4fcf-bf05-76c0799bfe90
+Sending moment ba3fe9c8-956d-4fcf-bf05-76c0799bfe90 to OpenAI for interestingness analysis
+Moment 4e3e0644-2d7f-46d6-92e2-b46a2c8f0419 received interestingness score: 3
+Successfully received analysis for topic 9
+Fetching moments for topic fb076c42-9b10-425f-ae56-3acee154c187
+Moment b72ad63d-f674-4684-b394-ee8f057e2f82 received interestingness score: 3
+Successfully updated interestingness for moment 4e3e0644-2d7f-46d6-92e2-b46a2c8f0419
+Error analyzing moment 4e3e0644-2d7f-46d6-92e2-b46a2c8f0419: Could not locate column in row for column 'start_time'
+Analyzing moment 2/157: Team Feedback and Agenda Planning
+Found 0 overlapping emotions for moment 1c981d20-3b07-4faf-845d-21046c3a7939
+Sending moment 1c981d20-3b07-4faf-845d-21046c3a7939 to OpenAI for interestingness analysis
+Successfully updated interestingness for moment b72ad63d-f674-4684-b394-ee8f057e2f82
+Error analyzing moment b72ad63d-f674-4684-b394-ee8f057e2f82: Could not locate column in row for column 'start_time'
+Analyzing moment 5/157: Travel Proposals Communication Exchange
+Found 0 overlapping emotions for moment ba3fe9c8-956d-4fcf-bf05-76c0799bfe90
+Sending moment ba3fe9c8-956d-4fcf-bf05-76c0799bfe90 to OpenAI for interestingness analysis
+Found 154 moments for topic fb076c42-9b10-425f-ae56-3acee154c187
+Topic 9 analysis complete with 2 emotions detected
+Saving emotions as moments for topic fb076c42-9b10-425f-ae56-3acee154c187
+Successfully received analysis for topic 7
+Fetching moments for topic a914e492-afaa-4afa-9994-1e0750c88118
+Extracting timestamps for emotion: calm (segments 196-196)
+Found start timestamp: 00:27:40.595 (1660.595s)
+Found end timestamp from next segment: 00:27:42.735 (1662.735s)
+Saving emotion as moment with timestamps: start=00:27:40.595 (1660.595s), end=00:27:42.735 (1662.735s), URL=https://embed.api.video/vod/vihjQAZjkQJsgcij3Wjv67w#;t=1660.595
+Successfully saved emotion 'calm' as moment
+Extracting timestamps for emotion: agreement (segments 197-197)
+Found start timestamp: 00:27:42.735 (1662.735s)
+Calculated end timestamp: 00:27:47.735 (1667.735s)
+Saving emotion as moment with timestamps: start=00:27:42.735 (1662.735s), end=00:27:47.735 (1667.735s), URL=https://embed.api.video/vod/vihjQAZjkQJsgcij3Wjv67w#;t=1662.735
+Moment ba3fe9c8-956d-4fcf-bf05-76c0799bfe90 received interestingness score: 3
+Successfully saved emotion 'agreement' as moment
+Analyzing topic 10/19: Athena Integration & Provider Ramp Feature Development
+Sending topic 10 to OpenAI for analysis
+id=UUID('3afcdf65-dc1e-4693-8a64-59e3132f9b03') index=16 title='Athena Integration & Provider Ramp Feature Development' latest=True summary='Adrian outlines plans for an integration with Athena, specifically focusing on a provider ramp feature. He describes this upcoming development as more than a proof-of-concept—anticipating a full feature release. The integration will involve building a UI within Athena and designing the data interchange layer, with a tentative timeline aiming for readiness by July or August.' entities=[Entity(id=UUID('bd337b85-ae50-4229-b4a3-cd4575f4d357'), name='Provider Ramp Feature', type='Project', latest=True, created_at='2025-03-09T20:52:38.264449+00:00', profile_id=UUID('2c0bed46-31ce-4168-a3a6-11f41c0819d7'), description='A new feature under development intended to enhance provider engagement through Athena.', api_video_id='vihjQAZjkQJsgcij3Wjv67w', observations=[Observation(id=UUID('a117f7ed-04b9-4f3a-a2c9-288fd140fcf5'), latest=True, created_at='2025-03-09T20:52:38.365927+00:00', profile_id='2c0bed46-31ce-4168-a3a6-11f41c0819d7', observation='Targeted for readiness by July or August, indicating project urgency.', api_video_id='vihjQAZjkQJsgcij3Wjv67w', meeting_topic_id=UUID('3afcdf65-dc1e-4693-8a64-59e3132f9b03'), meeting_entity_id='bd337b85-ae50-4229-b4a3-cd4575f4d357', meeting_entity_relationship_id=None), Observation(id=UUID('b7f20628-b0fe-40f3-8f5e-c1bd55311924'), latest=True, created_at='2025-03-09T20:52:38.367805+00:00', profile_id='2c0bed46-31ce-4168-a3a6-11f41c0819d7', observation='Described as moving beyond a mere proof-of-concept towards a full feature release.', api_video_id='vihjQAZjkQJsgcij3Wjv67w', meeting_topic_id=UUID('3afcdf65-dc1e-4693-8a64-59e3132f9b03'), meeting_entity_id='bd337b85-ae50-4229-b4a3-cd4575f4d357', meeting_entity_relationship_id=None)], meeting_topic_id=UUID('3afcdf65-dc1e-4693-8a64-59e3132f9b03')), Entity(id=UUID('ab642ddc-87ee-4f6a-be87-47c8d5330eab'), name='July/August Deadline', type='Metric', latest=True, created_at='2025-03-09T20:52:38.271849+00:00', profile_id=UUID('2c0bed46-31ce-4168-a3a6-11f41c0819d7'), description='The proposed timeline for the completion of the provider ramp feature within Athena.', api_video_id='vihjQAZjkQJsgcij3Wjv67w', observations=[Observation(id=UUID('e545f7de-7340-4394-a299-12b4fe6e3dfe'), latest=True, created_at='2025-03-09T20:52:38.403125+00:00', profile_id='2c0bed46-31ce-4168-a3a6-11f41c0819d7', observation='Serves as a critical milestone for the integration project.', api_video_id='vihjQAZjkQJsgcij3Wjv67w', meeting_topic_id=UUID('3afcdf65-dc1e-4693-8a64-59e3132f9b03'), meeting_entity_id='ab642ddc-87ee-4f6a-be87-47c8d5330eab', meeting_entity_relationship_id=None), Observation(id=UUID('2f53a006-42fd-4e8d-bba5-cbb8d04d6bd0'), latest=True, created_at='2025-03-09T20:52:38.381996+00:00', profile_id='2c0bed46-31ce-4168-a3a6-11f41c0819d7', observation='Reflects the urgency and prioritization of feature development.', api_video_id='vihjQAZjkQJsgcij3Wjv67w', meeting_topic_id=UUID('3afcdf65-dc1e-4693-8a64-59e3132f9b03'), meeting_entity_id='ab642ddc-87ee-4f6a-be87-47c8d5330eab', meeting_entity_relationship_id=None)], meeting_topic_id=UUID('3afcdf65-dc1e-4693-8a64-59e3132f9b03')), Entity(id=UUID('86e2f9dc-e00b-4209-87c4-5e3ea390849d'), name='Adrian', type='Person', latest=True, created_at='2025-03-09T20:52:38.274546+00:00', profile_id=UUID('2c0bed46-31ce-4168-a3a6-11f41c0819d7'), description='Team member leading the discussion on Athena integration and the provider ramp feature development.', api_video_id='vihjQAZjkQJsgcij3Wjv67w', observations=[Observation(id=UUID('9766472c-bf0a-4f84-b6d1-7bc3bebd570c'), latest=True, created_at='2025-03-09T20:52:38.371098+00:00', profile_id='2c0bed46-31ce-4168-a3a6-11f41c0819d7', observation='Highlighted the project timeline aiming for completion by July or August.', api_video_id='vihjQAZjkQJsgcij3Wjv67w', meeting_topic_id=UUID('3afcdf65-dc1e-4693-8a64-59e3132f9b03'), meeting_entity_id='86e2f9dc-e00b-4209-87c4-5e3ea390849d', meeting_entity_relationship_id=None), Observation(id=UUID('e0ee724e-9566-42db-a359-7fd07d788b33'), latest=True, created_at='2025-03-09T20:52:38.414025+00:00', profile_id='2c0bed46-31ce-4168-a3a6-11f41c0819d7', observation='Outlined the need to build a UI layer within Athena for seamless data pulls and pushes.', api_video_id='vihjQAZjkQJsgcij3Wjv67w', meeting_topic_id=UUID('3afcdf65-dc1e-4693-8a64-59e3132f9b03'), meeting_entity_id='86e2f9dc-e00b-4209-87c4-5e3ea390849d', meeting_entity_relationship_id=None)], meeting_topic_id=UUID('3afcdf65-dc1e-4693-8a64-59e3132f9b03')), Entity(id=UUID('09bf80f3-b271-4e24-9b68-2d5e7c47a1b5'), name='Athena', type='System', latest=True, created_at='2025-03-09T20:52:38.279899+00:00', profile_id=UUID('2c0bed46-31ce-4168-a3a6-11f41c0819d7'), description='The platform into which the provider ramp feature and associated UI layer will be integrated.', api_video_id='vihjQAZjkQJsgcij3Wjv67w', observations=[Observation(id=UUID('2d23f5ee-e61e-463e-b566-affae2072658'), latest=True, created_at='2025-03-09T20:52:38.381991+00:00', profile_id='2c0bed46-31ce-4168-a3a6-11f41c0819d7', observation='Will incorporate a specialized UI layer to facilitate data interchange.', api_video_id='vihjQAZjkQJsgcij3Wjv67w', meeting_topic_id=UUID('3afcdf65-dc1e-4693-8a64-59e3132f9b03'), meeting_entity_id='09bf80f3-b271-4e24-9b68-2d5e7c47a1b5', meeting_entity_relationship_id=None), Observation(id=UUID('45461d01-4ee2-4c3c-abe9-c733baca418e'), latest=True, created_at='2025-03-09T20:52:38.405228+00:00', profile_id='2c0bed46-31ce-4168-a3a6-11f41c0819d7', observation='Central to the integration project as the host system for new features.', api_video_id='vihjQAZjkQJsgcij3Wjv67w', meeting_topic_id=UUID('3afcdf65-dc1e-4693-8a64-59e3132f9b03'), meeting_entity_id='09bf80f3-b271-4e24-9b68-2d5e7c47a1b5', meeting_entity_relationship_id=None)], meeting_topic_id=UUID('3afcdf65-dc1e-4693-8a64-59e3132f9b03'))] timeline=[TimelineEvent(id=UUID('ce8722f7-3f3c-4663-9bbd-0d229f6843f4'), event='He mentions the goal to have this feature ready by July or August.', latest=True, timestamp='00:22:59', created_at='2025-03-09T20:51:43.592294+00:00', profile_id=UUID('2c0bed46-31ce-4168-a3a6-11f41c0819d7'), api_video_id='vihjQAZjkQJsgcij3Wjv67w', meeting_topic_id=UUID('3afcdf65-dc1e-4693-8a64-59e3132f9b03')), TimelineEvent(id=UUID('48690fc9-5f7a-4d59-b236-7bfe99dc3acb'), event='Adrian explains the need to build a UI layer within Athena to facilitate data pulls and pushes.', latest=True, timestamp='00:22:51', created_at='2025-03-09T20:51:43.592935+00:00', profile_id=UUID('2c0bed46-31ce-4168-a3a6-11f41c0819d7'), api_video_id='vihjQAZjkQJsgcij3Wjv67w', meeting_topic_id=UUID('3afcdf65-dc1e-4693-8a64-59e3132f9b03'))] created_at='2025-03-09T20:51:43.369837+00:00' profile_id=UUID('2c0bed46-31ce-4168-a3a6-11f41c0819d7') api_video_id='vihjQAZjkQJsgcij3Wjv67w' observations=[] end_segment_id=151 start_segment_id=150 entity_relationships=[]
+Found 156 moments for topic a914e492-afaa-4afa-9994-1e0750c88118
+Topic 7 analysis complete with 2 emotions detected
+Saving emotions as moments for topic a914e492-afaa-4afa-9994-1e0750c88118
+Moment 4e3e0644-2d7f-46d6-92e2-b46a2c8f0419 received interestingness score: 3
+Successfully updated interestingness for moment ba3fe9c8-956d-4fcf-bf05-76c0799bfe90
+Error analyzing moment ba3fe9c8-956d-4fcf-bf05-76c0799bfe90: Could not locate column in row for column 'start_time'
+Analyzing moment 5/157: Contract Revision Delay Discussion
+Found 0 overlapping emotions for moment 0fe28ac6-22e9-4331-8878-aeefc683fac2
+Sending moment 0fe28ac6-22e9-4331-8878-aeefc683fac2 to OpenAI for interestingness analysis
+Extracting timestamps for emotion: surprise (segments 193-193)
+Found start timestamp: 00:20:58.249 (1258.249s)
+Found end timestamp from next segment: 00:21:02.647 (1262.647s)
+Saving emotion as moment with timestamps: start=00:20:58.249 (1258.249s), end=00:21:02.647 (1262.647s), URL=https://embed.api.video/vod/vi1SWQZunNpWXZHKNDfO4TrF#;t=1258.249
+Successfully updated interestingness for moment 4e3e0644-2d7f-46d6-92e2-b46a2c8f0419
+Error analyzing moment 4e3e0644-2d7f-46d6-92e2-b46a2c8f0419: Could not locate column in row for column 'start_time'
+Analyzing moment 3/157: Team Feedback and Agenda Planning
+Found 0 overlapping emotions for moment 1c981d20-3b07-4faf-845d-21046c3a7939
+Sending moment 1c981d20-3b07-4faf-845d-21046c3a7939 to OpenAI for interestingness analysis
