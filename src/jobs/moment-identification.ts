@@ -47,7 +47,7 @@ export const MeetingModel = z.object({
   meeting_baas_original_json: z.record(z.any()).nullable(),
   created_at: z.string(),
   db_created_at: z.string().nullable(),
-}) satisfies z.ZodType<Omit<Tables<"meetings">, "searchable">>;
+});
 export type MeetingModel = z.infer<typeof MeetingModel>;
 
 export const MeetingObservationModel = z.object({
