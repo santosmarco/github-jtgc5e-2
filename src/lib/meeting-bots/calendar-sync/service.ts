@@ -405,10 +405,12 @@ export function createCalendarSyncService(
 
         // Check if all attendees are internal
         const isInternalMeeting =
-          calendarEvent.attendees?.every((attendee) => {
-            const attendeeDomain = attendee.email?.split("@")[1];
-            return attendeeDomain === userDomain;
-          }) ?? true;
+          !calendarEvent.attendees || calendarEvent.attendees.length === 0
+            ? isOrganizer // Self-organized meetings with no attendees are internal
+            : calendarEvent.attendees.every((attendee) => {
+                const attendeeDomain = attendee.email?.split("@")[1];
+                return attendeeDomain === userDomain;
+              });
 
         logger.info("📊 Meeting evaluation details", {
           event_id: event.id,
@@ -611,6 +613,7 @@ export function createCalendarSyncService(
           data: { user },
         } = await supabase.auth.admin.getUserById(calendar.profile.id);
 
+        /*
         if (user?.app_metadata.recall_zoom_oauth_credential) {
           logger.info("🔑 User has Zoom integration", {
             user_id: user.id,
@@ -684,6 +687,7 @@ export function createCalendarSyncService(
 
           return;
         }
+        */
 
         const meetingJoinResult = await meetingBaas.meetings.join({
           bot_name: botName,
