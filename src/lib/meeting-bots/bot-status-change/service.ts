@@ -34,6 +34,11 @@ export type MeetingBotWithProfileAndEventAndCalendar =
     calendar: Tables<"recall_calendars_v2"> | Tables<"recall_calendars"> | null;
   };
 
+export type MeetingBotWithProfileAndEventAndCalendarAndTranscript =
+  MeetingBotWithProfileAndEventAndCalendar & {
+    transcript: RecallTranscript;
+  };
+
 export type ApiVideoMetadataObject = {
   user_id?: string;
   event_id?: string;
@@ -330,7 +335,7 @@ export function createBotStatusChangeService(
         await handleTranscript(meetingBot, transcript, isV2);
 
         if (apiVideoId && !meetingBotUpdateError) {
-          await handleVideoProcessing(meetingBot);
+          await handleVideoProcessing({ ...meetingBot, transcript });
         }
       } else {
         await slack.info({
@@ -687,7 +692,7 @@ export function createBotStatusChangeService(
   }
 
   async function handleVideoProcessing(
-    bot: MeetingBotWithProfileAndEventAndCalendar,
+    bot: MeetingBotWithProfileAndEventAndCalendarAndTranscript,
   ) {
     try {
       logger.info("🎬 Starting video processing", {
