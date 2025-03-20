@@ -33,16 +33,16 @@ export default function RootLayout({
       <body>
         <NuqsAdapter>
           <TRPCReactProvider>
-            <ProfileProvider>
-              <TooltipProvider delayDuration={0}>
-                <PostHogProvider>
+            <PostHogProvider>
+              <ProfileProvider>
+                <TooltipProvider delayDuration={0}>
                   {children}
                   <Toaster />
                   <Analytics />
                   <SpeedInsights />
-                </PostHogProvider>
-              </TooltipProvider>
-            </ProfileProvider>
+                </TooltipProvider>
+              </ProfileProvider>
+            </PostHogProvider>
           </TRPCReactProvider>
         </NuqsAdapter>
       </body>

@@ -9,7 +9,6 @@ export const client = axios.create({
     "Content-Type": "application/json",
     "X-API-Key": env.INTERNAL_API_KEY,
   },
-  timeout: 15000, // 15 second timeout
 });
 
 // Configure retry behavior
