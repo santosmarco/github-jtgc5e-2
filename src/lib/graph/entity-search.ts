@@ -1,8 +1,5 @@
-import console from "console";
-import { searchEntityVectors } from "../processing/entity-embeddings";
 import type { EntityVectorMetadata } from "../processing/entity-embeddings";
-import { inspect } from "util";
-import { a } from "node_modules/next-safe-action/dist/index.types-Cct3QIs2.mjs";
+import { searchEntityVectors } from "../processing/entity-embeddings";
 
 /**
  * Search result from entity vector search
@@ -250,16 +247,6 @@ export async function searchEntities(
     10000, // 10 second timeout
   );
 }
-
-searchEntities(
-  "what are the most interesting moments in which Lucia amde something very insteresting that she could use to improve her leadership skills?",
-  {
-    topK: 10,
-    minScore: 0.2,
-  },
-).then((x) =>
-  console.log(inspect(formatEntitySearchResults(x), { depth: null })),
-);
 
 /**
  * Formats entity search results into a more user-friendly structure for display
@@ -1147,7 +1134,3 @@ export async function multiCriteriaEntitySearch(
     .sort((a, b) => b.totalScore - a.totalScore)
     .slice(0, resultLimit);
 }
-
-buildEntityKnowledgeGraph("Lucia Huang").then((graph) => {
-  console.log(inspect(graph, { depth: null, colors: true }));
-});
