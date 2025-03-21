@@ -15,6 +15,7 @@ import {
   Platform,
 } from "../schemas";
 import type { MeetingBotsServiceDependencies } from "../types";
+import { z } from "zod";
 
 export type RecallCalendarWithProfile = Tables<"recall_calendars_v2"> & {
   profile: Tables<"profiles">;
@@ -613,8 +614,19 @@ export function createCalendarSyncService(
           data: { user },
         } = await supabase.auth.admin.getUserById(calendar.profile.id);
 
-        /*
-        if (user?.app_metadata.recall_zoom_oauth_credential) {
+        if (
+          user?.app_metadata.recall_zoom_oauth_credential &&
+          !z // remove after zoom app approval
+            .object({
+              extendedProperties: z.object({
+                shared: z.object({
+                  meetingId: z.string(),
+                  zmMeetingNum: z.string(),
+                }),
+              }),
+            })
+            .safeParse(event.raw).success
+        ) {
           logger.info("🔑 User has Zoom integration", {
             user_id: user.id,
           });
@@ -687,7 +699,6 @@ export function createCalendarSyncService(
 
           return;
         }
-        */
 
         const meetingJoinResult = await meetingBaas.meetings.join({
           bot_name: botName,
