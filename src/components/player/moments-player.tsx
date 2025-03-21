@@ -201,9 +201,11 @@ const VideoPlayerSection = memo(function VideoPlayerSection({
             currentMoment.moment.segment_start_timestamp_in_seconds;
           // Reset playback speed to default
           videoElement.playbackRate = 1;
+          /*
           videoElement.play().catch(() => {
             console.log("Autoplay blocked by browser");
           });
+          */
         }
       }, 100);
       return () => clearTimeout(timer);

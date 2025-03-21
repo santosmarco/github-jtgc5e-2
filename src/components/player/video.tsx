@@ -131,9 +131,11 @@ export function VideoPlayer({
   useEffect(() => {
     if (!videoRef.current || !hasInitialSeek) return;
 
+    /*
     videoRef.current.play().catch((error) => {
       console.log("Autoplay failed:", error);
     });
+    */
 
     // Reset playback speed to default when video source changes
     setPlaybackSpeed(1);
