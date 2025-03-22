@@ -189,6 +189,20 @@ export function createCalendarSyncService(
           upsert_result: upsertResult,
         });
 
+        // Check if event is relevant (not in past and has required data) before proceeding
+        const eventRelevance = await isEventRelevant(event);
+        if (!eventRelevance.isRelevant) {
+          logger.info(
+            `⏭️ Skipping event processing - ${eventRelevance.reason}`,
+            {
+              event_id: event.id,
+              calendar_id: calendar.id,
+              profile_email: calendar.profile.email,
+            },
+          );
+          return;
+        }
+
         await cleanupExistingBots(event);
 
         const shouldScheduleBot = await evaluateShouldScheduleBot(
@@ -258,6 +272,34 @@ export function createCalendarSyncService(
         });
       }
     });
+  }
+
+  async function isEventRelevant(event: RecallCalendarEvent) {
+    // Check if the event is in the past (has ended)
+    const now = new Date();
+    const startTime = event.start_time ? new Date(event.start_time) : null;
+    const endTime = event.end_time ? new Date(event.end_time) : null;
+
+    // Skip if event has already ended
+    if (endTime && endTime < now) {
+      return {
+        isRelevant: false,
+        reason: "Event already ended",
+      };
+    }
+
+    // Skip if event has no valid time information
+    if (!startTime) {
+      return {
+        isRelevant: false,
+        reason: "Missing start time",
+      };
+    }
+
+    return {
+      isRelevant: true,
+      reason: "Event is current or upcoming",
+    };
   }
 
   async function cleanupExistingBots(event: RecallCalendarEvent) {
@@ -350,33 +392,6 @@ export function createCalendarSyncService(
               user_email: calendar.profile.email,
             },
           );
-          return false;
-        }
-
-        // Check if the event is in the past (both start and end time are in the past)
-        const now = new Date();
-        const startTime = event.start_time ? new Date(event.start_time) : null;
-        const endTime = event.end_time ? new Date(event.end_time) : null;
-
-        // Skip if event has already ended
-        if (endTime && endTime < now) {
-          logger.info("⏭️ Skipping bot scheduling - Event already ended", {
-            event_id: event.id,
-            end_time: endTime.toISOString(),
-            now: now.toISOString(),
-            profile_id: calendar.profile.id,
-            user_email: calendar.profile.email,
-          });
-          return false;
-        }
-
-        // Skip if event has no valid time information
-        if (!startTime) {
-          logger.info("⏭️ Skipping bot scheduling - Missing start time", {
-            event_id: event.id,
-            profile_id: calendar.profile.id,
-            user_email: calendar.profile.email,
-          });
           return false;
         }
 
