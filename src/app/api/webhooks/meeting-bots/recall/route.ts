@@ -55,9 +55,10 @@ export async function POST(request: NextRequest) {
         try {
           await processMeetingBot.trigger(parsedBody, {
             tags: [
-              parsedBody.event,
-              parsedBody.data.status.code,
-              parsedBody.data.bot_id,
+              `event:${parsedBody.event}`,
+              `status:${parsedBody.data.status.code}`,
+              `bot_id:${parsedBody.data.bot_id}`,
+              "provider:recall",
             ],
           });
         } catch (triggerError) {
@@ -78,7 +79,16 @@ export async function POST(request: NextRequest) {
         });
 
         try {
-          await syncCalendars.trigger({ ...parsedBody, ...query });
+          await syncCalendars.trigger(
+            { ...parsedBody, ...query },
+            {
+              tags: [
+                `event:${parsedBody.event}`,
+                `calendar_id:${parsedBody.data.calendar_id}`,
+                `last_updated:${parsedBody.data.last_updated_ts}`,
+              ],
+            },
+          );
         } catch (syncError) {
           logger.error("❌ Failed to trigger calendar sync", {
             error: syncError,

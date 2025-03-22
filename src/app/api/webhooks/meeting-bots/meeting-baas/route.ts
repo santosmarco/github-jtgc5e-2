@@ -55,13 +55,22 @@ export async function POST(request: NextRequest) {
         });
 
         try {
+          // Determine status tag based on payload data
+          let statusTag = "status:unknown";
+          if ("status" in parsedBody.data) {
+            statusTag = `status:${parsedBody.data.status.code}`;
+          } else if ("error" in parsedBody.data) {
+            statusTag = "status:fatal";
+          } else {
+            statusTag = "status:done";
+          }
+
           await processMeetingBot.trigger(parsedBody, {
             tags: [
-              parsedBody.event,
-              ...("status" in parsedBody.data
-                ? [parsedBody.data.status.code]
-                : []),
-              parsedBody.data.bot_id,
+              "event:bot.status_change",
+              statusTag,
+              `bot_id:${parsedBody.data.bot_id}`,
+              "provider:meeting_baas",
             ],
           });
         } catch (triggerError) {
