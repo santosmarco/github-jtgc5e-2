@@ -7,6 +7,8 @@ import type {
 } from "~/lib/recall/client";
 import type { Json, Tables, TablesInsert } from "~/lib/supabase/database.types";
 
+import _ from "lodash";
+import { z } from "zod";
 import { BOT_AUTOMATIC_LEAVE } from "../constants";
 import {
   type CalendarSyncEvent,
@@ -15,7 +17,6 @@ import {
   Platform,
 } from "../schemas";
 import type { MeetingBotsServiceDependencies } from "../types";
-import { z } from "zod";
 
 export type RecallCalendarWithProfile = Tables<"recall_calendars_v2"> & {
   profile: Tables<"profiles">;
@@ -100,6 +101,40 @@ export function createCalendarSyncService(
           return;
         }
 
+        const allResults: NonNullable<
+          Awaited<
+            ReturnType<typeof recall.calendarV2.calendar_events_list>
+          >["results"]
+        > = [];
+        let nextCursor: string | null = null;
+
+        do {
+          let response: Awaited<
+            ReturnType<typeof recall.calendarV2.calendar_events_list>
+          >;
+
+          try {
+            response = await recall.calendarV2.calendar_events_list({
+              queries: {
+                calendar_id: event.data.calendar_id,
+                ...(options.full !== "true" && {
+                  updated_at__gte: event.data.last_updated_ts,
+                }),
+                ...(nextCursor && { cursor: nextCursor }),
+              },
+            });
+          } catch {
+            nextCursor = null;
+            break;
+          }
+
+          allResults.push(...(response.results ?? []));
+          nextCursor = response.next ?? null;
+        } while (nextCursor);
+
+        const events = { results: _.uniqBy(allResults, (x) => x.id) };
+
+        /*
         const events = await recall.calendarV2.calendar_events_list({
           queries: {
             calendar_id: event.data.calendar_id,
@@ -108,6 +143,7 @@ export function createCalendarSyncService(
               : { updated_at__gte: event.data.last_updated_ts }),
           },
         });
+        */
 
         logger.info("📅 Retrieved calendar events for processing", {
           event_count: events.results?.length ?? 0,
