@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { logger } from "~/lib/logging/server";
 
 import { api } from "~/trpc/server";
 
@@ -14,7 +15,7 @@ export default async function AdminLayout({
       notFound();
     }
   } catch (error) {
-    console.error("Failed to get user:", error);
+    logger.error("Failed to get user:", { error });
     redirect("/login");
   }
 

@@ -11,6 +11,7 @@ import titanLogo from "~/assets/titan-logo.svg";
 import { Alert, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Link } from "~/components/ui/link";
+import { logger } from "~/lib/logging/client";
 import { api } from "~/trpc/react";
 
 import { SignInButton } from "./_components/sign-in-button";
@@ -35,7 +36,7 @@ export default function SignInPage() {
         });
       },
       onError: (err) => {
-        console.error(err);
+        logger.error("Failed to resend invitation", { error: err });
         toast.error("Failed to resend invitation", {
           description: "Please try again later.",
         });

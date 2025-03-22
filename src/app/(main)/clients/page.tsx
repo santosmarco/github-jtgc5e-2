@@ -5,14 +5,14 @@ import {
   type CellContext,
   type ColumnDef,
   type ColumnFiltersState,
+  type SortingState,
+  type VisibilityState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  type SortingState,
   useReactTable,
-  type VisibilityState,
 } from "@tanstack/react-table";
 import dayjs from "dayjs";
 import _ from "lodash";
@@ -87,9 +87,10 @@ import {
   TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { useProfile } from "~/hooks/use-profile";
+import { logger } from "~/lib/logging/client";
 import { UserInviteCreate } from "~/lib/user-invites/schemas";
 import { cn } from "~/lib/utils";
-import { api, type RouterOutputs } from "~/trpc/react";
+import { type RouterOutputs, api } from "~/trpc/react";
 
 function getSortIcon(sortDir: false | "asc" | "desc") {
   if (sortDir === "asc") return <ArrowUp className="ml-2 h-4 w-4" />;
@@ -313,7 +314,7 @@ function NewClientDialog() {
         void utils.clients.getClients.invalidate();
       },
       onError: (error) => {
-        console.error(error);
+        logger.error("Failed to invite client", { error });
         toast.error(error.message);
       },
     });

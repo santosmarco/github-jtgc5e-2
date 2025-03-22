@@ -6,6 +6,7 @@ import { OnboardingFlowStage2 } from "~/components/onboarding-flow-stage-2";
 import { ProfileWarning } from "~/components/profile-warning";
 import { FeedbackButton } from "~/components/ui/feedback-button";
 import { ZoomIntegrationBanner } from "~/components/zoom-banner";
+import { logger } from "~/lib/logging/server";
 import { api } from "~/trpc/server";
 
 export default async function MainLayout({
@@ -17,7 +18,7 @@ export default async function MainLayout({
   try {
     user = await api.auth.getUser();
   } catch (error) {
-    console.error("Failed to get user:", error);
+    logger.error("Failed to get user:", { error });
     redirect("/login");
   }
 
