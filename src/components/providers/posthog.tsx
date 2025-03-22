@@ -10,10 +10,11 @@ import {
   createAnonymousSessionId,
   isPostHogBlocked,
 } from "~/lib/posthog-utils";
-import { trackPerformanceMetric } from "~/lib/analytics";
+import { identifyUser, trackPerformanceMetric } from "~/lib/analytics";
 
 // Import web-vitals for performance tracking
 import { onCLS, onFID, onLCP } from "web-vitals";
+import { api } from "~/trpc/react";
 
 const PostHogPageView = dynamic(() => import("./posthog-page-view"), {
   ssr: false,
@@ -54,6 +55,8 @@ function setupPerformanceTracking() {
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
   const [_adBlockerDetected, setAdBlockerDetected] = useState(false);
+
+  const { data: user, isLoading: isUserLoading } = api.auth.getUser.useQuery();
 
   useEffect(() => {
     // Only run on client side
@@ -122,6 +125,20 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       }
     };
   }, []);
+
+  // Identify user when user data is loaded
+  useEffect(() => {
+    if (!isUserLoading && user) {
+      // Identify the user in PostHog with their ID and properties
+      identifyUser(user.id, {
+        email: user.email,
+        name: user.nickname,
+        role: user.role,
+        created_at: user.created_at,
+        last_seen_at: new Date().toISOString(),
+      });
+    }
+  }, [user, isUserLoading]);
 
   // Still render children even if PostHog fails to load
   return (
