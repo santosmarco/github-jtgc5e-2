@@ -101,6 +101,15 @@ export function createCalendarSyncService(
           return;
         }
 
+        if (calendar.profile.email.includes("zoom")) {
+          logger.info("👨‍🏫 Skipping calendar sync for zoom profile", {
+            calendar: calendar,
+            event: event,
+            profile_role: calendar.profile.role,
+          });
+          return;
+        }
+
         const allResults: NonNullable<
           Awaited<
             ReturnType<typeof recall.calendarV2.calendar_events_list>
