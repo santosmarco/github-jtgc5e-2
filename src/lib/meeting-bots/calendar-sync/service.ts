@@ -353,6 +353,33 @@ export function createCalendarSyncService(
           return false;
         }
 
+        // Check if the event is in the past (both start and end time are in the past)
+        const now = new Date();
+        const startTime = event.start_time ? new Date(event.start_time) : null;
+        const endTime = event.end_time ? new Date(event.end_time) : null;
+
+        // Skip if event has already ended
+        if (endTime && endTime < now) {
+          logger.info("⏭️ Skipping bot scheduling - Event already ended", {
+            event_id: event.id,
+            end_time: endTime.toISOString(),
+            now: now.toISOString(),
+            profile_id: calendar.profile.id,
+            user_email: calendar.profile.email,
+          });
+          return false;
+        }
+
+        // Skip if event has no valid time information
+        if (!startTime) {
+          logger.info("⏭️ Skipping bot scheduling - Missing start time", {
+            event_id: event.id,
+            profile_id: calendar.profile.id,
+            user_email: calendar.profile.email,
+          });
+          return false;
+        }
+
         const { data: userSettings } = await supabase
           .from("user_settings")
           .select("*, profile:profiles!inner(*)")
