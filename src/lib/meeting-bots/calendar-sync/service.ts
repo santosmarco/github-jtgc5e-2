@@ -104,14 +104,8 @@ export function createCalendarSyncService(
           queries: {
             calendar_id: event.data.calendar_id,
             ...(options.full === "true"
-              ? {
-                  start_time__gte: new Date(
-                    event.data.last_updated_ts,
-                  ).toISOString(),
-                }
-              : {
-                  updated_at__gte: event.data.last_updated_ts,
-                }),
+              ? { start_time__gte: new Date().toISOString() }
+              : { updated_at__gte: event.data.last_updated_ts }),
           },
         });
 
