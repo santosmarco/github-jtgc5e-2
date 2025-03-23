@@ -11,6 +11,7 @@ export type EntityExtractionInput = z.infer<typeof EntityExtractionInput>;
 export const entityExtraction = schemaTask({
   id: "entity-extraction",
   schema: EntityExtractionInput,
+  maxDuration: 60 * 10, // 10 minutes
   run: async (input, { ctx }) => {
     const supabase = createClient();
     const entityExtractionService = new EntityExtractionService(supabase);

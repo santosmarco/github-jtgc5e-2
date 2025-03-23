@@ -11,6 +11,7 @@ export type TopicSegmentationInput = z.infer<typeof TopicSegmentationInput>;
 export const topicSegmentation = schemaTask({
   id: "topic-segmentation",
   schema: TopicSegmentationInput,
+  maxDuration: 60 * 10, // 10 minutes
   run: async (input, { ctx }) => {
     const supabase = createClient();
     const topicSegmentationService = new TopicSegmentationService(supabase);
