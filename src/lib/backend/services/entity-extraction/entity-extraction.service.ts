@@ -1,16 +1,16 @@
 import { openai } from "@ai-sdk/openai";
 import { generateObject } from "ai";
+import dayjs from "dayjs";
 import _ from "lodash";
 
 import { embedTopicEntities } from "~/lib/processing/entity-embeddings";
 import type { ProcessingContext } from "~/lib/processing/steps";
-import type { TopicSegment } from "~/lib/processing/topic-segmentation";
 import type { Tables } from "~/lib/supabase/database.types";
 
 import { BackendService } from "../backend.service";
+import type { TopicSegment } from "../topic-segmentation/topic-segmentation.schemas";
 import { Vtt } from "../vtt/vtt.service";
 
-import dayjs from "dayjs";
 import {
   type EntityExtractionPromptVariables,
   getEntityExtractionPrompt,

@@ -22,6 +22,7 @@ export function transformUserInviteIntoProfile(
     coach: userInvite.invited_by_profile ? [userInvite.invited_by_profile] : [],
     company: userInvite.company,
     created_at: userInvite.created_at,
+    updated_at: userInvite.created_at,
     status: "pending",
     did_complete_onboarding: false,
     did_complete_post_ten_meeting_onboarding: false,

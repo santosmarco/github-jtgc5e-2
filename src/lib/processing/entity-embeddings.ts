@@ -6,7 +6,7 @@ import type {
   Entity,
   EntityExtractionOutput,
   EntityRelation,
-} from "./entity-extraction";
+} from "~/lib/backend/services/entity-extraction/entity-extraction.schemas";
 
 /**
  * Metadata for entity vectors in Pinecone

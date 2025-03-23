@@ -1,7 +1,7 @@
-import * as md from "ts-markdown";
 import { dedent as s } from "ts-dedent";
+import * as md from "ts-markdown";
 
-import type { TopicSegment } from "~/lib/processing/topic-segmentation";
+import type { TopicSegment } from "../topic-segmentation/topic-segmentation.schemas";
 import type { Vtt } from "../vtt/vtt.service";
 
 /**
