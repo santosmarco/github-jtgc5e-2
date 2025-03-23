@@ -12,7 +12,7 @@ import { apiVideo } from "~/server/api/services/api-video";
 export const processMeetingBot = schemaTask({
   id: "process-meeting-bot",
   schema: ProviderAgnosticBotStatusChangeEvent,
-  maxDuration: 60 * 10, // 10 minutes
+  maxDuration: 60 * 20, // 20 minutes
   run: async (payload) => {
     const deps = {
       supabase: await __dangerouslyCreateAdminClient__(),
