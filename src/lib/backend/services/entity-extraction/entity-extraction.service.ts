@@ -306,8 +306,8 @@ export class EntityExtractionService extends BackendService {
       topicsCount: topics.length,
     });
 
-    // Process each topic sequentially to avoid race conditions
-    for (const topic of topics) {
+    // Process all topics in parallel
+    const processingPromises = topics.map((topic) => {
       const topicSegment: TopicSegmentWithId = {
         id: topic.id,
         title: topic.title,
@@ -320,7 +320,7 @@ export class EntityExtractionService extends BackendService {
         })),
       };
 
-      await this.processSingleTopic(
+      return this.processSingleTopic(
         topicSegment,
         topic.index,
         meetingTopics,
@@ -328,7 +328,15 @@ export class EntityExtractionService extends BackendService {
         api_video_id,
         ctx,
       );
-    }
+    });
+
+    // Wait for all topics to be processed
+    await Promise.all(processingPromises);
+
+    ctx.logger.info("Completed parallel processing of all topics", {
+      api_video_id,
+      topicsProcessed: topics.length,
+    });
   }
 
   /**
