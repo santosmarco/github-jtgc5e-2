@@ -347,8 +347,11 @@ export function createBotStatusChangeService(
             transcript: cleanedTranscript,
             api_video_id: apiVideoId,
           });
-
-          // await handleVideoProcessing({ ...meetingBot, transcript });
+          await handleVideoProcessing({
+            ...meetingBot,
+            transcript: cleanedTranscript,
+            api_video_id: apiVideoId,
+          });
         }
       } else {
         await slack.info({
@@ -716,10 +719,165 @@ export function createBotStatusChangeService(
       return;
     }
 
-    await topicSegmentation.triggerAndWait(bot);
-    await entityExtraction.triggerAndWait({
+    const { error: meetingProcessingStatusInsertError } = await supabase
+      .from("meeting_processing_status")
+      .insert({
+        video_id: bot.api_video_id,
+      });
+
+    if (meetingProcessingStatusInsertError) {
+      logger.error("❌ Failed to create meeting processing status", {
+        error: meetingProcessingStatusInsertError,
+        bot_id: bot.id,
+        profile_id: bot.profile_id,
+        user_email: bot.profile.email,
+      });
+      await slack.error({
+        text: formatSlackMessage(
+          bot,
+          `❌ Failed to create meeting processing status: ${meetingProcessingStatusInsertError.message}`,
+        ),
+      });
+      return;
+    }
+
+    const topicSegmentationResult = await topicSegmentation.triggerAndWait(bot);
+
+    if (!topicSegmentationResult.ok) {
+      logger.error("❌ Failed to segment topics", {
+        error: topicSegmentationResult.error,
+        bot_id: bot.id,
+        profile_id: bot.profile_id,
+        user_email: bot.profile.email,
+      });
+      await slack.error({
+        text: formatSlackMessage(
+          bot,
+          `❌ Failed to segment topics: ${topicSegmentationResult.error instanceof Error ? topicSegmentationResult.error.message : String(topicSegmentationResult.error)}`,
+        ),
+      });
+
+      const { error: meetingProcessingStatusUpdateError } = await supabase
+        .from("meeting_processing_status")
+        .update({
+          topic_segmentation_status: "failed",
+        })
+        .eq("video_id", bot.api_video_id);
+
+      if (meetingProcessingStatusUpdateError) {
+        logger.error("❌ Failed to update meeting processing status", {
+          error: meetingProcessingStatusUpdateError,
+          bot_id: bot.id,
+          profile_id: bot.profile_id,
+          user_email: bot.profile.email,
+        });
+        await slack.error({
+          text: formatSlackMessage(
+            bot,
+            `❌ Failed to update meeting processing status: ${meetingProcessingStatusUpdateError.message}`,
+          ),
+        });
+
+        return;
+      }
+
+      return;
+    }
+
+    const { error: meetingProcessingStatusTopicSegmentationUpdateError } =
+      await supabase
+        .from("meeting_processing_status")
+        .update({
+          topic_segmentation_status: "completed",
+        })
+        .eq("video_id", bot.api_video_id);
+
+    if (meetingProcessingStatusTopicSegmentationUpdateError) {
+      logger.error("❌ Failed to update meeting processing status", {
+        error: meetingProcessingStatusTopicSegmentationUpdateError,
+        bot_id: bot.id,
+        profile_id: bot.profile_id,
+        user_email: bot.profile.email,
+      });
+      await slack.error({
+        text: formatSlackMessage(
+          bot,
+          `❌ Failed to update meeting processing status: ${meetingProcessingStatusTopicSegmentationUpdateError.message}`,
+        ),
+      });
+
+      return;
+    }
+
+    const entityExtractionResult = await entityExtraction.triggerAndWait({
       api_video_id: bot.api_video_id,
     });
+
+    if (!entityExtractionResult.ok) {
+      logger.error("❌ Failed to extract entities", {
+        error: entityExtractionResult.error,
+        bot_id: bot.id,
+        profile_id: bot.profile_id,
+        user_email: bot.profile.email,
+      });
+      await slack.error({
+        text: formatSlackMessage(
+          bot,
+          `❌ Failed to extract entities: ${entityExtractionResult.error instanceof Error ? entityExtractionResult.error.message : String(entityExtractionResult.error)}`,
+        ),
+      });
+
+      const { error: meetingProcessingStatusUpdateError } = await supabase
+        .from("meeting_processing_status")
+        .update({
+          entity_extraction_status: "failed",
+        })
+        .eq("video_id", bot.api_video_id);
+
+      if (meetingProcessingStatusUpdateError) {
+        logger.error("❌ Failed to update meeting processing status", {
+          error: meetingProcessingStatusUpdateError,
+          bot_id: bot.id,
+          profile_id: bot.profile_id,
+          user_email: bot.profile.email,
+        });
+        await slack.error({
+          text: formatSlackMessage(
+            bot,
+            `❌ Failed to update meeting processing status: ${meetingProcessingStatusUpdateError.message}`,
+          ),
+        });
+
+        return;
+      }
+
+      return;
+    }
+
+    const { error: meetingProcessingStatusEntityExtractionUpdateError } =
+      await supabase
+        .from("meeting_processing_status")
+        .update({
+          entity_extraction_status: "completed",
+        })
+        .eq("video_id", bot.api_video_id);
+
+    if (meetingProcessingStatusEntityExtractionUpdateError) {
+      logger.error("❌ Failed to update meeting processing status", {
+        error: meetingProcessingStatusEntityExtractionUpdateError,
+        bot_id: bot.id,
+        profile_id: bot.profile_id,
+        user_email: bot.profile.email,
+      });
+      await slack.error({
+        text: formatSlackMessage(
+          bot,
+          `❌ Failed to update meeting processing status: ${meetingProcessingStatusEntityExtractionUpdateError.message}`,
+        ),
+      });
+
+      return;
+    }
   }
 
   async function handleVideoProcessing(

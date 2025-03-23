@@ -60,12 +60,18 @@ export const uploadVideoToSupabaseStorage = schemaTask({
 
       const blob = await response.blob();
 
+      // Ensure we're always using video/mp4 content type regardless of what the source provides
+      const videoBlob = new Blob([await blob.arrayBuffer()], {
+        type: "video/mp4",
+      });
+
       logger.info("💾 Preparing to upload video blob", {
         bot_id: payload.botId,
         video_url: payload.videoUrl,
         file_name: payload.fileName,
-        blob_size: blob.size,
-        blob_type: blob.type,
+        blob_size: videoBlob.size,
+        original_blob_type: blob.type,
+        forced_blob_type: videoBlob.type,
         content_type: "video/mp4",
         provider: payload.provider,
       });
@@ -79,7 +85,7 @@ export const uploadVideoToSupabaseStorage = schemaTask({
 
       const { error } = await supabase.storage
         .from("meetings")
-        .upload(payload.fileName, blob, {
+        .upload(payload.fileName, videoBlob, {
           contentType: "video/mp4",
           upsert: true,
           metadata: {
@@ -94,6 +100,7 @@ export const uploadVideoToSupabaseStorage = schemaTask({
         logger.error("❌ Storage upload failed", {
           bot_id: payload.botId,
           file_name: payload.fileName,
+          error_message: error.message,
         });
         throw error;
       }
@@ -107,12 +114,12 @@ export const uploadVideoToSupabaseStorage = schemaTask({
         video_url: payload.videoUrl,
         file_name: payload.fileName,
         public_url: publicUrl,
-        blob_size: blob.size,
+        blob_size: videoBlob.size,
         provider: payload.provider,
       });
 
       await slack.success({
-        text: `Successfully uploaded video for bot ${payload.botId} to storage (${(blob.size / 1024 / 1024).toFixed(2)}MB)`,
+        text: `Successfully uploaded video for bot ${payload.botId} to storage (${(videoBlob.size / 1024 / 1024).toFixed(2)}MB)`,
       });
     } catch (error) {
       let message = (error as Error).message;

@@ -455,6 +455,9 @@ importers:
       ts-dedent:
         specifier: ^2.2.0
         version: 2.2.0
+      ts-markdown:
+        specifier: ^1.2.0
+        version: 1.2.0
       unified:
         specifier: ^11.0.5
         version: 11.0.5
@@ -9255,6 +9258,9 @@ packages:
 
   ts-interface-checker@0.1.13:
     resolution: {integrity: sha512-Y/arvbn+rrz3JCKl9C4kVNfTfSm2/mEp5FSz5EsZSANGPSlQrpRI5M4PKF+mJnE52jOO90PnPSc3Ur3bTQw0gA==}
+
+  ts-markdown@1.2.0:
+    resolution: {integrity: sha512-lP86j32LzBiOlK+CNVEHlLbwRSMJFbJBLVPnd4g8x2UpR6NMqEXcJwwIXUAstbmngacQk5SzvRPPLScie5RFdA==}
 
   ts-morph@12.0.0:
     resolution: {integrity: sha512-VHC8XgU2fFW7yO1f/b3mxKDje1vmyzFXHWzOYmKEkCEwcLjDtbdLgBQviqj4ZwP4MJkQtRo6Ha2I29lq/B+VxA==}
@@ -19088,6 +19094,10 @@ snapshots:
   ts-easing@0.2.0: {}
 
   ts-interface-checker@0.1.13: {}
+
+  ts-markdown@1.2.0:
+    dependencies:
+      yaml: 2.7.0
 
   ts-morph@12.0.0:
     dependencies:

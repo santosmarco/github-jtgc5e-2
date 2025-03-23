@@ -335,7 +335,7 @@ export type Database = {
           chunks_pinecone_affected_row: number | null
           chunks_supabase: string | null
           chunks_supabase_affected_row: number | null
-          id: string | null
+          id: string
           meeting_notes_pinecone: string | null
           meeting_notes_pinecone_affected_row: number | null
           meeting_notes_supabase: string | null
@@ -369,7 +369,7 @@ export type Database = {
           chunks_pinecone_affected_row?: number | null
           chunks_supabase?: string | null
           chunks_supabase_affected_row?: number | null
-          id?: string | null
+          id: string
           meeting_notes_pinecone?: string | null
           meeting_notes_pinecone_affected_row?: number | null
           meeting_notes_supabase?: string | null
@@ -403,7 +403,7 @@ export type Database = {
           chunks_pinecone_affected_row?: number | null
           chunks_supabase?: string | null
           chunks_supabase_affected_row?: number | null
-          id?: string | null
+          id?: string
           meeting_notes_pinecone?: string | null
           meeting_notes_pinecone_affected_row?: number | null
           meeting_notes_supabase?: string | null
@@ -1667,11 +1667,14 @@ export type Database = {
           embed_moments_status: string | null
           embed_notes_status: string | null
           embed_qna_status: string | null
+          entity_extraction_status: Database["public"]["Enums"]["processing_status"]
           id: string
+          interestingness_status: string | null
           meetings_status: string | null
           moments_status: string | null
           observation_status: string | null
           segments_status: string | null
+          topic_segmentation_status: Database["public"]["Enums"]["processing_status"]
           topics_status: string | null
           video_id: string | null
         }
@@ -1682,11 +1685,14 @@ export type Database = {
           embed_moments_status?: string | null
           embed_notes_status?: string | null
           embed_qna_status?: string | null
-          id: string
+          entity_extraction_status?: Database["public"]["Enums"]["processing_status"]
+          id?: string
+          interestingness_status?: string | null
           meetings_status?: string | null
           moments_status?: string | null
           observation_status?: string | null
           segments_status?: string | null
+          topic_segmentation_status?: Database["public"]["Enums"]["processing_status"]
           topics_status?: string | null
           video_id?: string | null
         }
@@ -1697,11 +1703,14 @@ export type Database = {
           embed_moments_status?: string | null
           embed_notes_status?: string | null
           embed_qna_status?: string | null
+          entity_extraction_status?: Database["public"]["Enums"]["processing_status"]
           id?: string
+          interestingness_status?: string | null
           meetings_status?: string | null
           moments_status?: string | null
           observation_status?: string | null
           segments_status?: string | null
+          topic_segmentation_status?: Database["public"]["Enums"]["processing_status"]
           topics_status?: string | null
           video_id?: string | null
         }
@@ -1910,6 +1919,7 @@ export type Database = {
           summary: string | null
           tags: string | null
           thumbnail_url: string | null
+          updated_at: string
           vectorized: boolean
           video_api_id: string
         }
@@ -1933,6 +1943,7 @@ export type Database = {
           summary?: string | null
           tags?: string | null
           thumbnail_url?: string | null
+          updated_at?: string
           vectorized?: boolean
           video_api_id: string
         }
@@ -1956,6 +1967,7 @@ export type Database = {
           summary?: string | null
           tags?: string | null
           thumbnail_url?: string | null
+          updated_at?: string
           vectorized?: boolean
           video_api_id?: string
         }
@@ -2218,7 +2230,7 @@ export type Database = {
           title: string | null
           topic_id: string | null
           updated_at: string | null
-          version: number
+          version: number | null
           video_api_id: string | null
           vtt: string | null
         }
@@ -2271,7 +2283,7 @@ export type Database = {
           title?: string | null
           topic_id?: string | null
           updated_at?: string | null
-          version?: number
+          version?: number | null
           video_api_id?: string | null
           vtt?: string | null
         }
@@ -2324,7 +2336,7 @@ export type Database = {
           title?: string | null
           topic_id?: string | null
           updated_at?: string | null
-          version?: number
+          version?: number | null
           video_api_id?: string | null
           vtt?: string | null
         }
@@ -2645,6 +2657,7 @@ export type Database = {
           nickname: string | null
           role: Database["public"]["Enums"]["user_role_enum"]
           status: Database["public"]["Enums"]["profile_status_enum"]
+          updated_at: string
         }
         Insert: {
           coach_id?: string | null
@@ -2660,6 +2673,7 @@ export type Database = {
           nickname?: string | null
           role?: Database["public"]["Enums"]["user_role_enum"]
           status?: Database["public"]["Enums"]["profile_status_enum"]
+          updated_at?: string
         }
         Update: {
           coach_id?: string | null
@@ -2675,6 +2689,7 @@ export type Database = {
           nickname?: string | null
           role?: Database["public"]["Enums"]["user_role_enum"]
           status?: Database["public"]["Enums"]["profile_status_enum"]
+          updated_at?: string
         }
         Relationships: [
           {
@@ -4044,6 +4059,7 @@ export type Database = {
           summary: string | null
           tags: string | null
           thumbnail_url: string | null
+          updated_at: string
           vectorized: boolean
           video_api_id: string
         }[]
