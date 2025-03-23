@@ -6,6 +6,9 @@ import { uploadVideoToSupabaseStorage } from "~/jobs/upload-video-to-supabase-st
 import { processVideo } from "~/lib/api/meetings";
 import type { Tables, TablesInsert } from "~/lib/supabase/database.types";
 
+import { entityExtraction } from "~/jobs/preprocessing/steps/entity-extraction";
+import { topicSegmentation } from "~/jobs/preprocessing/steps/topic-segmentation";
+import { Vtt } from "~/lib/backend/services/vtt/vtt.service";
 import type {
   MeetingBaasCompleteEventData,
   ProviderAgnosticBotStatusChangeEvent,
@@ -325,17 +328,27 @@ export function createBotStatusChangeService(
                 return [];
               }));
 
+        const cleanedTranscript = Vtt.fromRecallTranscript(transcript)
+          .clean()
+          .toRecallTranscript();
+
         logger.info("✅ Successfully fetched transcript", {
           bot_id: meetingBot.id,
-          transcript_segments: transcript.length,
+          transcript_segments: cleanedTranscript.length,
           profile_id: meetingBot.profile_id,
           user_email: meetingBot.profile.email,
         });
 
-        await handleTranscript(meetingBot, transcript, isV2);
+        await handleTranscript(meetingBot, cleanedTranscript, isV2);
 
         if (apiVideoId && !meetingBotUpdateError) {
-          await handleVideoProcessing({ ...meetingBot, transcript });
+          await handleVideoPreprocessing({
+            ...meetingBot,
+            transcript: cleanedTranscript,
+            api_video_id: apiVideoId,
+          });
+
+          // await handleVideoProcessing({ ...meetingBot, transcript });
         }
       } else {
         await slack.info({
@@ -691,6 +704,24 @@ export function createBotStatusChangeService(
     }
   }
 
+  async function handleVideoPreprocessing(
+    bot: MeetingBotWithProfileAndEventAndCalendarAndTranscript,
+  ) {
+    if (!bot.api_video_id) {
+      logger.warn("⚠️ No API.video ID found for bot", {
+        bot_id: bot.id,
+        profile_id: bot.profile_id,
+        user_email: bot.profile.email,
+      });
+      return;
+    }
+
+    await topicSegmentation.triggerAndWait(bot);
+    await entityExtraction.triggerAndWait({
+      api_video_id: bot.api_video_id,
+    });
+  }
+
   async function handleVideoProcessing(
     bot: MeetingBotWithProfileAndEventAndCalendarAndTranscript,
   ) {
@@ -770,9 +801,88 @@ export function createBotStatusChangeService(
       ),
     });
 
+    // Tables to use based on version
+    const slicesTable = isV2 ? "transcript_slices_v2" : "transcript_slices";
+    const wordsTable = isV2 ? "transcript_words_v2" : "transcript_words";
+
+    // First, backup existing data
+    logger.info("📦 Backing up existing transcript data", {
+      bot_id: bot.id,
+      profile_id: bot.profile_id,
+      user_email: bot.profile.email,
+    });
+
+    const { data: existingSlices } = await supabase
+      .from(slicesTable)
+      .select("*")
+      .eq("bot_id", bot.id);
+
+    const { data: existingWords } = await supabase
+      .from(wordsTable)
+      .select("*")
+      .eq("bot_id", bot.id);
+
+    // Delete existing transcript data
+    logger.info("🗑️ Deleting existing transcript data", {
+      bot_id: bot.id,
+      profile_id: bot.profile_id,
+      user_email: bot.profile.email,
+    });
+
+    // Delete words first (foreign key constraint)
+    const { error: deleteWordsError } = await supabase
+      .from(wordsTable)
+      .delete()
+      .eq("bot_id", bot.id);
+
+    if (deleteWordsError) {
+      logger.error("❌ Failed to delete existing transcript words", {
+        error: deleteWordsError,
+        bot_id: bot.id,
+        profile_id: bot.profile_id,
+        user_email: bot.profile.email,
+      });
+      await slack.error({
+        text: formatSlackMessage(
+          bot,
+          `📝 Failed to delete existing transcript words: ${deleteWordsError.message}`,
+        ),
+      });
+      return;
+    }
+
+    // Delete slices
+    const { error: deleteSlicesError } = await supabase
+      .from(slicesTable)
+      .delete()
+      .eq("bot_id", bot.id);
+
+    if (deleteSlicesError) {
+      logger.error("❌ Failed to delete existing transcript slices", {
+        error: deleteSlicesError,
+        bot_id: bot.id,
+        profile_id: bot.profile_id,
+        user_email: bot.profile.email,
+      });
+
+      // Restore words if slices deletion fails
+      if (existingWords && existingWords.length > 0) {
+        await supabase.from(wordsTable).insert(existingWords);
+      }
+
+      await slack.error({
+        text: formatSlackMessage(
+          bot,
+          `📝 Failed to delete existing transcript slices: ${deleteSlicesError.message}`,
+        ),
+      });
+      return;
+    }
+
+    // Insert new transcript slices
     const { data: transcriptSlices, error: transcriptSlicesError } =
       await supabase
-        .from(isV2 ? "transcript_slices_v2" : "transcript_slices")
+        .from(slicesTable)
         .insert(
           transcript.map(
             (slice, index) =>
@@ -793,6 +903,15 @@ export function createBotStatusChangeService(
         profile_id: bot.profile_id,
         user_email: bot.profile.email,
       });
+
+      // Restore original data
+      if (existingSlices && existingSlices.length > 0) {
+        await supabase.from(slicesTable).insert(existingSlices);
+        if (existingWords && existingWords.length > 0) {
+          await supabase.from(wordsTable).insert(existingWords);
+        }
+      }
+
       await slack.error({
         text: formatSlackMessage(
           bot,
@@ -811,6 +930,15 @@ export function createBotStatusChangeService(
         user_email: bot.profile.email,
         transcript_length: transcript.length,
       });
+
+      // Restore original data
+      if (existingSlices && existingSlices.length > 0) {
+        await supabase.from(slicesTable).insert(existingSlices);
+        if (existingWords && existingWords.length > 0) {
+          await supabase.from(wordsTable).insert(existingWords);
+        }
+      }
+
       await slack.warn({
         text: formatSlackMessage(
           bot,
@@ -854,9 +982,7 @@ export function createBotStatusChangeService(
       words_count: words.length,
     });
 
-    const { error: wordsError } = await supabase
-      .from(isV2 ? "transcript_words_v2" : "transcript_words")
-      .insert(words);
+    const { error: wordsError } = await supabase.from(wordsTable).insert(words);
 
     if (wordsError) {
       logger.error("❌ Failed to insert transcript words", {
@@ -866,6 +992,19 @@ export function createBotStatusChangeService(
         user_email: bot.profile.email,
         words_count: words.length,
       });
+
+      // Restore original data
+      if (existingSlices && existingSlices.length > 0) {
+        // Delete the newly inserted slices first
+        await supabase.from(slicesTable).delete().eq("bot_id", bot.id);
+
+        // Restore original slices and words
+        await supabase.from(slicesTable).insert(existingSlices);
+        if (existingWords && existingWords.length > 0) {
+          await supabase.from(wordsTable).insert(existingWords);
+        }
+      }
+
       await slack.error({
         text: formatSlackMessage(
           bot,
