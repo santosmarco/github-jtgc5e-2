@@ -155,6 +155,9 @@ export class TopicSegmentationService extends BackendService {
                   date:
                     input.event?.start_time &&
                     new Date(input.event.start_time).toISOString(),
+                  created_at:
+                    input.event?.start_time &&
+                    new Date(input.event.start_time).toISOString(),
                   duration_in_ms: durationInMs,
                   duration_in_seconds: durationInSeconds,
                   name: await getApiVideoTitle(input),

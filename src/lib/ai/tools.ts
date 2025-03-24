@@ -51,7 +51,7 @@ export function explainTools<T extends Record<string, Tool>>(
         `- \`${name}\`: ${tool._def.description}\n${JSON.stringify({
           parameters: zodToJsonSchema(tool._def.parameters),
           ...(tool._def.output && {
-          output: zodToJsonSchema(tool._def.output),
+            output: zodToJsonSchema(tool._def.output),
           }),
         })}`,
     )
@@ -202,7 +202,7 @@ export const listMeetingsTool = (profileId: string, apiVideoIds?: string[]) =>
         .from("meetings")
         .select("*, moments(*)")
         .eq("profile_id", profileId)
-        .order("date", { ascending: false })
+        .order("created_at", { ascending: false, nullsFirst: false })
         .range(start, end);
 
       if (apiVideoIds?.length) {
@@ -216,10 +216,10 @@ export const listMeetingsTool = (profileId: string, apiVideoIds?: string[]) =>
         query.eq("speaker", speaker);
       }
       if (startDate) {
-        query.gte("date", startDate);
+        query.gte("created_at", startDate);
       }
       if (endDate) {
-        query.lte("date", endDate);
+        query.lte("created_at", endDate);
       }
 
       const result = await query;
@@ -228,7 +228,7 @@ export const listMeetingsTool = (profileId: string, apiVideoIds?: string[]) =>
         result.data?.map((meeting) => ({
           id: meeting.video_api_id,
           name: meeting.name,
-          date: meeting.date,
+          date: meeting.created_at,
           speaker: meeting.speaker,
           summary: meeting.summary,
           momentIds: meeting.moments?.map((moment) => moment.id) ?? [],

@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import _ from "lodash";
 
 import type { VideoOutput } from "~/lib/videos";
 
@@ -31,6 +32,15 @@ export type VideoGridProps = {
 };
 
 export function VideoGrid({ videos }: VideoGridProps) {
+  const sortedVideos = _.orderBy(
+    videos,
+    [
+      (v) =>
+        v.meeting?.created_at ? new Date(v.meeting.created_at).getTime() : 0,
+    ],
+    ["desc"],
+  );
+
   return (
     <motion.div
       variants={gridVariants}
@@ -38,7 +48,7 @@ export function VideoGrid({ videos }: VideoGridProps) {
       animate="visible"
       className="container mx-auto grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3"
     >
-      {videos.map((video) => (
+      {sortedVideos.map((video) => (
         <motion.div key={video.videoId} variants={cardVariants}>
           <VideoCard video={video} />
         </motion.div>

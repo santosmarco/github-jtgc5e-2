@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import _ from "lodash";
-import { Heart, Play } from "lucide-react";
+import { Clock, Heart, Play } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import React, { useState } from "react";
@@ -28,7 +28,7 @@ export const VideoCard = React.forwardRef<
     <motion.div
       ref={ref}
       className={cn(
-        "group relative h-[280px] overflow-hidden rounded-xl border border-border/50 bg-card shadow-lg transition-all duration-500 hover:-translate-y-1 hover:border-primary/20 hover:shadow-xl",
+        "group relative h-[350px] overflow-hidden rounded-xl border border-border/50 bg-card shadow-lg transition-all duration-500 hover:-translate-y-1 hover:border-primary/20 hover:shadow-xl",
         className,
       )}
       whileHover="hover"
@@ -90,6 +90,28 @@ export const VideoCard = React.forwardRef<
             <h3 className="line-clamp-2 flex-1 text-base font-semibold leading-tight tracking-tight text-foreground transition-colors group-hover:text-primary">
               {video.title}
             </h3>
+
+            {/* Date Display */}
+            {video.meeting?.created_at && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground"
+              >
+                <Clock className="h-3 w-3" />
+                <time dateTime={video.meeting.created_at}>
+                  {new Date(video.meeting.created_at).toLocaleDateString(
+                    undefined,
+                    {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    },
+                  )}
+                </time>
+              </motion.div>
+            )}
 
             {/* Categories */}
             <div className="flex flex-wrap gap-2 pt-1">

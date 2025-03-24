@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import _ from "lodash";
 import { Calendar, Clock, TrendingUpIcon } from "lucide-react";
 
 import { Badge } from "~/components/ui/badge";
@@ -29,6 +30,15 @@ const itemVariants = {
   },
 };
 
+const hoverVariants = {
+  initial: { scale: 1, boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)" },
+  hover: {
+    scale: 1.02,
+    boxShadow: "0 5px 15px rgba(0, 0, 0, 0.1)",
+    borderColor: "rgba(var(--primary-rgb), 0.3)",
+  },
+};
+
 export function ChatMeetingList({ meetings, className }: ChatMeetingListProps) {
   if (!meetings?.length) {
     return (
@@ -43,6 +53,12 @@ export function ChatMeetingList({ meetings, className }: ChatMeetingListProps) {
     );
   }
 
+  const sortedMeetings = _.orderBy(
+    meetings,
+    [(m) => (m.date ? new Date(m.date).getTime() : 0)],
+    ["desc"],
+  );
+
   return (
     <motion.div
       variants={containerVariants}
@@ -50,10 +66,12 @@ export function ChatMeetingList({ meetings, className }: ChatMeetingListProps) {
       animate="visible"
       className={cn("space-y-2", className)}
     >
-      {meetings.map((meeting, index) => (
+      {sortedMeetings.map((meeting) => (
         <motion.div
-          key={index}
+          key={meeting.id}
           variants={itemVariants}
+          whileHover="hover"
+          initial="initial"
           onClick={() => {
             window.open(`/videos/${meeting.id}`, "_blank");
           }}
@@ -75,7 +93,12 @@ export function ChatMeetingList({ meetings, className }: ChatMeetingListProps) {
               )}
             </div>
             {meeting.date && (
-              <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <motion.div
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
+                className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground"
+              >
                 <Clock className="h-3 w-3" />
                 <time dateTime={meeting.date}>
                   {new Date(meeting.date).toLocaleDateString(undefined, {
@@ -84,9 +107,16 @@ export function ChatMeetingList({ meetings, className }: ChatMeetingListProps) {
                     year: "numeric",
                   })}
                 </time>
-              </div>
+              </motion.div>
             )}
           </div>
+
+          {/* Hover Effect Overlay */}
+          <motion.div
+            className="absolute inset-0 rounded-md"
+            variants={hoverVariants}
+            style={{ zIndex: -1 }}
+          />
         </motion.div>
       ))}
     </motion.div>
