@@ -268,6 +268,47 @@ export function VideoPlayer({
           <track kind="captions" />
         </video>
 
+        {/* Center Play/Pause Button */}
+        {(!isPlaying || isControlsVisible) && (
+          <motion.div
+            className="absolute left-[calc(50%-2.5rem)] top-[calc(50%-2.5rem)] z-10 -translate-x-1/2 -translate-y-1/2"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.8, opacity: 0 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{
+              type: "spring",
+              stiffness: 260,
+              damping: 20,
+            }}
+          >
+            <button
+              type="button"
+              onClick={togglePlay}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  togglePlay();
+                }
+              }}
+              className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-full bg-primary/80 shadow-lg backdrop-blur-sm transition-colors hover:bg-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 md:h-20 md:w-20"
+              aria-label={isPlaying ? "Pause" : "Play"}
+            >
+              <motion.div
+                initial={{ rotate: 0 }}
+                animate={{ rotate: isPlaying ? 0 : 360 }}
+                transition={{ duration: 0.5 }}
+              >
+                {isPlaying ? (
+                  <Pause className="h-8 w-8 text-background md:h-10 md:w-10" />
+                ) : (
+                  <Play className="ml-1 h-8 w-8 text-background md:h-10 md:w-10" />
+                )}
+              </motion.div>
+            </button>
+          </motion.div>
+        )}
+
         {isControlsVisible && (
           <div className="pointer-events-none absolute inset-0 rounded-lg bg-accent/50" />
         )}
