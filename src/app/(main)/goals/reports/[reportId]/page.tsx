@@ -520,8 +520,8 @@ export default function ReportPage({
                 <div
                   className={cn(
                     "grid h-full gap-6",
-                    "grid-cols-[1fr,1.5fr,0px]", // Default for small screens with comments hidden
-                    isCommentsVisible && "grid-cols-[1fr,1.5fr,298px]", // When comments toggled on small screens
+                    "grid-cols-[1.25fr,1fr,0px]", // Default for small screens with comments hidden
+                    isCommentsVisible && "grid-cols-[1.25fr,1fr,298px]", // When comments toggled on small screens
                   )}
                 >
                   <div className="flex flex-col gap-4">
