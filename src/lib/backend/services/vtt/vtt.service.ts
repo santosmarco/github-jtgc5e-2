@@ -12,7 +12,7 @@ export type VttCueInput = {
   index: number;
   startTimestamp: string;
   endTimestamp: string;
-  words: VttWord[];
+  words?: VttWord[];
   speaker: string;
 };
 
@@ -98,61 +98,37 @@ export class VttCue {
 
   private _vtt?: Vtt;
 
-  constructor(
-    input:
-      | VttCueInput
-      | {
-          index: number;
-          startTimestamp: string;
-          endTimestamp: string;
-          text?: string; // For backward compatibility
-          speaker: string;
-        },
-    vtt?: Vtt,
-  ) {
+  constructor(input: VttCueInput, vtt?: Vtt) {
     this.index = input.index;
     this.startTimestamp = input.startTimestamp;
-    this.endTimestamp = input.endTimestamp;
     this.speaker = input.speaker;
 
-    // Handle the case where 'words' is provided (new way)
-    if ("words" in input && input.words) {
-      this.words = input.words;
-    }
-    // Handle the case where 'text' is provided (backward compatibility)
-    else if ("text" in input && input.text !== undefined) {
-      const wordStrings = input.text
-        .trim()
-        .split(/\s+/)
-        .filter((word) => word.length > 0);
-      const cueStartMs = timestampToMilliseconds(input.startTimestamp);
-      const cueEndMs = timestampToMilliseconds(input.endTimestamp);
-      const timePerWord =
-        wordStrings.length > 0
-          ? (cueEndMs - cueStartMs) / wordStrings.length
-          : 0;
-
-      this.words = wordStrings.map((content, wordIndex) => {
-        const wordStartMs = cueStartMs + timePerWord * wordIndex;
-        const wordEndMs = wordStartMs + timePerWord;
-
-        return new VttWord({
-          content,
-          startTimestamp: millisecondsToTimestamp(wordStartMs),
-          endTimestamp: millisecondsToTimestamp(wordEndMs),
-          index: wordIndex + 1, // 1-based indexing
-        });
-      });
-    }
-    // Default to empty array
-    else {
-      this.words = [];
-    }
-
+    // Calculate millisecond values
     this.startInMilliseconds = timestampToMilliseconds(input.startTimestamp);
+
+    // Validate and potentially correct end timestamp
     this.endInMilliseconds = timestampToMilliseconds(input.endTimestamp);
+
+    // Ensure end timestamp is after start timestamp with a minimum duration
+    const MIN_DURATION_MS = 100; // Minimum 100ms duration
+    if (this.endInMilliseconds <= this.startInMilliseconds) {
+      this.endInMilliseconds = this.startInMilliseconds + MIN_DURATION_MS;
+      // Update the string representation to match
+      this.endTimestamp = millisecondsToTimestamp(this.endInMilliseconds);
+    } else {
+      this.endTimestamp = input.endTimestamp;
+    }
+
     this.durationInMilliseconds =
       this.endInMilliseconds - this.startInMilliseconds;
+
+    // Handle the 'words' property
+    if (input.words) {
+      this.words = input.words;
+    } else {
+      // Default to empty array
+      this.words = [];
+    }
 
     this._vtt = vtt;
   }
@@ -555,9 +531,26 @@ export class Vtt {
 
     const cues: VttCue[] = transcript.map((segment, index) => {
       const wordsSorted = _.sortBy(segment.words, (w) => w.start_timestamp);
+
+      if (wordsSorted.length === 0) {
+        // Handle empty segment with defaults
+        return new VttCue({
+          index: index + 1,
+          startTimestamp: "00:00:00.000",
+          endTimestamp: "00:00:00.100", // Minimum duration
+          words: [],
+          speaker: segment.speaker,
+        });
+      }
+
       const startTimestamp = (wordsSorted[0]?.start_timestamp ?? 0) * 1000;
-      const endTimestamp =
+      let endTimestamp =
         (wordsSorted[wordsSorted.length - 1]?.end_timestamp ?? 0) * 1000;
+
+      // Ensure end timestamp is after start timestamp
+      if (endTimestamp <= startTimestamp) {
+        endTimestamp = startTimestamp + 100; // Minimum 100ms duration
+      }
 
       return new VttCue({
         index: index + 1,
@@ -616,8 +609,9 @@ function timestampToMilliseconds(timestamp: string): number {
  * @param milliseconds Number of milliseconds
  * @returns Formatted timestamp string
  */
-function millisecondsToTimestamp(milliseconds: number): string {
-  const ms = milliseconds < 0 ? 0 : milliseconds;
+export function millisecondsToTimestamp(milliseconds: number): string {
+  // Ensure we have a valid number and truncate to an integer to avoid floating point issues
+  const ms = Math.max(0, Math.floor(milliseconds));
 
   const hours = Math.floor(ms / 3_600_000);
   const remainingAfterHours = ms % 3_600_000;
@@ -686,6 +680,11 @@ function parseVtt(text: string, vtt: Vtt): VttCue[] {
       const startTimestamp = timestampMatch[1];
       const endTimestamp = timestampMatch[2];
 
+      // Validate timestamp order
+      const startMs = timestampToMilliseconds(startTimestamp);
+      const endMs = timestampToMilliseconds(endTimestamp);
+      if (endMs <= startMs) continue; // Skip invalid cues with end time before or equal to start time
+
       // Third line contains speaker and text
       const contentLine = lines[2];
       if (!contentLine) continue;
@@ -693,10 +692,12 @@ function parseVtt(text: string, vtt: Vtt): VttCue[] {
       if (!speakerTextMatch || !speakerTextMatch[1] || !speakerTextMatch[2])
         continue;
       const speaker = speakerTextMatch[1];
-      const text = speakerTextMatch[2];
+      const textContent = speakerTextMatch[2];
 
       // Create VttWord objects from the text
-      const wordStrings = text.split(/\s+/).filter((word) => word.length > 0);
+      const wordStrings = textContent
+        .split(/\s+/)
+        .filter((word) => word.length > 0);
       const cueStartMs = timestampToMilliseconds(startTimestamp);
       const cueEndMs = timestampToMilliseconds(endTimestamp);
       const timePerWord =
