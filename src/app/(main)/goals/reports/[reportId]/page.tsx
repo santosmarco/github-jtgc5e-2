@@ -56,7 +56,7 @@ export default function ReportPage({
     setHasJustUpdatedCurrentMomentIndex,
   ] = useState(false);
   const [currentTab, setCurrentTab] = useState<"positive" | "negative">(
-    "positive",
+    "negative",
   );
 
   const utils = api.useUtils();
@@ -202,23 +202,23 @@ export default function ReportPage({
 
       if (!groupReports) return newState;
 
-      // If we're expanding the goal, select its first positive section
+      // If we're expanding the goal, select its first negative section
       if (newState[goalId]) {
         const report = groupReports.reports.find((r) =>
           r.report_goals.some((rg) => rg.goal_id === goalId),
         );
 
         if (report) {
-          const firstPositiveSection = report.report_sections.find(
-            (section) => section.direction === "positive",
+          const firstNegativeSection = report.report_sections.find(
+            (section) => section.direction === "negative",
           );
 
-          if (firstPositiveSection) {
-            setSelectedReportSectionId(firstPositiveSection.id);
+          if (firstNegativeSection) {
+            setSelectedReportSectionId(firstNegativeSection.id);
           }
         }
       } else {
-        // If we're closing the goal, find the next expanded goal's first positive section
+        // If we're closing the goal, find the next expanded goal's first negative section
         const nextExpandedReport = groupReports.reports.find((r) => {
           const reportGoalId = r.report_goals[0]?.goal_id;
           return (
@@ -227,12 +227,12 @@ export default function ReportPage({
         });
 
         if (nextExpandedReport) {
-          const firstPositiveSection = nextExpandedReport.report_sections.find(
-            (section) => section.direction === "positive",
+          const firstNegativeSection = nextExpandedReport.report_sections.find(
+            (section) => section.direction === "negative",
           );
 
-          if (firstPositiveSection) {
-            setSelectedReportSectionId(firstPositiveSection.id);
+          if (firstNegativeSection) {
+            setSelectedReportSectionId(firstNegativeSection.id);
           }
         }
       }
@@ -250,7 +250,7 @@ export default function ReportPage({
       }));
     }
 
-    // Set first positive section as selected if none selected
+    // Set first negative section as selected if none selected
     if (selectedReportSectionId === null && groupReports) {
       const report = groupReports.reports[0];
       if (report) {
@@ -287,19 +287,19 @@ export default function ReportPage({
             )
           : null;
 
-        // Get highest scoring positive section
-        const sortedPositiveSections = _.orderBy(
-          sectionScores.filter((s) => s.direction === "positive"),
+        // Get highest scoring negative section
+        const sortedNegativeSections = _.orderBy(
+          sectionScores.filter((s) => s.direction === "negative"),
           ["totalScore"],
           ["desc"],
         );
 
-        // Prioritize section with highest moment if it's positive, otherwise use highest scoring positive section
-        if (sectionWithHighestMoment?.direction === "positive") {
+        // Prioritize section with highest moment if it's negative, otherwise use highest scoring negative section
+        if (sectionWithHighestMoment?.direction === "negative") {
           setSelectedReportSectionId(sectionWithHighestMoment.id);
         } else {
-          const firstPositiveSection = sortedPositiveSections[0];
-          setSelectedReportSectionId(firstPositiveSection?.id ?? null);
+          const firstNegativeSection = sortedNegativeSections[0];
+          setSelectedReportSectionId(firstNegativeSection?.id ?? null);
         }
       }
     }
@@ -429,8 +429,8 @@ export default function ReportPage({
 
           return {
             id: `${pt ?? ""}-${nt}`,
-            leftLabel: pt ?? "",
-            rightLabel: nt,
+            leftLabel: nt,
+            rightLabel: pt ?? "",
             value: 100 * (positiveCount / total),
           };
         });
@@ -526,7 +526,7 @@ export default function ReportPage({
                 >
                   <div className="flex flex-col gap-4">
                     <Tabs
-                      defaultValue="positive"
+                      defaultValue="negative"
                       className="w-full"
                       onValueChange={(value) => {
                         setCurrentTab(value as "positive" | "negative");
@@ -547,18 +547,18 @@ export default function ReportPage({
 
                       <TabsList className="mb-4 flex w-full justify-between gap-2 bg-transparent px-0 pt-4">
                         <TabsTrigger
-                          value="positive"
-                          className="flex w-full items-center gap-1.5 rounded-md border py-1.5 text-sm font-medium transition-colors hover:bg-accent data-[state=active]:border-primary data-[state=active]:bg-primary/10 data-[state=inactive]:text-muted-foreground"
-                        >
-                          <ArrowUpRight className="h-4 w-4 text-primary" />
-                          Doing Well
-                        </TabsTrigger>
-                        <TabsTrigger
                           value="negative"
                           className="flex w-full items-center gap-1.5 rounded-md border py-1.5 text-sm font-medium transition-colors hover:bg-accent data-[state=active]:border-amber-500 data-[state=active]:bg-amber-500/10 data-[state=inactive]:text-muted-foreground"
                         >
                           <GoalIcon className="h-4 w-4 text-amber-500" />
                           Growth Areas
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="positive"
+                          className="flex w-full items-center gap-1.5 rounded-md border py-1.5 text-sm font-medium transition-colors hover:bg-accent data-[state=active]:border-primary data-[state=active]:bg-primary/10 data-[state=inactive]:text-muted-foreground"
+                        >
+                          <ArrowUpRight className="h-4 w-4 text-primary" />
+                          Doing Well
                         </TabsTrigger>
                       </TabsList>
 

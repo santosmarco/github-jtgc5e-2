@@ -32,19 +32,6 @@ export function ReportMetrics({ metrics, selectedTab }: ReportMetricsProps) {
               <div
                 className={cn(
                   "text-left text-sm transition-colors duration-200 sm:w-32 sm:text-right",
-                  selectedTab === "positive"
-                    ? isHighlighted
-                      ? "font-medium text-primary"
-                      : "text-primary/40"
-                    : "text-muted-foreground/40",
-                )}
-              >
-                {metric.leftLabel}
-              </div>
-
-              <div
-                className={cn(
-                  "text-right text-sm transition-colors duration-200 sm:hidden",
                   selectedTab === "negative"
                     ? isHighlighted
                       ? "font-medium text-amber-500"
@@ -53,6 +40,19 @@ export function ReportMetrics({ metrics, selectedTab }: ReportMetricsProps) {
                 )}
               >
                 {metric.rightLabel}
+              </div>
+
+              <div
+                className={cn(
+                  "text-right text-sm transition-colors duration-200 sm:hidden",
+                  selectedTab === "positive"
+                    ? isHighlighted
+                      ? "font-medium text-primary"
+                      : "text-primary/40"
+                    : "text-muted-foreground/40",
+                )}
+              >
+                {metric.leftLabel}
               </div>
             </div>
 
@@ -65,24 +65,24 @@ export function ReportMetrics({ metrics, selectedTab }: ReportMetricsProps) {
                     : isHighlighted && selectedTab === "negative"
                       ? "scale-125 bg-amber-500"
                       : metric.value < 50
-                        ? "bg-primary/60"
-                        : "bg-amber-500/60",
+                        ? "bg-amber-500/60"
+                        : "bg-primary/60",
                 )}
-                style={{ left: `${metric.value}%` }}
+                style={{ left: `${100 - metric.value}%` }}
               />
             </div>
 
             <div
               className={cn(
                 "hidden text-left text-sm transition-colors duration-200 sm:block sm:w-32",
-                selectedTab === "negative"
+                selectedTab === "positive"
                   ? isHighlighted
-                    ? "font-medium text-amber-500"
-                    : "text-amber-500/40"
+                    ? "font-medium text-primary"
+                    : "text-primary/40"
                   : "text-muted-foreground/40",
               )}
             >
-              {metric.rightLabel}
+              {metric.leftLabel}
             </div>
           </div>
         );
