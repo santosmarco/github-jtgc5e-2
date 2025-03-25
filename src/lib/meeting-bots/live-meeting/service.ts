@@ -62,7 +62,8 @@ export function createLiveMeetingService(deps: MeetingBotsServiceDependencies) {
       });
 
       if (
-        isZoomMeeting /* &&
+        isZoomMeeting &&
+        !userDetails.user.email?.includes("zoom") /* &&
         !userDetails.user.app_metadata?.integration_providers?.includes("zoom") */
       ) {
         const meetingJoinResult = await meetingBaas.meetings
