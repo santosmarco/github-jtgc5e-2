@@ -153,6 +153,12 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
       label: "Integrations",
       isActive: pathname.startsWith("/integrations"),
     },
+    {
+      href: "/settings",
+      icon: <CogIcon className="h-5 w-5" />,
+      label: "Settings",
+      isActive: pathname.startsWith("/settings"),
+    },
   ].filter((x): x is Exclude<typeof x, false | undefined> => !!x);
 
   return (
