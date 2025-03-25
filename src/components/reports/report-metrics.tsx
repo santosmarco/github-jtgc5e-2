@@ -39,7 +39,7 @@ export function ReportMetrics({ metrics, selectedTab }: ReportMetricsProps) {
                     : "text-muted-foreground/40",
                 )}
               >
-                {metric.rightLabel}
+                {metric.leftLabel}
               </div>
 
               <div
@@ -52,7 +52,7 @@ export function ReportMetrics({ metrics, selectedTab }: ReportMetricsProps) {
                     : "text-muted-foreground/40",
                 )}
               >
-                {metric.leftLabel}
+                {metric.rightLabel}
               </div>
             </div>
 
@@ -82,7 +82,7 @@ export function ReportMetrics({ metrics, selectedTab }: ReportMetricsProps) {
                   : "text-muted-foreground/40",
               )}
             >
-              {metric.leftLabel}
+              {metric.rightLabel}
             </div>
           </div>
         );
