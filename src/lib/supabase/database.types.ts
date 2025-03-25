@@ -95,6 +95,7 @@ export type Database = {
           profile_id: string
           raw: Json | null
           recall_calendar_id: string
+          should_join_user_override: boolean | null
           start_time: string
           updated_at: string
         }
@@ -115,6 +116,7 @@ export type Database = {
           profile_id: string
           raw?: Json | null
           recall_calendar_id: string
+          should_join_user_override?: boolean | null
           start_time: string
           updated_at: string
         }
@@ -135,6 +137,7 @@ export type Database = {
           profile_id?: string
           raw?: Json | null
           recall_calendar_id?: string
+          should_join_user_override?: boolean | null
           start_time?: string
           updated_at?: string
         }
@@ -1662,6 +1665,9 @@ export type Database = {
       meeting_processing_status: {
         Row: {
           action_items_status: string | null
+          backend_call_status:
+            | Database["public"]["Enums"]["processing_status"]
+            | null
           created_at: string | null
           embed_meeting_status: string | null
           embed_moments_status: string | null
@@ -1673,13 +1679,26 @@ export type Database = {
           meetings_status: string | null
           moments_status: string | null
           observation_status: string | null
+          origin: string | null
           segments_status: string | null
+          supabase_video_upload_status:
+            | Database["public"]["Enums"]["processing_status"]
+            | null
           topic_segmentation_status: Database["public"]["Enums"]["processing_status"]
           topics_status: string | null
+          transcript_slice_words_status:
+            | Database["public"]["Enums"]["processing_status"]
+            | null
+          video_api_upload_status:
+            | Database["public"]["Enums"]["processing_status"]
+            | null
           video_id: string | null
         }
         Insert: {
           action_items_status?: string | null
+          backend_call_status?:
+            | Database["public"]["Enums"]["processing_status"]
+            | null
           created_at?: string | null
           embed_meeting_status?: string | null
           embed_moments_status?: string | null
@@ -1691,13 +1710,26 @@ export type Database = {
           meetings_status?: string | null
           moments_status?: string | null
           observation_status?: string | null
+          origin?: string | null
           segments_status?: string | null
+          supabase_video_upload_status?:
+            | Database["public"]["Enums"]["processing_status"]
+            | null
           topic_segmentation_status?: Database["public"]["Enums"]["processing_status"]
           topics_status?: string | null
+          transcript_slice_words_status?:
+            | Database["public"]["Enums"]["processing_status"]
+            | null
+          video_api_upload_status?:
+            | Database["public"]["Enums"]["processing_status"]
+            | null
           video_id?: string | null
         }
         Update: {
           action_items_status?: string | null
+          backend_call_status?:
+            | Database["public"]["Enums"]["processing_status"]
+            | null
           created_at?: string | null
           embed_meeting_status?: string | null
           embed_moments_status?: string | null
@@ -1709,9 +1741,19 @@ export type Database = {
           meetings_status?: string | null
           moments_status?: string | null
           observation_status?: string | null
+          origin?: string | null
           segments_status?: string | null
+          supabase_video_upload_status?:
+            | Database["public"]["Enums"]["processing_status"]
+            | null
           topic_segmentation_status?: Database["public"]["Enums"]["processing_status"]
           topics_status?: string | null
+          transcript_slice_words_status?:
+            | Database["public"]["Enums"]["processing_status"]
+            | null
+          video_api_upload_status?:
+            | Database["public"]["Enums"]["processing_status"]
+            | null
           video_id?: string | null
         }
         Relationships: []
@@ -4195,7 +4237,12 @@ export type Database = {
         | "watch_moment"
         | "use_moments_command"
         | "reset_chat"
-      processing_status: "pending" | "completed" | "failed" | "partial"
+      processing_status:
+        | "pending"
+        | "completed"
+        | "failed"
+        | "partial"
+        | "skipped"
       profile_status_enum: "active" | "pending" | "inactive"
       recall_calendar_platform_type: "google_calendar" | "microsoft_outlook"
       report_processing_status_type: "pending" | "completed" | "failed"

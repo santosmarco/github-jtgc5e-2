@@ -1,6 +1,5 @@
 import type { logger } from "@trigger.dev/sdk/v3";
 
-import { GoogleCalendarEvent } from "~/lib/google-calendar/schemas";
 import type {
   Bot as RecallBot,
   CalendarEvent as RecallCalendarEvent,
@@ -17,6 +16,7 @@ import {
   Platform,
 } from "../schemas";
 import type { MeetingBotsServiceDependencies } from "../types";
+import { evaluateShouldScheduleBot as evaluateShouldScheduleBot_ } from "../utils";
 
 export type RecallCalendarWithProfile = Tables<"recall_calendars_v2"> & {
   profile: Tables<"profiles">;
@@ -196,27 +196,41 @@ export function createCalendarSyncService(
       });
 
       try {
-        const upsertResult = await supabase.from("calendar_events_v2").upsert(
-          {
-            id: event.id,
-            created_at: event.created_at,
-            end_time: event.end_time,
-            ical_uid: event.ical_uid,
-            is_deleted: event.is_deleted,
-            meeting_platform: MeetingPlatform.nullish()
-              .catch(null)
-              .parse(event.meeting_platform),
-            start_time: event.start_time,
-            platform_id: event.platform_id,
-            recall_calendar_id: event.calendar_id,
-            meeting_url: event.meeting_url,
-            platform: Platform.nullish().catch(null).parse(event.platform),
-            raw: event.raw as Json,
-            updated_at: event.updated_at,
+        const upsertResult = await supabase
+          .from("calendar_events_v2")
+          .upsert(
+            {
+              id: event.id,
+              created_at: event.created_at,
+              end_time: event.end_time,
+              ical_uid: event.ical_uid,
+              is_deleted: event.is_deleted,
+              meeting_platform: MeetingPlatform.nullish()
+                .catch(null)
+                .parse(event.meeting_platform),
+              start_time: event.start_time,
+              platform_id: event.platform_id,
+              recall_calendar_id: event.calendar_id,
+              meeting_url: event.meeting_url,
+              platform: Platform.nullish().catch(null).parse(event.platform),
+              raw: event.raw as Json,
+              updated_at: event.updated_at,
+              profile_id: calendar.profile.id,
+            },
+            { onConflict: "id" },
+          )
+          .select("*")
+          .maybeSingle();
+
+        if (upsertResult.error || !upsertResult.data) {
+          logger.error("❌ Failed to upsert calendar event", {
+            error: upsertResult.error,
+            event_id: event.id,
+            calendar_id: calendar.id,
             profile_id: calendar.profile.id,
-          },
-          { onConflict: "id" },
-        );
+          });
+          return;
+        }
 
         logger.info("💾 Upserted calendar event", {
           event_id: event.id,
@@ -224,6 +238,8 @@ export function createCalendarSyncService(
           profile_id: calendar.profile.id,
           upsert_result: upsertResult,
         });
+
+        const calendarEvent = upsertResult.data;
 
         // Check if event is relevant (not in past and has required data) before proceeding
         const eventRelevance = await isEventRelevant(event);
@@ -241,17 +257,15 @@ export function createCalendarSyncService(
 
         await cleanupExistingBots(event);
 
-        const shouldScheduleBot = await evaluateShouldScheduleBot(
-          calendar,
-          event,
-        );
+        const { shouldJoin: shouldScheduleBot, reason: schedulingReason } =
+          await evaluateShouldScheduleBot(calendar, calendarEvent);
 
         if (!shouldScheduleBot) {
           logger.info("⏭️ Skipping bot scheduling", {
             event_id: event.id,
             calendar_id: calendar.id,
             profile_email: calendar.profile.email,
-            reason: "Failed scheduling criteria",
+            reason: schedulingReason,
           });
           return;
         }
@@ -260,6 +274,7 @@ export function createCalendarSyncService(
           event_id: event.id,
           calendar_id: calendar.id,
           profile_email: calendar.profile.email,
+          reason: schedulingReason,
         });
 
         const [botName, botMetadata, botDeduplicationKey] = await Promise.all([
@@ -407,7 +422,7 @@ export function createCalendarSyncService(
 
   async function evaluateShouldScheduleBot(
     calendar: RecallCalendarWithProfile,
-    event: RecallCalendarEvent,
+    event: Tables<"calendar_events_v2">,
   ) {
     return logger.trace("calendar-sync.evaluate-scheduling", async (trace) => {
       trace.setAttributes({
@@ -416,143 +431,7 @@ export function createCalendarSyncService(
         "profile.email": calendar.profile.email,
       });
 
-      try {
-        if (event.is_deleted || !event.meeting_url) {
-          logger.info(
-            "⏭️ Skipping bot scheduling - Event deleted or missing meeting URL",
-            {
-              event_id: event.id,
-              is_deleted: event.is_deleted,
-              has_meeting_url: !!event.meeting_url,
-              profile_id: calendar.profile.id,
-              user_email: calendar.profile.email,
-            },
-          );
-          return false;
-        }
-
-        const { data: userSettings } = await supabase
-          .from("user_settings")
-          .select("*, profile:profiles!inner(*)")
-          .eq("profile_id", calendar.profile.id)
-          .maybeSingle();
-
-        if (!userSettings) {
-          logger.info("⏭️ Skipping bot scheduling - No user settings found", {
-            profile_id: calendar.profile.id,
-            event_id: event.id,
-          });
-          return false;
-        }
-
-        // Parse raw event data against schema
-        const parseResult = GoogleCalendarEvent.safeParse(event.raw);
-
-        if (!parseResult.success) {
-          logger.error("Failed to parse event data", {
-            error: parseResult.error,
-            data: event.raw,
-            profile_id: calendar.profile.id,
-            user_email: calendar.profile.email,
-            validation_errors: parseResult.error.errors,
-          });
-          return false;
-        }
-
-        const calendarEvent = parseResult.data;
-        const userEmail = userSettings.profile.email;
-
-        if (!userEmail) {
-          logger.info("⏭️ Skipping bot scheduling - No user email", {
-            profile_id: calendar.profile.id,
-            event_id: event.id,
-          });
-          return false;
-        }
-
-        // Get user's domain for internal/external check
-        const userDomain = userEmail.split("@")[1];
-
-        // Check if user is the organizer
-        const isOrganizer = calendarEvent.organizer?.email === userEmail;
-
-        // Check if user's response is pending
-        const userAttendee = calendarEvent.attendees?.find(
-          (attendee) => attendee.email === userEmail,
-        );
-        const isPending = userAttendee?.responseStatus === "needsAction";
-
-        // Check if all attendees are internal
-        const isInternalMeeting =
-          !calendarEvent.attendees || calendarEvent.attendees.length === 0
-            ? isOrganizer // Self-organized meetings with no attendees are internal
-            : calendarEvent.attendees.every((attendee) => {
-                const attendeeDomain = attendee.email?.split("@")[1];
-                return attendeeDomain === userDomain;
-              });
-
-        logger.info("📊 Meeting evaluation details", {
-          event_id: event.id,
-          is_organizer: isOrganizer,
-          is_pending: isPending,
-          is_internal_meeting: isInternalMeeting,
-          attendee_count: calendarEvent.attendees?.length ?? 0,
-          user_email: userEmail,
-        });
-
-        // Apply exclusion rules first
-        if (userSettings.should_not_join_pending_meetings && isPending) {
-          logger.info("⏭️ Skipping - Pending meeting", {
-            event_id: event.id,
-            profile_email: userEmail,
-          });
-          return false;
-        }
-
-        if (
-          userSettings.should_not_join_owned_by_others_meetings &&
-          !isOrganizer
-        ) {
-          logger.info("⏭️ Skipping - Not organizer", {
-            event_id: event.id,
-            profile_email: userEmail,
-          });
-          return false;
-        }
-
-        // Apply inclusion rules
-        if (isInternalMeeting) {
-          const shouldJoin = userSettings.should_join_team_meetings;
-          logger.info(
-            `${shouldJoin ? "✅" : "⏭️"} Internal meeting evaluation`,
-            {
-              event_id: event.id,
-              should_join: shouldJoin,
-              profile_email: userEmail,
-            },
-          );
-          return shouldJoin;
-        }
-
-        const shouldJoin = userSettings.should_join_external_meetings;
-        logger.info(`${shouldJoin ? "✅" : "⏭️"} External meeting evaluation`, {
-          event_id: event.id,
-          should_join: shouldJoin,
-          profile_email: userEmail,
-        });
-        return shouldJoin;
-      } catch (error) {
-        logger.error("Failed to evaluate should schedule bot", {
-          error,
-          event_id: event.id,
-          calendar_id: calendar.id,
-          profile_id: calendar.profile.id,
-        });
-        await slack.error({
-          text: `[${calendar.profile.email}] Failed to evaluate should schedule bot: ${(error as Error).message}`,
-        });
-        return false;
-      }
+      return evaluateShouldScheduleBot_(calendar.profile.id, event, supabase);
     });
   }
 
@@ -696,14 +575,14 @@ export function createCalendarSyncService(
           user?.app_metadata.recall_zoom_oauth_credential &&
           (user?.email?.includes("zoom") || // remove after zoom app approval
             !z
-            .object({
-              extendedProperties: z.object({
-                shared: z.object({
-                  meetingId: z.string(),
-                  zmMeetingNum: z.string(),
+              .object({
+                extendedProperties: z.object({
+                  shared: z.object({
+                    meetingId: z.string(),
+                    zmMeetingNum: z.string(),
+                  }),
                 }),
-              }),
-            })
+              })
               .safeParse(event.raw).success)
         ) {
           logger.info("🔑 User has Zoom integration", {
