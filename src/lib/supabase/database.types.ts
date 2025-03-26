@@ -97,6 +97,7 @@ export type Database = {
           recall_calendar_id: string
           should_join_user_override: boolean | null
           start_time: string
+          tags: string[] | null
           updated_at: string
         }
         Insert: {
@@ -118,6 +119,7 @@ export type Database = {
           recall_calendar_id: string
           should_join_user_override?: boolean | null
           start_time: string
+          tags?: string[] | null
           updated_at: string
         }
         Update: {
@@ -139,6 +141,7 @@ export type Database = {
           recall_calendar_id?: string
           should_join_user_override?: boolean | null
           start_time?: string
+          tags?: string[] | null
           updated_at?: string
         }
         Relationships: [
@@ -1671,11 +1674,10 @@ export type Database = {
           created_at: string | null
           embed_meeting_status: string | null
           embed_moments_status: string | null
-          embed_notes_status: string | null
-          embed_qna_status: string | null
           entity_extraction_status: Database["public"]["Enums"]["processing_status"]
           id: string
           interestingness_status: string | null
+          internal: boolean | null
           meetings_status: string | null
           moments_status: string | null
           observation_status: string | null
@@ -1702,11 +1704,10 @@ export type Database = {
           created_at?: string | null
           embed_meeting_status?: string | null
           embed_moments_status?: string | null
-          embed_notes_status?: string | null
-          embed_qna_status?: string | null
           entity_extraction_status?: Database["public"]["Enums"]["processing_status"]
           id?: string
           interestingness_status?: string | null
+          internal?: boolean | null
           meetings_status?: string | null
           moments_status?: string | null
           observation_status?: string | null
@@ -1733,11 +1734,10 @@ export type Database = {
           created_at?: string | null
           embed_meeting_status?: string | null
           embed_moments_status?: string | null
-          embed_notes_status?: string | null
-          embed_qna_status?: string | null
           entity_extraction_status?: Database["public"]["Enums"]["processing_status"]
           id?: string
           interestingness_status?: string | null
+          internal?: boolean | null
           meetings_status?: string | null
           moments_status?: string | null
           observation_status?: string | null
@@ -3758,11 +3758,14 @@ export type Database = {
             | null
           platform_id: string | null
           profile_id: string | null
+          raw: Json | null
           recall_calendar_id: string | null
+          should_join_user_override: boolean | null
           start_date_time: string | null
           start_time: string | null
           status: string | null
           summary: string | null
+          tags: string[] | null
           updated_at: string | null
         }
         Insert: {
@@ -3785,11 +3788,14 @@ export type Database = {
             | null
           platform_id?: string | null
           profile_id?: string | null
+          raw?: Json | null
           recall_calendar_id?: string | null
+          should_join_user_override?: boolean | null
           start_date_time?: never
           start_time?: string | null
           status?: never
           summary?: never
+          tags?: string[] | null
           updated_at?: string | null
         }
         Update: {
@@ -3812,11 +3818,14 @@ export type Database = {
             | null
           platform_id?: string | null
           profile_id?: string | null
+          raw?: Json | null
           recall_calendar_id?: string | null
+          should_join_user_override?: boolean | null
           start_date_time?: never
           start_time?: string | null
           status?: never
           summary?: never
+          tags?: string[] | null
           updated_at?: string | null
         }
         Relationships: [
