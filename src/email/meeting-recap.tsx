@@ -17,7 +17,7 @@ export type MeetingRecapEmailProps = {
 
 export function MeetingRecapEmail({ meeting }: MeetingRecapEmailProps) {
   const previewText = "Your meeting insights are ready";
-  const meetingUrl = new URL(`/meetings/${meeting.video_api_id}`, BASE_URL);
+  const meetingUrl = new URL(`/videos/${meeting.video_api_id}`, BASE_URL);
 
   return (
     <EmailContainer previewText={previewText}>
