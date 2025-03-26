@@ -117,9 +117,9 @@ export function createCalendarSyncService(
             response = await recall.calendarV2.calendar_events_list({
               queries: {
                 calendar_id: event.data.calendar_id,
-                ...(options.full !== "true" && {
-                  updated_at__gte: event.data.last_updated_ts,
-                }),
+                ...(options.full === "true"
+                  ? { start_time__gte: new Date().toISOString() }
+                  : { updated_at__gte: event.data.last_updated_ts }),
                 ...(nextCursor && { cursor: nextCursor }),
               },
             });
