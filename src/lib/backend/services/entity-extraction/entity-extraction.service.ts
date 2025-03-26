@@ -139,6 +139,13 @@ export class EntityExtractionService extends BackendService {
           // Fetch meeting data with topics and events
           const meeting = await this.fetchMeetingData(api_video_id, ctx, span);
 
+          if (meeting.topics.length === 0) {
+            ctx.logger.info("Meeting has no topics", {
+              api_video_id: meeting.video_api_id,
+            });
+            return;
+          }
+
           // Prepare meeting topics for processing
           const meetingTopics = this.prepareMeetingTopics(meeting, span, ctx);
 
@@ -257,10 +264,10 @@ export class EntityExtractionService extends BackendService {
     }
 
     if (meeting.topics.length === 0) {
-      const errorMessage = "Meeting has no topics";
-      span.setStatus({ code: 2, message: errorMessage });
-      ctx.logger.error(errorMessage, { api_video_id: meeting.video_api_id });
-      throw new Error(errorMessage);
+      return {
+        vtt: meeting.clean_vtt_file,
+        topics: [],
+      };
     }
 
     ctx.logger.info("Preparing meeting topics for processing", {
