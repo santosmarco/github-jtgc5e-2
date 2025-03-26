@@ -172,7 +172,7 @@ export function VideoPageClient({ videoId }: VideoPageClientProps) {
         </motion.div>
       </header>
 
-      <div className="container mx-auto space-y-8 pt-24">
+      <div className="container mx-auto space-y-8 pt-12">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div className="space-y-4 lg:col-span-2 lg:space-y-6">
             <VideoPlayer
