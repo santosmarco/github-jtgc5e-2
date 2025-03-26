@@ -3,15 +3,14 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Brain,
+  Calendar,
   CogIcon,
   GoalIcon,
   LogOut,
   MessageSquare,
   Puzzle,
-  Target,
   TrendingUpIcon,
   User,
-  User2Icon,
   UsersIcon,
   Video,
 } from "lucide-react";
@@ -35,7 +34,7 @@ import { useProfile } from "~/hooks/use-profile";
 import { createClient } from "~/lib/supabase/client";
 import type { Tables } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
-import { api, type RouterOutputs } from "~/trpc/react";
+import { type RouterOutputs, api } from "~/trpc/react";
 
 import { CoachBadge } from "../coach-badge";
 import { TaskList } from "../onboarding-task-list";
@@ -132,6 +131,12 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
       icon: <Video className="h-5 w-5" />,
       label: "Meetings",
       isActive: pathname === "/" || pathname.startsWith("/videos"),
+    },
+    {
+      href: "/calendar",
+      icon: <Calendar className="h-5 w-5" />,
+      label: "Calendar",
+      isActive: pathname.startsWith("/calendar"),
     },
     {
       href: "/moments",

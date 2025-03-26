@@ -35,8 +35,6 @@ export function TaskList({ tasks = [] }: TaskListProps) {
             <div className="space-y-2.5">
               <h2 className="text-base font-semibold tracking-tight text-foreground">
                 Start exploring
-                <br />
-                insights chat
               </h2>
 
               <div className="space-y-1.5">
