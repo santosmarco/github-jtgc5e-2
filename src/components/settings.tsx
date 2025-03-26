@@ -13,7 +13,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
-import { createClient } from "~/lib/supabase/client";
 import { cn } from "~/lib/utils";
 import type { RouterOutputs } from "~/trpc/react";
 import { api } from "~/trpc/react";
@@ -39,14 +38,16 @@ const stagger = {
 
 export function Settings({ user, settings: initialSettings }: SettingsProps) {
   const utils = api.useUtils();
+  const updateSettingMutation = api.settings.updateSetting.useMutation();
   const isCoach = user.role === "coach";
   const [botName, setBotName] = useState(initialSettings.bot_name ?? "");
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
 
   const updateSetting = useCallback(
-    async (key: keyof typeof initialSettings, value: boolean | string) => {
-      const supabase = createClient();
-
+    async (
+      key: Parameters<typeof updateSettingMutation.mutateAsync>[0]["key"],
+      value: Parameters<typeof updateSettingMutation.mutateAsync>[0]["value"],
+    ) => {
       if (isCoach || initialSettings[key] === value) return;
 
       // Optimistically update the UI
@@ -56,21 +57,34 @@ export function Settings({ user, settings: initialSettings }: SettingsProps) {
       );
 
       // Update in database
-      void (async () => {
-        await supabase
-          .from("user_settings")
-          .update({ [key]: value })
-          .eq("profile_id", initialSettings.profile_id);
+      try {
+        await updateSettingMutation.mutateAsync({
+          profileId: initialSettings.profile_id,
+          key,
+          value,
+        });
 
         // Invalidate to ensure consistency
         await utils.settings.retrieveForProfile.invalidate({
           profileId: initialSettings.profile_id,
         });
-      })();
 
-      toast.success("Saved");
+        toast.success("Saved");
+      } catch (error) {
+        // Revert optimistic update on error
+        utils.settings.retrieveForProfile.setData(
+          { profileId: initialSettings.profile_id },
+          initialSettings,
+        );
+        toast.error("Failed to save setting");
+      }
     },
-    [isCoach, utils.settings.retrieveForProfile, initialSettings],
+    [
+      isCoach,
+      utils.settings.retrieveForProfile,
+      initialSettings,
+      updateSettingMutation,
+    ],
   );
 
   const debouncedUpdateBotName = useCallback(
