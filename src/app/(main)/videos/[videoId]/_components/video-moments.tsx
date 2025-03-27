@@ -36,8 +36,8 @@ export function VideoMoments({
     .sort(handleMomentCategorySort)
     .concat(["Analysis"])
     .map((category) => ({
-      label: category,
-      value: category,
+      label: category.replace(/_.*$/, ""),
+      value: category.replace(/_.*$/, ""),
       disabled: category === "Analysis",
       comingSoon: category === "Analysis",
     }));
