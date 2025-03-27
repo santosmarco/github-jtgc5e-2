@@ -331,13 +331,13 @@ export const momentsRouter = createTRPCRouter({
               segment_ideal_timestamp_in_seconds:
                 moment.segment_start_timestamp_in_seconds_ideal,
               video_id: moment.video_api_id ?? "",
-              activity_type: moment.activity_type ?? "",
+              activity_type: (moment.activity_type ?? "").replace(/_.*$/, ""),
               activity_reasoning: (moment.activity_reasoning ?? "").replace(
                 /^"|"$/g,
                 "",
               ),
               target_person_reasoning: null,
-              activity: moment.activity ?? "",
+              activity: (moment.activity ?? "").replace(/_.*$/, ""),
               relevant: moment.relevant,
               reactions: [],
               subtags: [],
@@ -423,8 +423,8 @@ export const momentsRouter = createTRPCRouter({
             index: `${moment.video_api_id}_${moment.activity}_${idx}`,
             sequence_id: idx,
             video_id: moment.video_api_id ?? "",
-            activity: moment.activity ?? "",
-            activity_type: moment.activity_type ?? "",
+            activity: (moment.activity ?? "").replace(/_.*$/, ""),
+            activity_type: (moment.activity_type ?? "").replace(/_.*$/, ""),
             activity_reasoning: (moment.activity_reasoning ?? "").replace(
               /^"|"$/g,
               "",
