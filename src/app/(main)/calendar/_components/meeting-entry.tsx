@@ -96,16 +96,18 @@ const getBotStatusDetails = (
   switch (meetingBot.status) {
     case "in_call_recording":
       return {
-        border: "border-green-500",
+        border: "border-emerald-500/40",
         message: "Recording in progress",
-        icon: <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />,
+        icon: <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />,
         badge: "Recording",
       };
 
     case "in_call_not_recording":
       return {
-        border: "border-yellow-500",
-        message: "In call but not recording",
+        border: "border-yellow-500/40",
+        message: meetingBot.error_code
+          ? `Not recording: ${meetingBot.error_code}`
+          : "In call but not recording",
         icon: <AlertCircle className="h-3.5 w-3.5 text-yellow-500" />,
         badge: "Not Recording",
       };
@@ -113,39 +115,129 @@ const getBotStatusDetails = (
     case "in_waiting_room":
       return {
         border: "border-primary/40",
-        message: "Waiting in lobby",
-        icon: <Clock className="h-3.5 w-3.5 text-blue-400" />,
+        message: meetingBot.error_code
+          ? `Waiting in lobby: ${meetingBot.error_code}`
+          : "Waiting in lobby",
+        icon: <Clock className="h-3.5 w-3.5 text-primary" />,
         badge: "In Lobby",
       };
 
     case "in_waiting_for_host":
       return {
         border: "border-primary/40",
-        message: "Waiting for host",
-        icon: <Clock className="h-3.5 w-3.5 text-blue-400" />,
+        message: meetingBot.error_code
+          ? `Waiting for host: ${meetingBot.error_code}`
+          : "Waiting for host",
+        icon: <Clock className="h-3.5 w-3.5 text-primary" />,
         badge: "Waiting Host",
       };
 
     case "joining_call":
+      if (meetingBot.error_code || meetingBot.sub_code) {
+        return {
+          border: "border-yellow-500/40",
+          message: meetingBot.error_code
+            ? `Issue joining: ${meetingBot.error_code}`
+            : meetingBot.sub_code
+              ? `Issue joining: ${formatSubCode(meetingBot.sub_code)}`
+              : "Issue joining meeting",
+          icon: <AlertCircle className="h-3.5 w-3.5 text-yellow-500" />,
+          badge: "Join Issue",
+        };
+      }
       return {
-        border: "border-primary",
+        border: "border-primary/40",
         message: "Joining meeting",
-        icon: <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />,
+        icon: <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />,
         badge: "Joining",
       };
 
     case "fatal":
+      // Handle specific fatal cases
+      if (
+        meetingBot.sub_code === "meeting_not_found" ||
+        meetingBot.error_code?.includes("MeetingNotExist") ||
+        meetingBot.error_code?.includes("MeetingOver")
+      ) {
+        return {
+          border: "border-destructive/40",
+          message: "Meeting no longer exists or has ended",
+          icon: <BotOff className="h-3.5 w-3.5 text-destructive" />,
+          badge: "Not Found",
+        };
+      }
+
+      // Handle warning-level errors
+      if (
+        meetingBot.error_code ===
+          "The meeting ended before the bot could participate" ||
+        meetingBot.error_code === "Waiting for host timeout"
+      ) {
+        return {
+          border: "border-yellow-500/40",
+          message:
+            meetingBot.error_code === "Waiting for host timeout"
+              ? "Host did not join the meeting"
+              : "Meeting ended before bot could join",
+          icon: <AlertCircle className="h-3.5 w-3.5 text-yellow-500" />,
+          badge: "Skipped",
+        };
+      }
+
+      if (
+        meetingBot.error_code?.includes("Recording rights not granted") ||
+        meetingBot.error_code?.includes("setting enabled for recording")
+      ) {
+        return {
+          border: "border-yellow-500/40",
+          message: "Recording permission denied",
+          icon: <AlertCircle className="h-3.5 w-3.5 text-yellow-500" />,
+          badge: "No Permission",
+        };
+      }
+      if (meetingBot.sub_code === "zoom_sdk_app_not_published") {
+        return {
+          border: "border-destructive/40",
+          message: "Zoom app configuration issue",
+          icon: <BotOff className="h-3.5 w-3.5 text-destructive" />,
+          badge: "Config Error",
+        };
+      }
       return {
         border: "border-destructive/40",
-        message: meetingBot.sub_code
-          ? `Error: ${formatSubCode(meetingBot.sub_code)}`
-          : "Fatal error occurred",
+        message:
+          meetingBot.error_code || meetingBot.sub_code
+            ? `Error: ${meetingBot.error_code || (meetingBot.sub_code ? formatSubCode(meetingBot.sub_code) : "Unknown")}`
+            : "Fatal error occurred",
         icon: <BotOff className="h-3.5 w-3.5 text-destructive" />,
         badge: "Error",
       };
 
     case "done":
     case "call_ended":
+      // Handle different completion scenarios
+      if (
+        meetingBot.sub_code === "timeout_exceeded_max_duration" ||
+        meetingBot.sub_code === "bot_kicked_from_call"
+      ) {
+        return {
+          border: "border-yellow-500/40",
+          message: formatSubCode(meetingBot.sub_code),
+          icon: <AlertCircle className="h-3.5 w-3.5 text-yellow-500" />,
+          badge: "Partial",
+        };
+      }
+      if (
+        meetingBot.sub_code?.includes("timeout_exceeded") ||
+        meetingBot.sub_code?.includes("bot_kicked")
+      ) {
+        return {
+          border: "border-emerald-500/40",
+          message: formatSubCode(meetingBot.sub_code),
+          icon: <Bot className="h-3.5 w-3.5 text-emerald-500" />,
+          badge: "Completed",
+        };
+      }
       return {
         border: "border-emerald-500/40",
         message: meetingBot.sub_code
