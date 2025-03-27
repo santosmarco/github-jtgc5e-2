@@ -57,6 +57,7 @@ client.interceptors.response.use(
       message: error.message,
     });
 
+    /*
     // If there's a fallback URL available, try the request again with it
     if (env.INTERNAL_API_URL_OLD && error.config) {
       console.log("Retrying with fallback API URL:", env.INTERNAL_API_URL_OLD);
@@ -65,6 +66,7 @@ client.interceptors.response.use(
 
       return axios(fallbackConfig);
     }
+    */
 
     return Promise.reject(error);
   },

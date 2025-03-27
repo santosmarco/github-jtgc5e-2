@@ -54,11 +54,11 @@ export function transformMoment(
     segment_ideal_timestamp_in_seconds:
       moment.segment_start_timestamp_in_seconds_ideal,
     video_id: moment.video_api_id ?? "",
-    activity_type: moment.activity_type ?? "",
+    activity_type: (moment.activity_type ?? "").replace(/_.*$/g, ""),
     activity_reasoning: (moment.activity_reasoning ?? "").replace(/^"|"$/g, ""),
     target_person_type: moment.target_person_type ?? "",
     target_person_reasoning: null,
-    activity: moment.activity ?? "",
+    activity: (moment.activity ?? "").replace(/_.*$/g, ""),
     relevant: moment.relevant,
     reactions: [],
     subtags: moment.subtags ?? [],
