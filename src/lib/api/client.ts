@@ -1,5 +1,5 @@
 import axios, { type AxiosError } from "axios";
-import axiosRetry from "axios-retry";
+// import axiosRetry from "axios-retry";
 
 import { env } from "~/env";
 
@@ -11,6 +11,7 @@ export const client = axios.create({
   },
 });
 
+/*
 // Configure retry behavior
 axiosRetry(client, {
   retries: 3,
@@ -23,6 +24,7 @@ axiosRetry(client, {
     );
   },
 });
+*/
 
 // Add request interceptor
 client.interceptors.request.use(
