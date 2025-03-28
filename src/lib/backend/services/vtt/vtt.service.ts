@@ -405,12 +405,12 @@ export class Vtt {
     const cleanedCues = this.cues
       .filter((cue) => {
         // Remove cues with empty text or speaker
-        return cue.text.trim() !== "" && cue.speaker.trim() !== "";
+        return cue.text?.trim() !== "" && cue.speaker?.trim() !== "";
       })
       .map((cue) => {
-        cue.speaker = cue.speaker.trim();
+        cue.speaker = cue.speaker?.trim() ?? "";
         cue.words = cue.words.map((word) => {
-          word.content = word.content.trim();
+          word.content = word.content?.trim() ?? "";
           return word;
         });
         return cue;
@@ -539,7 +539,7 @@ export class Vtt {
           startTimestamp: "00:00:00.000",
           endTimestamp: "00:00:00.100", // Minimum duration
           words: [],
-          speaker: segment.speaker,
+          speaker: segment.speaker ?? "",
         });
       }
 
@@ -559,13 +559,13 @@ export class Vtt {
         words: wordsSorted.map(
           (w, index) =>
             new VttWord({
-              content: w.text.trim(),
+              content: w.text?.trim() ?? "",
               startTimestamp: millisecondsToTimestamp(w.start_timestamp * 1000),
               endTimestamp: millisecondsToTimestamp(w.end_timestamp * 1000),
               index,
             }),
         ),
-        speaker: segment.speaker,
+        speaker: segment.speaker ?? "",
       });
     });
 
@@ -659,7 +659,7 @@ function parseVtt(text: string, vtt: Vtt): VttCue[] {
     try {
       const lines = block
         .split("\n")
-        .map((line) => line.trim())
+        .map((line) => line?.trim() ?? "")
         .filter(Boolean);
 
       // Need at least 3 lines for a valid cue

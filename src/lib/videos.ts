@@ -73,7 +73,7 @@ export function parseVTT(content: string, videoId: string): ParsedVTT[] {
   const data: ParsedVTT[] = [];
 
   for (const block of blocks) {
-    const lines = block.trim().split("\n");
+    const lines = (block ?? "").trim().split("\n").filter(Boolean);
     if (lines.length >= 3) {
       try {
         const [index = "", timing = "", ...textLines] = lines;

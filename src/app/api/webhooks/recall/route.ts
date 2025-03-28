@@ -292,14 +292,15 @@ async function uploadVideoToApiVideo(
   }
 
   const tags = _.uniq(
-    typeof bot.metadata?.user_id === "string"
+    (typeof bot.metadata?.user_id === "string"
       ? [
-          ...bot.meeting_participants.map(({ name }) => name.trim()),
+          ...bot.meeting_participants.map(({ name }) => name?.trim()),
           bot.metadata.user_id.startsWith('"')
             ? bot.metadata.user_id.slice(1, -1)
             : bot.metadata.user_id,
         ]
-      : bot.meeting_participants.map(({ name }) => name.trim()),
+      : bot.meeting_participants.map(({ name }) => name?.trim())
+    ).filter(isTruthy),
   );
   log.info(`🏷️ Detected speakers/tags: ${tags.join(", ")}`, { tags });
 

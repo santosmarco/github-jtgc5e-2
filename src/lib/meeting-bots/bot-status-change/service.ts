@@ -260,12 +260,18 @@ export function createBotStatusChangeService(
         });
 
         const participants = _.uniq(
-          recallBot?.meeting_participants.map(({ name }) => name.trim()) ??
+          (
+            recallBot?.meeting_participants.map(({ name }) => name?.trim()) ??
             ("speakers" in event.data
-              ? /* meeting_baas */ event.data.speakers.map((speaker) =>
-                  speaker.trim(),
-                )
-              : []),
+              ? /* meeting_baas */ (event.data.speakers ?? [])
+                  .concat(
+                    (event.data.transcript ?? []).flatMap(
+                      ({ speaker }) => speaker,
+                    ) ?? [],
+                  )
+                  .map((speaker) => speaker?.trim())
+              : [])
+          ).filter(Boolean),
         );
 
         const { storageUrl, apiVideoId, speakers } = await handleVideoUpload(

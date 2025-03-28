@@ -190,14 +190,15 @@ async function uploadToApiVideo(
   }
 
   const tags = _.uniq(
-    extra?.user_id
+    (extra?.user_id
       ? [
-          ...transcripts.map(({ speaker }) => speaker.trim()),
+          ...transcripts.map(({ speaker }) => speaker?.trim()),
           extra.user_id.startsWith('"')
             ? extra.user_id.slice(1, -1)
             : extra.user_id,
         ]
-      : transcripts.map(({ speaker }) => speaker.trim()),
+      : transcripts.map(({ speaker }) => speaker?.trim())
+    ).filter(isTruthy),
   );
   log.info(`Detected speakers/tags: ${tags.join(", ")}`, { tags });
 
