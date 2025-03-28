@@ -162,7 +162,7 @@ export class TopicSegmentationService extends BackendService {
                   duration_in_seconds: durationInSeconds,
                   name: await getApiVideoTitle(input),
                   provider: input.provider,
-                  speaker: input.profile.nickname,
+                  speaker: input.profile?.nickname,
                 })
                 .select("*")
                 .single();
@@ -466,7 +466,7 @@ async function getApiVideoTitle(
       error,
       bot_id: bot.id,
       profile_id: bot.profile_id,
-      user_email: bot.profile.email,
+      user_email: bot.profile?.email,
     });
 
     return fallbackTitle;

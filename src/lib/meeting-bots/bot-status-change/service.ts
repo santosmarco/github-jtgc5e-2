@@ -28,7 +28,7 @@ export type MeetingBotWithProfileAndEvent = (
   | Tables<"meeting_bots_v2">
   | Tables<"meeting_bots">
 ) & {
-  profile: Tables<"profiles">;
+  profile: Tables<"profiles"> | null;
   event: Tables<"calendar_events_v2"> | Tables<"calendar_events"> | null;
 };
 
@@ -208,14 +208,53 @@ export function createBotStatusChangeService(
               return;
             }
           }
-        } else {
-          logger.error("❌ Failed to find meeting bot", {
-            bot_id: event.data.bot_id,
-          });
-          return;
-        }
 
-        isV2 = false;
+          isV2 = false;
+        } else {
+          const recallBot = await recall.bot
+            .bot_retrieve({
+              params: { id: event.data.bot_id },
+            })
+            .catch((error: unknown) => {
+              logger.warn("⚠️ Failed to fetch bot from Recall", {
+                error,
+                bot_id: event.data.bot_id,
+              });
+              return undefined;
+            });
+
+          if (!recallBot) {
+            logger.error("❌ Meeting bot not found in database or Recall API", {
+              bot_id: event.data.bot_id,
+            });
+            return;
+          }
+
+          ({ data: meetingBot } = await supabase
+            .from("meeting_bots_v2")
+            .insert({
+              id: event.data.bot_id,
+              profile_id: recallBot.metadata?.user_id,
+              provider: "recall",
+              ...(status?.code && { status: status.code }),
+              ...(status?.sub_code && { sub_code: status.sub_code }),
+              ...(status?.message && { message: status.message }),
+              ...(status?.recording_id && {
+                recording_id: status.recording_id,
+              }),
+            })
+            .select(
+              "*, profile:profiles(*), calendar:recall_calendars_v2(*), event:calendar_events_v2(*)",
+            )
+            .single());
+
+          if (!meetingBot) {
+            logger.error("❌ Failed to find meeting bot", {
+              bot_id: event.data.bot_id,
+            });
+            return;
+          }
+        }
       }
 
       logger.info("✅ Successfully updated meeting bot status", {
@@ -231,7 +270,7 @@ export function createBotStatusChangeService(
             error,
             bot_id: event.data.bot_id,
             profile_id: meetingBot.profile_id,
-            user_email: meetingBot.profile.email,
+            user_email: meetingBot.profile?.email,
           });
           return undefined;
         });
@@ -240,7 +279,7 @@ export function createBotStatusChangeService(
         logger.info("✅ Successfully fetched bot from Recall", {
           bot_id: event.data.bot_id,
           profile_id: meetingBot.profile_id,
-          user_email: meetingBot.profile.email,
+          user_email: meetingBot.profile?.email,
           has_video_url: !!recallBot.video_url,
         });
       }
@@ -256,7 +295,7 @@ export function createBotStatusChangeService(
         logger.info("🎥 Starting meeting completion workflow", {
           bot_id: meetingBot.id,
           profile_id: meetingBot.profile_id,
-          user_email: meetingBot.profile.email,
+          user_email: meetingBot.profile?.email,
         });
 
         const participants = _.uniq(
@@ -289,7 +328,7 @@ export function createBotStatusChangeService(
           api_video_id: apiVideoId,
           speakers_count: speakers.length,
           profile_id: meetingBot.profile_id,
-          user_email: meetingBot.profile.email,
+          user_email: meetingBot.profile?.email,
         });
 
         const { error: meetingBotUpdateError } = await supabase
@@ -306,14 +345,14 @@ export function createBotStatusChangeService(
             error: meetingBotUpdateError,
             bot_id: meetingBot.id,
             profile_id: meetingBot.profile_id,
-            user_email: meetingBot.profile.email,
+            user_email: meetingBot.profile?.email,
           });
         }
 
         logger.info("📝 Fetching transcript from Recall", {
           bot_id: meetingBot.id,
           profile_id: meetingBot.profile_id,
-          user_email: meetingBot.profile.email,
+          user_email: meetingBot.profile?.email,
         });
 
         const transcript = await ("transcript" in event.data
@@ -329,7 +368,7 @@ export function createBotStatusChangeService(
                   error,
                   bot_id: meetingBot.id,
                   profile_id: meetingBot.profile_id,
-                  user_email: meetingBot.profile.email,
+                  user_email: meetingBot.profile?.email,
                 });
                 return [];
               }));
@@ -342,7 +381,7 @@ export function createBotStatusChangeService(
           bot_id: meetingBot.id,
           transcript_segments: cleanedTranscript.length,
           profile_id: meetingBot.profile_id,
-          user_email: meetingBot.profile.email,
+          user_email: meetingBot.profile?.email,
         });
 
         await handleTranscript(meetingBot, cleanedTranscript, isV2);
@@ -389,7 +428,7 @@ export function createBotStatusChangeService(
       logger.info("🎥 Starting video upload process", {
         bot_id: bot.id,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
         video_url: videoUrl,
       });
 
@@ -397,7 +436,7 @@ export function createBotStatusChangeService(
         logger.warn("⚠️ Missing video URL for upload", {
           bot_id: bot.id,
           profile_id: bot.profile_id,
-          user_email: bot.profile.email,
+          user_email: bot.profile?.email,
         });
 
         await slack.warn({
@@ -413,7 +452,7 @@ export function createBotStatusChangeService(
       logger.info("🚀 Initiating parallel video uploads", {
         bot_id: bot.id,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
         video_url: videoUrl,
       });
 
@@ -428,7 +467,7 @@ export function createBotStatusChangeService(
         api_video_id: apiVideoId,
         speakers_count: speakers.length,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
       });
 
       return { storageUrl, apiVideoId, speakers };
@@ -444,7 +483,7 @@ export function createBotStatusChangeService(
         error_message: errorMessage,
         bot_id: bot.id,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
       });
       await slack.error({
         text: formatSlackMessage(
@@ -468,7 +507,7 @@ export function createBotStatusChangeService(
         file_name: fileName,
         video_url: videoUrl,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
       });
 
       void uploadVideoToSupabaseStorage.trigger({
@@ -482,7 +521,7 @@ export function createBotStatusChangeService(
         bot_id: bot.id,
         file_name: fileName,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
       });
 
       const storageUrl = `https://db.withtitan.com/storage/v1/object/public/meetings/${fileName}`;
@@ -500,7 +539,7 @@ export function createBotStatusChangeService(
         error_message: errorMessage,
         bot_id: bot.id,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
       });
       await slack.error({
         text: formatSlackMessage(
@@ -521,7 +560,7 @@ export function createBotStatusChangeService(
       logger.info("📤 Starting API.video upload", {
         bot_id: bot.id,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
         video_url: videoUrl,
       });
 
@@ -538,7 +577,7 @@ export function createBotStatusChangeService(
           bot_id: bot.id,
           video_id: existingApiVideos.data[0]?.videoId,
           profile_id: bot.profile_id,
-          user_email: bot.profile.email,
+          user_email: bot.profile?.email,
           videos_count: existingApiVideos.data.length,
         });
 
@@ -559,14 +598,14 @@ export function createBotStatusChangeService(
         speakers: tags,
         speakers_count: tags.length,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
       });
 
       if (tags.length === 0) {
         logger.warn("⚠️ No speakers detected for video upload", {
           bot_id: bot.id,
           profile_id: bot.profile_id,
-          user_email: bot.profile.email,
+          user_email: bot.profile?.email,
           participants,
         });
 
@@ -592,7 +631,7 @@ export function createBotStatusChangeService(
         title,
         description_length: description?.length,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
       });
 
       await slack.info({
@@ -614,7 +653,7 @@ export function createBotStatusChangeService(
         title: video.title,
         tags_count: video.tags?.length ?? 0,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
       });
 
       await slack.success({
@@ -637,7 +676,7 @@ export function createBotStatusChangeService(
         error_message: errorMessage,
         bot_id: bot.id,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
       });
       await slack.error({
         text: formatSlackMessage(
@@ -653,7 +692,7 @@ export function createBotStatusChangeService(
     bot: MeetingBotWithProfileAndEventAndCalendar,
   ) {
     const metadataObject = {
-      user_id: bot.profile.id,
+      user_id: bot.profile?.id,
       event_id: bot.event?.id,
       meeting_bot_id: bot.id,
     } satisfies ApiVideoMetadataObject;
@@ -686,7 +725,7 @@ export function createBotStatusChangeService(
         error,
         bot_id: bot.id,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
       });
       return fallbackTitle;
     }
@@ -707,7 +746,7 @@ export function createBotStatusChangeService(
         error,
         bot_id: bot.id,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
       });
       return undefined;
     }
@@ -720,7 +759,7 @@ export function createBotStatusChangeService(
       logger.warn("⚠️ No API.video ID found for bot", {
         bot_id: bot.id,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
       });
       return;
     }
@@ -736,7 +775,7 @@ export function createBotStatusChangeService(
         error: meetingProcessingStatusInsertError,
         bot_id: bot.id,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
       });
       await slack.error({
         text: formatSlackMessage(
@@ -754,7 +793,7 @@ export function createBotStatusChangeService(
         error: topicSegmentationResult.error,
         bot_id: bot.id,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
       });
       await slack.error({
         text: formatSlackMessage(
@@ -775,7 +814,7 @@ export function createBotStatusChangeService(
           error: meetingProcessingStatusUpdateError,
           bot_id: bot.id,
           profile_id: bot.profile_id,
-          user_email: bot.profile.email,
+          user_email: bot.profile?.email,
         });
         await slack.error({
           text: formatSlackMessage(
@@ -803,7 +842,7 @@ export function createBotStatusChangeService(
         error: meetingProcessingStatusTopicSegmentationUpdateError,
         bot_id: bot.id,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
       });
       await slack.error({
         text: formatSlackMessage(
@@ -824,7 +863,7 @@ export function createBotStatusChangeService(
         error: entityExtractionResult.error,
         bot_id: bot.id,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
       });
       await slack.error({
         text: formatSlackMessage(
@@ -845,7 +884,7 @@ export function createBotStatusChangeService(
           error: meetingProcessingStatusUpdateError,
           bot_id: bot.id,
           profile_id: bot.profile_id,
-          user_email: bot.profile.email,
+          user_email: bot.profile?.email,
         });
         await slack.error({
           text: formatSlackMessage(
@@ -873,7 +912,7 @@ export function createBotStatusChangeService(
         error: meetingProcessingStatusEntityExtractionUpdateError,
         bot_id: bot.id,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
       });
       await slack.error({
         text: formatSlackMessage(
@@ -893,7 +932,7 @@ export function createBotStatusChangeService(
       logger.info("🎬 Starting video processing", {
         bot_id: bot.id,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
       });
 
       await processVideo({
@@ -904,7 +943,7 @@ export function createBotStatusChangeService(
       logger.info("✅ Video processing initiated", {
         bot_id: bot.id,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
       });
     } catch (error) {
       let errorMessage = (error as Error).message;
@@ -918,7 +957,7 @@ export function createBotStatusChangeService(
         error_message: errorMessage,
         bot_id: bot.id,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
       });
       await slack.error({
         text: formatSlackMessage(
@@ -950,7 +989,7 @@ export function createBotStatusChangeService(
     logger.info("📝 Processing transcript", {
       bot_id: bot.id,
       profile_id: bot.profile_id,
-      user_email: bot.profile.email,
+      user_email: bot.profile?.email,
       transcript_length: transcript.length,
       total_words: transcript.reduce(
         (acc, slice) => acc + slice.words.length,
@@ -973,7 +1012,7 @@ export function createBotStatusChangeService(
     logger.info("📦 Backing up existing transcript data", {
       bot_id: bot.id,
       profile_id: bot.profile_id,
-      user_email: bot.profile.email,
+      user_email: bot.profile?.email,
     });
 
     const { data: existingSlices } = await supabase
@@ -990,7 +1029,7 @@ export function createBotStatusChangeService(
     logger.info("🗑️ Deleting existing transcript data", {
       bot_id: bot.id,
       profile_id: bot.profile_id,
-      user_email: bot.profile.email,
+      user_email: bot.profile?.email,
     });
 
     // Delete words first (foreign key constraint)
@@ -1004,7 +1043,7 @@ export function createBotStatusChangeService(
         error: deleteWordsError,
         bot_id: bot.id,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
       });
       await slack.error({
         text: formatSlackMessage(
@@ -1026,7 +1065,7 @@ export function createBotStatusChangeService(
         error: deleteSlicesError,
         bot_id: bot.id,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
       });
 
       // Restore words if slices deletion fails
@@ -1065,7 +1104,7 @@ export function createBotStatusChangeService(
         error: transcriptSlicesError,
         bot_id: bot.id,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
       });
 
       // Restore original data
@@ -1091,7 +1130,7 @@ export function createBotStatusChangeService(
         error,
         bot_id: bot.id,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
         transcript_length: transcript.length,
       });
 
@@ -1115,7 +1154,7 @@ export function createBotStatusChangeService(
     logger.info("✅ Inserted transcript slices", {
       bot_id: bot.id,
       profile_id: bot.profile_id,
-      user_email: bot.profile.email,
+      user_email: bot.profile?.email,
       slices_count: transcriptSlices.length,
       unique_speakers: _.uniq(transcriptSlices.map((s) => s.speaker_name))
         .length,
@@ -1142,7 +1181,7 @@ export function createBotStatusChangeService(
     logger.info("📝 Inserting transcript words", {
       bot_id: bot.id,
       profile_id: bot.profile_id,
-      user_email: bot.profile.email,
+      user_email: bot.profile?.email,
       words_count: words.length,
     });
 
@@ -1153,7 +1192,7 @@ export function createBotStatusChangeService(
         error: wordsError,
         bot_id: bot.id,
         profile_id: bot.profile_id,
-        user_email: bot.profile.email,
+        user_email: bot.profile?.email,
         words_count: words.length,
       });
 
@@ -1181,7 +1220,7 @@ export function createBotStatusChangeService(
     logger.info("✨ Successfully processed transcript", {
       bot_id: bot.id,
       profile_id: bot.profile_id,
-      user_email: bot.profile.email,
+      user_email: bot.profile?.email,
       slices_count: transcriptSlices.length,
       words_count: words.length,
       unique_speakers: _.uniq(transcriptSlices.map((s) => s.speaker_name))
@@ -1189,7 +1228,7 @@ export function createBotStatusChangeService(
     });
 
     await slack.success({
-      text: `[${bot.profile.email}] Successfully processed transcript with ${transcriptSlices.length} slices and ${words.length} words`,
+      text: `[${bot.profile?.email}] Successfully processed transcript with ${transcriptSlices.length} slices and ${words.length} words`,
     });
   }
 
@@ -1202,8 +1241,8 @@ export function createBotStatusChangeService(
         ? "🎥 GMeet"
         : bot.event?.meeting_platform === "zoom"
           ? "🎥 Zoom"
-          : "🎥 Unknown",
-      `*User:* \`${bot.profile.email}\``,
+          : `🎥 ${_.startCase(bot.event?.meeting_platform ?? "Unknown")}`,
+      `*User:* \`${bot.profile?.email}\``,
       `*Bot:* <https://supabase.com/dashboard/project/gukeqqpzhaignmhdduma/editor/289720?schema=${encodeURIComponent("public")}&filter=${encodeURIComponent(`id:eq:${bot.id}`)}|${bot.id}>`,
       bot.event &&
         `*Event:* <https://supabase.com/dashboard/project/gukeqqpzhaignmhdduma/editor/287060?schema=${encodeURIComponent("public")}&filter=${encodeURIComponent(`id:eq:${bot.event.id}`)}|${bot.event.id}>`,
