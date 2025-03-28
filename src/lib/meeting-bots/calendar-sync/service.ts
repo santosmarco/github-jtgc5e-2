@@ -573,17 +573,7 @@ export function createCalendarSyncService(
 
         if (
           user?.app_metadata.recall_zoom_oauth_credential &&
-          (user?.email?.includes("zoom") || // remove after zoom app approval
-            !z
-              .object({
-                extendedProperties: z.object({
-                  shared: z.object({
-                    meetingId: z.string(),
-                    zmMeetingNum: z.string(),
-                  }),
-                }),
-              })
-              .safeParse(event.raw).success)
+          user?.email?.includes("zoom")
         ) {
           logger.info("🔑 User has Zoom integration", {
             user_id: user.id,
