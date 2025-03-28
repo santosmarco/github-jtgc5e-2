@@ -4,6 +4,7 @@ import {
   BotOff,
   CheckCircle2,
   Clock,
+  Loader2,
   type LucideIcon,
 } from "lucide-react";
 import type { RouterOutputs } from "~/trpc/react";
@@ -21,6 +22,7 @@ export type BotStatusVariant =
 export type BotStatusInfoStyles = {
   border: string;
   text: string;
+  icon?: string;
 };
 
 export type BotStatusInfo = {
@@ -35,8 +37,18 @@ type StatusInfoFactoryArgs = {
   success: [];
   warning: [message: string];
   error: [message: string];
-  primary: [badge: string, message: string, icon?: LucideIcon];
-  muted: [badge: string, message: string, icon?: LucideIcon];
+  primary: [
+    badge: string,
+    message: string | null,
+    icon?: LucideIcon,
+    styles?: Partial<BotStatusInfoStyles>,
+  ];
+  muted: [
+    badge: string,
+    message: string | null,
+    icon?: LucideIcon,
+    styles?: Partial<BotStatusInfoStyles>,
+  ];
 };
 
 const statusInfoFactories = {
@@ -61,19 +73,37 @@ const statusInfoFactories = {
     icon: BotOff,
     styles: { border: "border-destructive/40", text: "text-destructive" },
   }),
-  primary: (badge: string, message: string, icon = Clock): BotStatusInfo => ({
+  primary: (
+    badge: string,
+    message: string | null,
+    icon = Clock,
+    styles?: Partial<BotStatusInfoStyles>,
+  ): BotStatusInfo => ({
     variant: "primary",
     badge,
     message,
     icon,
-    styles: { border: "border-primary/40", text: "text-primary" },
+    styles: {
+      border: "border-primary/60",
+      text: "text-primary",
+      ...styles,
+    },
   }),
-  muted: (badge: string, message: string, icon = Bot): BotStatusInfo => ({
+  muted: (
+    badge: string,
+    message: string | null,
+    icon = Bot,
+    styles?: Partial<BotStatusInfoStyles>,
+  ): BotStatusInfo => ({
     variant: "muted",
     badge,
     message,
     icon,
-    styles: { border: "border-border", text: "text-muted-foreground" },
+    styles: {
+      border: "border-border",
+      text: "text-muted-foreground",
+      ...styles,
+    },
   }),
 } satisfies {
   [K in BotStatusVariant]: (...args: StatusInfoFactoryArgs[K]) => BotStatusInfo;
@@ -192,6 +222,24 @@ export function getBotStatusInfo(
     if (status) return status;
   }
 
+  if (meetingBot.status === "in_waiting_room") {
+    return statusInfoFactories.primary("In waiting room", null);
+  }
+
+  if (meetingBot.status === "in_waiting_for_host") {
+    return statusInfoFactories.primary("Waiting for host", null);
+  }
+
+  if (
+    meetingBot.status === "joining_call" ||
+    meetingBot.status === "in_call_recording" ||
+    meetingBot.status === "in_call_not_recording"
+  ) {
+    return statusInfoFactories.primary("Joining call", null, Loader2, {
+      icon: "animate-spin",
+    });
+  }
+
   // Default case for unknown subcodes
   return statusInfoFactories.muted(
     "Unknown",
@@ -199,6 +247,8 @@ export function getBotStatusInfo(
       ? `Unknown status: ${meetingBot.sub_code}`
       : meetingBot.error_code
         ? `Unknown status: ${meetingBot.error_code}`
-        : "Unknown status",
+        : meetingBot.status
+          ? `Unknown status: ${meetingBot.status}`
+          : "Unknown status",
   );
 }

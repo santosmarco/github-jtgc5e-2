@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Calendar } from "lucide-react";
+import { Calendar, ClockArrowDownIcon } from "lucide-react";
 import * as React from "react";
 
 import {
@@ -292,7 +292,7 @@ export function CalendarView({
                     custom={index}
                     className="rounded-lg"
                   >
-                    <MeetingEntry event={event} />
+                    <MeetingEntry event={event} isNow={true} />
                   </motion.div>
                 ))}
               </motion.div>
@@ -312,7 +312,7 @@ export function CalendarView({
                 variants={headerVariants}
               >
                 <Calendar className="h-4 w-4" />
-                <span>Today's Upcoming</span>
+                <span>Upcoming Today</span>
               </motion.div>
               <motion.div className="space-y-4">
                 {upcomingTodayEvents.map((event, index) => (
@@ -334,11 +334,17 @@ export function CalendarView({
             (shouldCollapseCompleted ? (
               <Collapsible className="space-y-4">
                 <CollapsibleTrigger className="w-full">
-                  <div className="flex items-center justify-between text-sm font-medium text-muted-foreground">
-                    <div className="flex items-center gap-3">
-                      <Calendar className="h-4 w-4" />
-                      <span>Today's Completed ({pastTodayEvents.length})</span>
-                    </div>
+                  <motion.div
+                    className="flex items-center justify-between text-sm font-medium text-muted-foreground"
+                    variants={sectionVariants}
+                  >
+                    <motion.div
+                      className="flex items-center gap-3"
+                      variants={headerVariants}
+                    >
+                      <ClockArrowDownIcon className="h-4 w-4" />
+                      <span>Earlier Today ({pastTodayEvents.length})</span>
+                    </motion.div>
                     <svg
                       width="16"
                       height="16"
@@ -346,7 +352,9 @@ export function CalendarView({
                       fill="none"
                       xmlns="http://www.w3.org/2000/svg"
                       className="ui-open:rotate-180 h-4 w-4 transition-transform"
+                      aria-hidden="true"
                     >
+                      <title>Expand section</title>
                       <path
                         d="M4 6L8 10L12 6"
                         stroke="currentColor"
@@ -355,7 +363,7 @@ export function CalendarView({
                         strokeLinejoin="round"
                       />
                     </svg>
-                  </div>
+                  </motion.div>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <div className="space-y-4">

@@ -2,13 +2,14 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import _ from "lodash";
-import { Info, Video, VideoOff } from "lucide-react";
+import { ArrowRight, Info, Video, VideoOff } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
 import { Switch } from "~/components/ui/switch";
 import {
   Tooltip,
@@ -21,6 +22,7 @@ import { type RouterOutputs, api } from "~/trpc/react";
 
 interface MeetingEntryProps {
   event: RouterOutputs["calendar"]["getCalendarEvents"][number];
+  isNow?: boolean;
 }
 
 interface BotStatusDetails {
@@ -60,7 +62,30 @@ const itemVariants = {
   },
 };
 
-export function MeetingEntry({ event }: MeetingEntryProps) {
+const buttonVariants = {
+  hidden: { opacity: 0, scale: 0.8 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    transition: {
+      type: "spring",
+      damping: 25,
+      stiffness: 300,
+      delay: 0.2,
+    },
+  },
+  hover: {
+    scale: 1.05,
+    transition: {
+      type: "spring",
+      damping: 15,
+      stiffness: 400,
+    },
+  },
+  tap: { scale: 0.95 },
+};
+
+export function MeetingEntry({ event, isNow = false }: MeetingEntryProps) {
   const [tag, setTag] = React.useState("");
   const hasMeetingUrl = !!event.meeting_url;
   const isInPast = event.start_time
@@ -277,6 +302,28 @@ export function MeetingEntry({ event }: MeetingEntryProps) {
     isInPast,
   );
 
+  // Add bot mutation
+  const addBotMutation = api.calendar.launchMeetingBot.useMutation({
+    onSuccess: () => {
+      toast.success("Bot added to meeting successfully");
+      void utils.calendar.getCalendarEvents.invalidate();
+    },
+    onError: (error) => {
+      toast.error(`Failed to add bot: ${error.message}`);
+    },
+  });
+
+  // Handle add bot
+  const handleAddBot = () => {
+    if (event.id && event.profile_id && event.meeting_url && event.summary) {
+      addBotMutation.mutate({
+        profileId: event.profile_id,
+        meetingUrl: event.meeting_url,
+        meetingTitle: event.summary,
+      });
+    }
+  };
+
   // If no meeting URL, render a minimalist version
   if (!hasMeetingUrl) {
     return (
@@ -308,12 +355,47 @@ export function MeetingEntry({ event }: MeetingEntryProps) {
     <Tooltip>
       <TooltipTrigger asChild>
         <motion.div
-          className="overflow-hidden rounded-lg border p-4"
+          className={cn(
+            "relative overflow-hidden rounded-lg border p-4",
+            isNow &&
+              {
+                primary: "border-primary/30 bg-primary/5",
+                warning: "border-yellow-500/30 bg-yellow-500/5",
+                error: "border-destructive/30 bg-destructive/5",
+                muted: "border-border bg-background",
+                success: "border-emerald-500/30 bg-emerald-500/5",
+              }[botStatusDetails.variant],
+          )}
           variants={cardVariants}
           initial="hidden"
           animate="visible"
           {...(prefersReducedMotion ? { transition: { duration: 0 } } : {})}
         >
+          {isNow && (
+            <motion.div
+              className={cn(
+                "absolute inset-0 bg-gradient-to-r",
+                {
+                  primary: "from-transparent via-transparent to-primary/10",
+                  warning: "from-transparent via-transparent to-yellow-500/10",
+                  error: "from-transparent via-transparent to-destructive/10",
+                  muted: "from-transparent via-transparent to-border",
+                  success: "from-transparent via-transparent to-emerald-500/10",
+                }[botStatusDetails.variant],
+              )}
+              initial={{ x: "-100%" }}
+              animate={{
+                x: "100%",
+                transition: {
+                  duration: 3,
+                  ease: "linear",
+                  repeat: Number.POSITIVE_INFINITY,
+                  repeatDelay: 1,
+                },
+              }}
+            />
+          )}
+
           <div>
             <motion.div
               className="flex items-center justify-between gap-2"
@@ -375,17 +457,17 @@ export function MeetingEntry({ event }: MeetingEntryProps) {
                     >
                       <Tooltip
                         open={
-                          botStatusDetails.badge === "Completed" ||
-                          botStatusDetails.badge === "Ended"
-                            ? false
-                            : undefined
+                          botStatusDetails.message === null ? false : undefined
                         }
                       >
                         <TooltipTrigger className="flex items-center">
                           <Badge
                             variant="outline"
                             className={cn(
-                              "cursor-help rounded-sm px-2 text-[10px]",
+                              "rounded-sm px-2 text-[10px]",
+                              botStatusDetails.message
+                                ? "cursor-help"
+                                : "cursor-default",
                               botStatusDetails.styles.border,
                             )}
                           >
@@ -450,6 +532,41 @@ export function MeetingEntry({ event }: MeetingEntryProps) {
                     </label>
                   </div>
                 )}
+                {isNow &&
+                  !event.meeting_bot?.api_video_id &&
+                  botStatusDetails.variant !== "primary" && (
+                    <motion.div
+                      variants={buttonVariants}
+                      initial="hidden"
+                      animate="visible"
+                      whileTap="tap"
+                      className="flex h-6 items-center justify-center gap-2 text-xs font-medium"
+                    >
+                      <Button
+                        onClick={handleAddBot}
+                        disabled={addBotMutation.isPending}
+                        size="sm"
+                        className={cn(
+                          "flex h-full items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90",
+                          {
+                            warning:
+                              "border-yellow-500 bg-yellow-500/5 text-yellow-500 hover:bg-yellow-500/10",
+                            error:
+                              "border-destructive bg-destructive/5 text-destructive hover:bg-destructive/10",
+                            muted:
+                              "border-border bg-background text-muted-foreground hover:bg-background",
+                            success:
+                              "border-emerald-500 bg-emerald-500/5 text-emerald-500 hover:bg-emerald-500/10",
+                          }[botStatusDetails.variant],
+                        )}
+                      >
+                        {addBotMutation.isPending
+                          ? "Adding bot..."
+                          : "Add bot to meeting"}
+                        <ArrowRight className="!h-3.5 !w-3.5" />
+                      </Button>
+                    </motion.div>
+                  )}
                 {event.meeting_bot?.api_video_id && (
                   <Link
                     href={`/videos/${event.meeting_bot.api_video_id}`}
@@ -457,7 +574,7 @@ export function MeetingEntry({ event }: MeetingEntryProps) {
                       "flex items-center gap-2 rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90",
                     )}
                   >
-                    <Video className="h-3 w-3" />
+                    <Video className="h-3.5 w-3.5" />
                     See recording
                   </Link>
                 )}
