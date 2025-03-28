@@ -9,6 +9,7 @@ import type { Tables, TablesInsert } from "~/lib/supabase/database.types";
 import { entityExtraction } from "~/jobs/preprocessing/steps/entity-extraction";
 import { topicSegmentation } from "~/jobs/preprocessing/steps/topic-segmentation";
 import { Vtt } from "~/lib/backend/services/vtt/vtt.service";
+import { isTruthy } from "~/lib/utils";
 import type {
   MeetingBaasCompleteEventData,
   ProviderAgnosticBotStatusChangeEvent,
@@ -786,7 +787,16 @@ export function createBotStatusChangeService(
       return;
     }
 
-    const topicSegmentationResult = await topicSegmentation.triggerAndWait(bot);
+    const topicSegmentationResult = await topicSegmentation.triggerAndWait(
+      bot,
+      {
+        tags: [
+          `bot_id:${bot.id}`,
+          bot.profile_id && `profile_id:${bot.profile_id}`,
+          `video_id:${bot.api_video_id}`,
+        ].filter(isTruthy),
+      },
+    );
 
     if (!topicSegmentationResult.ok) {
       logger.error("❌ Failed to segment topics", {
@@ -854,10 +864,18 @@ export function createBotStatusChangeService(
       return;
     }
 
-    const entityExtractionResult = await entityExtraction.triggerAndWait({
-      api_video_id: bot.api_video_id,
-    });
-
+    const entityExtractionResult = await entityExtraction.triggerAndWait(
+      {
+        api_video_id: bot.api_video_id,
+      },
+      {
+        tags: [
+          `bot_id:${bot.id}`,
+          bot.profile_id && `profile_id:${bot.profile_id}`,
+          `video_id:${bot.api_video_id}`,
+        ].filter(isTruthy),
+      },
+    );
     if (!entityExtractionResult.ok) {
       logger.error("❌ Failed to extract entities", {
         error: entityExtractionResult.error,
