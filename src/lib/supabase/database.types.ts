@@ -1181,14 +1181,14 @@ export type Database = {
         Row: {
           api_video_id: string | null
           created_at: string
-          deduplication_key: string
+          deduplication_key: string | null
           error_code: string | null
           event_id: string | null
           id: string
           is_removed: boolean
           message: string | null
           mp4_source_url: string | null
-          profile_id: string
+          profile_id: string | null
           provider: Database["public"]["Enums"]["meeting_bots_provider_enum"]
           raw_data: Json | null
           recall_calendar_id: string | null
@@ -1201,14 +1201,14 @@ export type Database = {
         Insert: {
           api_video_id?: string | null
           created_at?: string
-          deduplication_key: string
+          deduplication_key?: string | null
           error_code?: string | null
           event_id?: string | null
           id: string
           is_removed?: boolean
           message?: string | null
           mp4_source_url?: string | null
-          profile_id: string
+          profile_id?: string | null
           provider: Database["public"]["Enums"]["meeting_bots_provider_enum"]
           raw_data?: Json | null
           recall_calendar_id?: string | null
@@ -1221,14 +1221,14 @@ export type Database = {
         Update: {
           api_video_id?: string | null
           created_at?: string
-          deduplication_key?: string
+          deduplication_key?: string | null
           error_code?: string | null
           event_id?: string | null
           id?: string
           is_removed?: boolean
           message?: string | null
           mp4_source_url?: string | null
-          profile_id?: string
+          profile_id?: string | null
           provider?: Database["public"]["Enums"]["meeting_bots_provider_enum"]
           raw_data?: Json | null
           recall_calendar_id?: string | null
@@ -2594,14 +2594,14 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "observations_profile_id_fkey"
+            foreignKeyName: "observation_prompts_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "meetings_with_profile"
             referencedColumns: ["profile_id"]
           },
           {
-            foreignKeyName: "observations_profile_id_fkey"
+            foreignKeyName: "observation_prompts_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
