@@ -1,18 +1,8 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import _ from "lodash";
-import {
-  AlertCircle,
-  Bot,
-  BotOff,
-  CheckCircle2,
-  Clock,
-  Info,
-  Loader2,
-  Video,
-  VideoOff,
-} from "lucide-react";
+import { Info, Video, VideoOff } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
@@ -25,6 +15,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
+import { getBotStatusInfo } from "~/lib/meeting-bots/status";
 import { cn } from "~/lib/utils";
 import { type RouterOutputs, api } from "~/trpc/react";
 
@@ -41,7 +32,7 @@ interface BotStatusDetails {
 
 // Animation variants
 const cardVariants = {
-  hidden: { opacity: 0, y: 10, scale: 0.98 },
+  hidden: { opacity: 0, y: 5, scale: 0.98 },
   visible: {
     opacity: 1,
     y: 0,
@@ -49,219 +40,24 @@ const cardVariants = {
     transition: {
       type: "spring",
       damping: 25,
-      stiffness: 120,
-      staggerChildren: 0.07,
-      delayChildren: 0.05,
+      stiffness: 300,
+      staggerChildren: 0.05,
+      delayChildren: 0.02,
     },
   },
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 5 },
+  hidden: { opacity: 0, y: 3 },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
       type: "spring",
-      damping: 30,
-      stiffness: 200,
+      damping: 25,
+      stiffness: 300,
     },
   },
-};
-
-const getBotStatusDetails = (
-  meetingBot: RouterOutputs["calendar"]["getCalendarEvents"][number]["meeting_bot"],
-  shouldJoin: boolean,
-): BotStatusDetails => {
-  // Default state when bot should not join
-  if (!shouldJoin) {
-    return {
-      border: "border-border",
-      message: "Bot is not configured to join this meeting",
-      icon: <Bot className="h-3.5 w-3.5 text-muted-foreground" />,
-      badge: "Disabled",
-    };
-  }
-
-  if (!meetingBot) {
-    return {
-      border: "border-border",
-      message: "Waiting to start",
-      icon: <Clock className="h-3.5 w-3.5 text-muted-foreground" />,
-      badge: "Pending",
-    };
-  }
-
-  // Handle each status
-  switch (meetingBot.status) {
-    case "in_call_recording":
-      return {
-        border: "border-emerald-500/40",
-        message: "Recording in progress",
-        icon: <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />,
-        badge: "Recording",
-      };
-
-    case "in_call_not_recording":
-      return {
-        border: "border-yellow-500/40",
-        message: meetingBot.error_code
-          ? `Not recording: ${meetingBot.error_code}`
-          : "In call but not recording",
-        icon: <AlertCircle className="h-3.5 w-3.5 text-yellow-500" />,
-        badge: "Not Recording",
-      };
-
-    case "in_waiting_room":
-      return {
-        border: "border-primary/40",
-        message: meetingBot.error_code
-          ? `Waiting in lobby: ${meetingBot.error_code}`
-          : "Waiting in lobby",
-        icon: <Clock className="h-3.5 w-3.5 text-primary" />,
-        badge: "In Lobby",
-      };
-
-    case "in_waiting_for_host":
-      return {
-        border: "border-primary/40",
-        message: meetingBot.error_code
-          ? `Waiting for host: ${meetingBot.error_code}`
-          : "Waiting for host",
-        icon: <Clock className="h-3.5 w-3.5 text-primary" />,
-        badge: "Waiting Host",
-      };
-
-    case "joining_call":
-      if (meetingBot.error_code || meetingBot.sub_code) {
-        return {
-          border: "border-yellow-500/40",
-          message: meetingBot.error_code
-            ? `Issue joining: ${meetingBot.error_code}`
-            : meetingBot.sub_code
-              ? `Issue joining: ${formatSubCode(meetingBot.sub_code)}`
-              : "Issue joining meeting",
-          icon: <AlertCircle className="h-3.5 w-3.5 text-yellow-500" />,
-          badge: "Join Issue",
-        };
-      }
-      return {
-        border: "border-primary/40",
-        message: "Joining meeting",
-        icon: <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />,
-        badge: "Joining",
-      };
-
-    case "fatal":
-      // Handle specific fatal cases
-      if (
-        meetingBot.sub_code === "meeting_not_found" ||
-        meetingBot.error_code?.includes("MeetingNotExist") ||
-        meetingBot.error_code?.includes("MeetingOver")
-      ) {
-        return {
-          border: "border-destructive/40",
-          message: "Meeting no longer exists or has ended",
-          icon: <BotOff className="h-3.5 w-3.5 text-destructive" />,
-          badge: "Not Found",
-        };
-      }
-
-      // Handle warning-level errors
-      if (
-        meetingBot.error_code ===
-          "The meeting ended before the bot could participate" ||
-        meetingBot.error_code === "Waiting for host timeout"
-      ) {
-        return {
-          border: "border-yellow-500/40",
-          message:
-            meetingBot.error_code === "Waiting for host timeout"
-              ? "Host did not join the meeting"
-              : "Meeting ended before bot could join",
-          icon: <AlertCircle className="h-3.5 w-3.5 text-yellow-500" />,
-          badge: "Skipped",
-        };
-      }
-
-      if (
-        meetingBot.error_code?.includes("Recording rights not granted") ||
-        meetingBot.error_code?.includes("setting enabled for recording")
-      ) {
-        return {
-          border: "border-yellow-500/40",
-          message: "Recording permission denied",
-          icon: <AlertCircle className="h-3.5 w-3.5 text-yellow-500" />,
-          badge: "No Permission",
-        };
-      }
-      if (meetingBot.sub_code === "zoom_sdk_app_not_published") {
-        return {
-          border: "border-destructive/40",
-          message: "Zoom app configuration issue",
-          icon: <BotOff className="h-3.5 w-3.5 text-destructive" />,
-          badge: "Config Error",
-        };
-      }
-      return {
-        border: "border-destructive/40",
-        message:
-          meetingBot.error_code || meetingBot.sub_code
-            ? `Error: ${meetingBot.error_code || (meetingBot.sub_code ? formatSubCode(meetingBot.sub_code) : "Unknown")}`
-            : "Fatal error occurred",
-        icon: <BotOff className="h-3.5 w-3.5 text-destructive" />,
-        badge: "Error",
-      };
-
-    case "done":
-    case "call_ended":
-      // Handle different completion scenarios
-      if (
-        meetingBot.sub_code === "timeout_exceeded_max_duration" ||
-        meetingBot.sub_code === "bot_kicked_from_call"
-      ) {
-        return {
-          border: "border-yellow-500/40",
-          message: formatSubCode(meetingBot.sub_code),
-          icon: <AlertCircle className="h-3.5 w-3.5 text-yellow-500" />,
-          badge: "Partial",
-        };
-      }
-      if (
-        meetingBot.sub_code?.includes("timeout_exceeded") ||
-        meetingBot.sub_code?.includes("bot_kicked")
-      ) {
-        return {
-          border: "border-emerald-500/40",
-          message: formatSubCode(meetingBot.sub_code),
-          icon: <Bot className="h-3.5 w-3.5 text-emerald-500" />,
-          badge: "Completed",
-        };
-      }
-      return {
-        border: "border-emerald-500/40",
-        message: meetingBot.sub_code
-          ? formatSubCode(meetingBot.sub_code)
-          : "Meeting ended",
-        icon: <Bot className="h-3.5 w-3.5 text-emerald-500" />,
-        badge: "Ended",
-      };
-
-    default:
-      return {
-        border: "border-border",
-        message: "Scheduled",
-        icon: <Bot className="h-3.5 w-3.5 text-muted-foreground" />,
-        badge: "Scheduled",
-      };
-  }
-};
-
-const formatSubCode = (subCode: string): string => {
-  return subCode
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
 };
 
 export function MeetingEntry({ event }: MeetingEntryProps) {
@@ -272,6 +68,7 @@ export function MeetingEntry({ event }: MeetingEntryProps) {
     : false;
 
   const utils = api.useUtils();
+  const prefersReducedMotion = useReducedMotion();
 
   console.log(event);
 
@@ -474,7 +271,11 @@ export function MeetingEntry({ event }: MeetingEntryProps) {
     return <Video className="h-4 w-4" />;
   };
 
-  const botStatusDetails = getBotStatusDetails(event.meeting_bot, shouldJoin);
+  const botStatusDetails = getBotStatusInfo(
+    event.meeting_bot,
+    shouldJoin,
+    isInPast,
+  );
 
   // If no meeting URL, render a minimalist version
   if (!hasMeetingUrl) {
@@ -511,6 +312,7 @@ export function MeetingEntry({ event }: MeetingEntryProps) {
           variants={cardVariants}
           initial="hidden"
           animate="visible"
+          {...(prefersReducedMotion ? { transition: { duration: 0 } } : {})}
         >
           <div>
             <motion.div
@@ -571,17 +373,29 @@ export function MeetingEntry({ event }: MeetingEntryProps) {
                       }}
                       className="flex items-center gap-2"
                     >
-                      <Tooltip>
+                      <Tooltip
+                        open={
+                          botStatusDetails.badge === "Completed" ||
+                          botStatusDetails.badge === "Ended"
+                            ? false
+                            : undefined
+                        }
+                      >
                         <TooltipTrigger className="flex items-center">
                           <Badge
                             variant="outline"
                             className={cn(
                               "cursor-help rounded-sm px-2 text-[10px]",
-                              botStatusDetails.border,
+                              botStatusDetails.styles.border,
                             )}
                           >
                             <span className="flex items-center gap-1">
-                              {botStatusDetails.icon}
+                              <botStatusDetails.icon
+                                className={cn(
+                                  "h-3 w-3",
+                                  botStatusDetails.styles.text,
+                                )}
+                              />
                               {botStatusDetails.badge}
                             </span>
                           </Badge>
@@ -594,11 +408,6 @@ export function MeetingEntry({ event }: MeetingEntryProps) {
                             <p className="text-xs font-medium">
                               {botStatusDetails.message}
                             </p>
-                            {event.meeting_bot?.sub_code && (
-                              <p className="text-[10px] text-muted-foreground">
-                                {formatSubCode(event.meeting_bot.sub_code)}
-                              </p>
-                            )}
                           </div>
                         </TooltipContent>
                       </Tooltip>

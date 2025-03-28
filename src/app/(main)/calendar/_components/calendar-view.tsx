@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Calendar } from "lucide-react";
 import * as React from "react";
 
@@ -37,30 +37,29 @@ const containerVariants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.15,
+      staggerChildren: 0.05,
       when: "beforeChildren",
     },
   },
 };
 
 const sectionVariants = {
-  hidden: { opacity: 0, y: 15 },
+  hidden: { opacity: 0, y: 10 },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
       type: "spring",
-      damping: 20,
-      stiffness: 100,
-      staggerChildren: 0.08,
+      damping: 25,
+      stiffness: 300,
+      staggerChildren: 0.05,
       when: "beforeChildren",
     },
   },
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 10, scale: 0.98 },
+  hidden: { opacity: 0, y: 5, scale: 0.98 },
   visible: {
     opacity: 1,
     y: 0,
@@ -68,20 +67,20 @@ const itemVariants = {
     transition: {
       type: "spring",
       damping: 25,
-      stiffness: 120,
+      stiffness: 300,
     },
   },
 };
 
 const headerVariants = {
-  hidden: { opacity: 0, x: -10 },
+  hidden: { opacity: 0, x: -5 },
   visible: {
     opacity: 1,
     x: 0,
     transition: {
       type: "spring",
       damping: 25,
-      stiffness: 200,
+      stiffness: 300,
     },
   },
 };
@@ -91,6 +90,8 @@ export function CalendarView({
   isLoading,
   selectedDate,
 }: CalendarViewProps) {
+  const prefersReducedMotion = useReducedMotion();
+
   // Create refs for each section
   const selectedDateSectionRef = React.useRef<HTMLElement>(null);
   const nowSectionRef = React.useRef<HTMLElement>(null);
@@ -182,41 +183,6 @@ export function CalendarView({
   const shouldCollapseCompleted =
     nowEvents.length > 0 || upcomingTodayEvents.length > 0;
 
-  // Scroll to the appropriate section when selectedDate changes
-  React.useEffect(() => {
-    if (!selectedDate) return;
-
-    const selectedDateStr = selectedDate.toDateString();
-    const today = new Date();
-    const tomorrow = new Date();
-    tomorrow.setDate(today.getDate() + 1);
-
-    // Determine which section to scroll to
-    if (isSelectedDatePast) {
-      selectedDateSectionRef.current?.scrollIntoView({ behavior: "smooth" });
-    } else if (selectedDateStr === today.toDateString()) {
-      if (nowEvents.length > 0) {
-        nowSectionRef.current?.scrollIntoView({ behavior: "smooth" });
-      } else {
-        todaySectionRef.current?.scrollIntoView({ behavior: "smooth" });
-      }
-    } else if (selectedDateStr === tomorrow.toDateString()) {
-      tomorrowSectionRef.current?.scrollIntoView({ behavior: "smooth" });
-    } else {
-      try {
-        const formattedDate = selectedDate.toISOString().split("T")[0];
-        const sectionRef = formattedDate
-          ? futureSectionRefs.current[formattedDate]
-          : null;
-        if (sectionRef) {
-          sectionRef.scrollIntoView({ behavior: "smooth" });
-        }
-      } catch (error) {
-        console.error("Error scrolling to date section:", error);
-      }
-    }
-  }, [selectedDate, nowEvents.length, isSelectedDatePast]);
-
   if (isLoading) {
     return (
       <motion.div
@@ -266,6 +232,7 @@ export function CalendarView({
       variants={containerVariants}
       initial="hidden"
       animate="visible"
+      {...(prefersReducedMotion ? { transition: { duration: 0 } } : {})}
     >
       {/* Selected Past Date Section */}
       {isSelectedDatePast && selectedDateEvents.length > 0 && (

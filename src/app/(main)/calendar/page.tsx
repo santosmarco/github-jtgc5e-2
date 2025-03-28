@@ -5,6 +5,7 @@ import _ from "lodash";
 import { Calendar as CalendarIcon, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { useReducedMotion } from "framer-motion";
 
 import { Button } from "~/components/ui/button";
 import { useProfile } from "~/hooks/use-profile";
@@ -20,39 +21,39 @@ const containerVariants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2,
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+      ease: "easeOut",
+      duration: 0.3,
     },
   },
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 10 },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.6,
-      ease: "easeOut",
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1],
     },
   },
 };
 
 const headerIconVariants = {
-  hidden: { scale: 0.8, opacity: 0, rotate: -10 },
+  hidden: { scale: 0.9, opacity: 0 },
   visible: {
     scale: 1,
     opacity: 1,
-    rotate: 0,
     transition: {
       type: "spring",
-      stiffness: 260,
-      damping: 20,
+      stiffness: 300,
+      damping: 25,
     },
   },
   hover: {
-    scale: 1.1,
-    rotate: 5,
+    scale: 1.05,
     transition: {
       type: "spring",
       stiffness: 400,
@@ -161,12 +162,16 @@ export default function CalendarPage(): JSX.Element {
   // Only block UI on future events loading
   const isLoading = isLoadingFuture;
 
+  // Inside the component, add reduced motion support
+  const prefersReducedMotion = useReducedMotion();
+
   return (
     <motion.div
       variants={containerVariants}
       initial="hidden"
       animate="visible"
       className="-mx-12 -mt-12 min-h-screen space-y-8"
+      {...(prefersReducedMotion ? { transition: { duration: 0 } } : {})}
     >
       <AnimatePresence>
         {isLoadingPast && <PastEventsLoader isLoading={isLoadingPast} />}
