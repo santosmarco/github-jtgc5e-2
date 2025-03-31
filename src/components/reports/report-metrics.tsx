@@ -18,9 +18,9 @@ export function ReportMetrics({ metrics, selectedTab }: ReportMetricsProps) {
       {metrics.map((metric) => {
         const isHighlighted =
           selectedTab === "positive"
-            ? metric.value < 50
+            ? metric.value <= 50
             : selectedTab === "negative"
-              ? metric.value >= 50
+              ? metric.value > 50
               : false;
 
         return (
@@ -64,9 +64,9 @@ export function ReportMetrics({ metrics, selectedTab }: ReportMetricsProps) {
                     ? "scale-125 bg-primary"
                     : isHighlighted && selectedTab === "negative"
                       ? "scale-125 bg-amber-500"
-                      : metric.value < 50
-                        ? "bg-amber-500/60"
-                        : "bg-primary/60",
+                      : metric.value <= 50
+                        ? "bg-primary/60"
+                        : "bg-amber-500/60",
                 )}
                 style={{ left: `${100 - metric.value}%` }}
               />

@@ -1,38 +1,30 @@
 "use client";
 
 import dayjs from "dayjs";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion, useSpring } from "framer-motion";
 import _ from "lodash";
 import type { LucideProps } from "lucide-react";
 import {
-  ArrowRight,
-  CalendarCheck,
-  Check,
-  CheckCircle2,
-  ClipboardCheck,
-  Clock,
-  TrendingUp,
   AlertTriangle,
-  FileWarning,
+  ArrowRight,
+  CheckCircle2,
+  Clock,
   Eye,
-  CheckCheckIcon,
+  FileWarning,
+  Loader2,
+  Trophy,
 } from "lucide-react";
 import dynamic from "next/dynamic";
-import React, { useMemo } from "react";
+import { useRouter } from "next/navigation";
+import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "~/components/ui/badge";
-import { Card } from "~/components/ui/card";
+import { Button } from "~/components/ui/button";
+import { Switch } from "~/components/ui/switch";
+import { transformMoment } from "~/lib/db/moments";
 import { cn } from "~/lib/utils";
 import { type RouterOutputs, api } from "~/trpc/react";
-import { SkillProgressCard } from "./goal-progress-card";
 
-export type SkillCardProps = {
-  skill: RouterOutputs["skills"]["getAllSkills"][number];
-  profileId: string;
-  onSkillEnabled?: () => void;
-};
-
-// Refined animations for a more elegant feel
+// Enhanced animations
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: {
@@ -48,60 +40,66 @@ const cardVariants = {
   },
 };
 
-const itemVariants = {
-  hidden: { opacity: 0, x: -10 },
+const gaugeVariants = {
+  hidden: { opacity: 0, scale: 0.8 },
   visible: {
     opacity: 1,
-    x: 0,
-    transition: {
-      type: "spring",
-      stiffness: 80,
-      damping: 12,
-    },
-  },
-};
-
-const iconContainerVariants = {
-  hidden: { scale: 0.9, opacity: 0 },
-  visible: {
     scale: 1,
-    opacity: 1,
     transition: {
       type: "spring",
       stiffness: 100,
-      damping: 15,
-    },
-  },
-};
-
-// Stats animations
-const statsVariants = {
-  hidden: { opacity: 0, y: 10 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: "spring",
-      stiffness: 80,
-      damping: 12,
+      damping: 20,
       delay: 0.2,
     },
   },
 };
 
-// Subtle pattern animation
-const patternAnimation = {
-  scale: [1, 1.05, 1],
-  opacity: [0.2, 0.3, 0.2],
-  transition: {
-    duration: 6,
-    repeat: Number.POSITIVE_INFINITY,
-    ease: "easeInOut",
+const scoreVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring",
+      stiffness: 100,
+      damping: 20,
+      delay: 0.4,
+    },
   },
 };
 
+export type SkillCardProps = {
+  skill: RouterOutputs["skills"]["getAllSkills"][number];
+  profileId: string;
+  onSkillEnabled?: () => void;
+  onSkillDisabled?: () => void;
+};
+
 export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
-  function SkillCard({ skill, profileId, onSkillEnabled }, ref) {
+  function SkillCard(
+    { skill, profileId, onSkillEnabled, onSkillDisabled },
+    ref,
+  ) {
+    const utils = api.useUtils();
+    const router = useRouter();
+    const [score, setScore] = useState(0);
+    const springScore = useSpring(0, {
+      stiffness: 100,
+      damping: 30,
+      mass: 1,
+    });
+
+    useEffect(() => {
+      springScore.set(73);
+    }, [springScore]);
+
+    useEffect(() => {
+      const unsubscribe = springScore.on("change", (latest) => {
+        setScore(Math.round(latest));
+      });
+      return () => unsubscribe();
+    }, [springScore]);
+
     const Icon = useMemo(
       () =>
         dynamic<LucideProps>(
@@ -111,7 +109,7 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
                 mod.icons[
                   skill.icon && skill.icon in mod.icons
                     ? (skill.icon as keyof typeof mod.icons)
-                    : "Target"
+                    : "Mic"
                 ],
             ),
           {
@@ -132,15 +130,34 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
       [skill.icon],
     );
 
+    const angle = (score / 100) * 180;
+
     const { mutate: enableSkill, isPending: isEnablingSkill } =
       api.skills.enableSkill.useMutation({
         onSuccess: () => {
           toast.success(`"${skill.title}" enabled`, {
             description: "You can now track your skill progress",
           });
+          utils.skills.getAllSkills.invalidate();
           onSkillEnabled?.();
         },
         onError: (error) => {
+          console.log(error);
+          toast.error(error.message);
+        },
+      });
+
+    const { mutate: disableSkill, isPending: isDisablingSkill } =
+      api.skills.disableSkill.useMutation({
+        onSuccess: () => {
+          toast.success(`"${skill.title}" disabled`, {
+            description: "You can re-enable it anytime",
+          });
+          utils.skills.getAllSkills.invalidate();
+          onSkillDisabled?.();
+        },
+        onError: (error) => {
+          console.log(error);
           toast.error(error.message);
         },
       });
@@ -152,7 +169,15 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
       });
     };
 
+    const handleSkillDisable = () => {
+      disableSkill({
+        skillId: skill.id,
+        profileId: profileId,
+      });
+    };
+
     const isEnabled = skill.goals.some((goal) => goal.is_default);
+    const isLoading = isEnablingSkill || isDisablingSkill;
 
     const isCompleted =
       skill.goals && skill.goals.length > 0
@@ -187,6 +212,7 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
             ["desc"],
           )[0]
         : null;
+
     const latestReview =
       reviewedAssessments.length > 0
         ? _.orderBy(
@@ -201,6 +227,15 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
       (reportGoal) =>
         skill.goals.some((goal) => goal.id === reportGoal.goal_id),
     );
+
+    const latestSkillAssessmentStatus = _.orderBy(
+      skill.statuses,
+      [(status) => dayjs(status.created_at).toDate()],
+      ["desc"],
+    )[0];
+
+    const latestSkillAssessmentProcessingStatus =
+      latestSkillAssessmentStatus?.status;
 
     // Determine status for display
     const getStatus = () => {
@@ -234,21 +269,78 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
 
       switch (status) {
         case "Processing":
-          return { icon: Clock, color: "text-amber-500/70" };
+          return { icon: Clock, color: "text-chart-4" };
         case "Failed":
-          return { icon: AlertTriangle, color: "text-rose-500/80" };
+          return { icon: AlertTriangle, color: "text-destructive" };
         case "Reviewed":
-          return { icon: CheckCircle2, color: "text-emerald-500/70" };
+          return { icon: CheckCircle2, color: "text-chart-2" };
         case "Pending Review":
-          return { icon: FileWarning, color: "text-amber-500/70" };
+          return { icon: FileWarning, color: "text-chart-4" };
         case "In Review":
-          return { icon: Eye, color: "text-indigo-500/80" };
+          return { icon: Eye, color: "text-chart-1" };
         default:
-          return { icon: ArrowRight, color: "text-primary/70" };
+          return { icon: ArrowRight, color: "text-primary" };
       }
     };
 
     const { icon: StatusIcon, color: statusColor } = getStatusIconAndColor();
+
+    console.log(isLoading);
+
+    const reportSkillPositiveScaleTags =
+      skill.scales.map((s) => s.positive_tag_title) ?? [];
+    const reportSkillNegativeScaleTags =
+      skill.scales.map((s) => s.negative_tag_title) ?? [];
+    const reportSkillScaleTags = [
+      ...reportSkillPositiveScaleTags.flatMap((t) => t.split(",")),
+      ...reportSkillNegativeScaleTags.flatMap((t) => t.split(",")),
+    ];
+    const momentSubtagFrequencies = _.countBy(
+      latestAssessment?.report_moments.flatMap((rm, idx) =>
+        transformMoment(rm.moment, idx)
+          .subtags.map((s) => s.tag)
+          .filter((t) => t && reportSkillScaleTags.includes(t)),
+      ),
+    );
+    const momentSubtagFrequenciesTotal = _.sum(
+      Object.values(momentSubtagFrequencies),
+    );
+
+    const metrics = reportSkillPositiveScaleTags.map((pt, i) => {
+      const nt = reportSkillNegativeScaleTags[i] ?? "";
+      const positiveCount = momentSubtagFrequencies[pt ?? ""] ?? 0;
+      const negativeCount = momentSubtagFrequencies[nt] ?? 0;
+      const total = positiveCount + negativeCount || 1;
+
+      return {
+        id: `${pt ?? ""}-${nt}`,
+        leftLabel: nt,
+        rightLabel: pt ?? "",
+        value: 100 * (positiveCount / total),
+      };
+    });
+
+    const total = _.sum(metrics.map((m) => m.value));
+    const numerator = _.sumBy(
+      Object.entries(momentSubtagFrequencies).filter(([label, qty]) =>
+        reportSkillNegativeScaleTags.includes(label),
+      ),
+      ([label, qty]) => qty,
+    );
+    const denominator = _.sumBy(
+      Object.values(momentSubtagFrequencies),
+      (qty) => qty,
+    );
+    const totalScore =
+      denominator <= 0 ? 0 : 0.5 + 0.5 * (numerator / denominator);
+
+    const navigateToReport = () => {
+      if (isEnabled && !isLoading && latestSkillAssessmentStatus) {
+        router.push(
+          `/goals/reports/${latestSkillAssessmentStatus?.id}?goalId=${skillAssessmentGoal?.goal_id}`,
+        );
+      }
+    };
 
     return (
       <motion.div
@@ -256,292 +348,316 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
         variants={cardVariants}
         initial="hidden"
         animate="visible"
-        className="h-full overflow-visible border-b border-border/40 pb-5"
+        className={cn(
+          "relative overflow-hidden rounded-xl px-6 shadow-[0_10px_50px_rgba(0,0,0,0.1)] backdrop-blur-sm",
+          isLoading && "pointer-events-none opacity-80",
+          !isEnabled &&
+            "after:absolute after:inset-0 after:bg-background/30 after:backdrop-blur-[2px]",
+          isEnabled &&
+            !isLoading &&
+            "cursor-pointer transition-shadow duration-300 hover:shadow-xl",
+        )}
+        onClick={isEnabled ? navigateToReport : undefined}
       >
-        <div className="grid h-full grid-cols-4 gap-x-4 overflow-visible">
-          <Card className="relative col-span-3 flex h-full flex-col overflow-visible border border-border/40 bg-gradient-to-br from-background to-muted/20 shadow-sm backdrop-blur-sm">
-            <div className="flex h-full w-full flex-col justify-between overflow-visible">
-              <div className="flex flex-col justify-between overflow-visible">
-                <motion.div
-                  variants={itemVariants}
-                  className="flex items-start justify-between gap-5 p-5"
-                >
-                  <div className="flex items-start gap-5">
-                    <motion.div
-                      variants={iconContainerVariants}
-                      className={cn(
-                        "relative flex shrink-0 items-center justify-center overflow-hidden rounded-2xl border shadow-sm transition-all duration-300",
-                        isCompleted
-                          ? "border-muted/50 from-muted/40 to-background"
-                          : "border-primary/20 from-primary/5 to-background",
-                      )}
-                      style={{ height: "100px", width: "100px" }}
-                    >
-                      {/* Animated background patterns */}
-                      <motion.div className="absolute inset-0">
-                        <motion.div
-                          className={cn(
-                            "absolute inset-0",
-                            isCompleted
-                              ? "bg-[radial-gradient(circle_at_50%_50%,rgba(161,161,170,0.08),transparent)]"
-                              : "bg-[radial-gradient(circle_at_50%_50%,rgba(45.3,121,245,0.08),transparent)]",
-                          )}
-                          animate={patternAnimation}
-                        />
-                      </motion.div>
+        {/* Background pattern */}
+        <motion.div
+          className={cn(
+            "pointer-events-none absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.40),transparent)] opacity-30",
+          )}
+          style={{
+            backgroundImage: `url(/skills/${skill.title.toLowerCase().replace(/[\s\(\)]+/g, "-")}.svg)`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+          }}
+        />
 
-                      <motion.div
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{
-                          type: "spring",
-                          stiffness: 100,
-                          damping: 15,
-                          delay: 0.1,
-                        }}
-                      >
-                        <Icon
-                          className={cn(
-                            "relative h-12 w-12 transition-all duration-300",
-                            isCompleted
-                              ? "text-muted-foreground/60"
-                              : "text-primary drop-shadow-sm",
-                          )}
-                        />
-                      </motion.div>
+        {/* Loading overlay */}
+        {isLoading && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex flex-col items-center gap-2"
+            >
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="font-medium text-primary">
+                {isEnablingSkill ? "Enabling skill..." : "Disabling skill..."}
+              </p>
+            </motion.div>
+          </div>
+        )}
 
-                      {isCompleted && (
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          transition={{
-                            type: "spring",
-                            stiffness: 200,
-                            damping: 15,
-                          }}
-                          className="absolute bottom-3 right-3 rounded-full bg-background/70 p-1 backdrop-blur-sm"
-                        >
-                          <Check className="h-5 w-5 text-emerald-500" />
-                        </motion.div>
-                      )}
-                    </motion.div>
+        {/* Header */}
+        <div className="relative flex h-16 items-center justify-between">
+          <motion.div
+            className="flex items-center gap-4"
+            variants={{
+              hidden: { opacity: 0, x: -20 },
+              visible: {
+                opacity: 1,
+                x: 0,
+                transition: {
+                  type: "spring",
+                  stiffness: 100,
+                  damping: 20,
+                },
+              },
+            }}
+          >
+            <Icon className="h-8 w-8 drop-shadow-md" />
+            <h2 className="text-lg font-bold leading-none tracking-tight drop-shadow-sm">
+              {skill.title}
+            </h2>
+          </motion.div>
+          {isEnabled && (
+            <motion.div
+              className="flex items-center gap-3 pl-4"
+              variants={{
+                hidden: { opacity: 0, x: 20 },
+                visible: {
+                  opacity: 1,
+                  x: 0,
+                  transition: {
+                    type: "spring",
+                    stiffness: 100,
+                    damping: 20,
+                    delay: 0.1,
+                  },
+                },
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative flex items-center gap-2">
+                <span className="text-xs font-medium text-muted-foreground">
+                  Off
+                </span>
+                <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-emerald-400/20 to-emerald-400/30 blur-sm" />
+                <Switch
+                  checked={isEnabled}
+                  onCheckedChange={
+                    skill.goal_templates.length > 0
+                      ? isEnabled
+                        ? handleSkillDisable
+                        : handleSkillEnable
+                      : undefined
+                  }
+                  disabled={skill.goal_templates.length === 0 || isLoading}
+                  className="relative z-10 data-[state=checked]:bg-emerald-400"
+                />
+                <span className="text-xs font-medium text-emerald-500">On</span>
+              </div>
+            </motion.div>
+          )}
+        </div>
 
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <motion.h3
-                          variants={itemVariants}
-                          className={cn(
-                            "text-xl font-medium tracking-tight",
-                            isCompleted
-                              ? "text-muted-foreground/70"
-                              : "text-foreground",
-                          )}
-                        >
-                          {skill.title}
-                        </motion.h3>
-
-                        {/* {totalReviews > 0 && (
-                          <motion.div
-                            variants={itemVariants}
-                            initial="hidden"
-                            animate="visible"
-                          >
-                            <Badge
-                              variant="secondary"
-                              className="ml-1 flex items-center gap-1 bg-primary/10 text-xs font-normal text-primary"
-                            >
-                              <ClipboardCheck className="h-3 w-3" />
-                              <span>
-                                {totalReviews}{" "}
-                                {totalReviews === 1 ? "review" : "reviews"}
-                              </span>
-                            </Badge>
-                          </motion.div>
-                        )} */}
-                      </div>
-
-                      <AnimatePresence mode="wait">
-                        {skill.description && (
-                          <motion.p
-                            key="context"
-                            variants={itemVariants}
-                            initial="hidden"
-                            animate="visible"
-                            exit="hidden"
-                            className={cn(
-                              "mt-1 text-sm leading-relaxed",
-                              isCompleted
-                                ? "text-muted-foreground/60"
-                                : "text-muted-foreground/80",
-                            )}
-                          >
-                            {skill.description}
-                          </motion.p>
-                        )}
-                      </AnimatePresence>
-
-                      {/* Enhanced Stats section with improved visual hierarchy */}
-
-                      <motion.div
-                        variants={statsVariants}
-                        className="mt-3 flex flex-col gap-3"
-                      >
-                        <div className="flex items-center gap-8">
-                          <AnimatePresence mode="wait">
-                            {latestAssessment || latestReview ? (
-                              <motion.div
-                                className="flex w-full items-center gap-10 pb-4"
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                transition={{
-                                  type: "spring",
-                                  stiffness: 100,
-                                  damping: 15,
-                                  staggerChildren: 0.05,
-                                  delayChildren: 0.1,
-                                }}
-                              >
-                                <motion.div
-                                  className="flex flex-col rounded-md bg-muted/5 transition-colors hover:bg-muted/10"
-                                  initial={{ scale: 0.9, opacity: 0 }}
-                                  animate={{ scale: 1, opacity: 1 }}
-                                  transition={{ duration: 0.2, delay: 0.1 }}
-                                >
-                                  <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground/80">
-                                    <CalendarCheck className="-mt-0.5 h-3.5 w-3.5 text-primary/70" />
-                                    <span>
-                                      Latest{" "}
-                                      {latestReview ? "Review" : "Assessment"}
-                                    </span>
-                                  </div>
-                                  <p className="mt-1 pl-5 text-xs font-medium">
-                                    {(latestReview
-                                      ? dayjs(latestReview.created_at)
-                                      : dayjs(latestAssessment?.created_at)
-                                    ).format("MMM D, YYYY")}
-                                  </p>
-                                </motion.div>
-
-                                <motion.div
-                                  className="flex flex-col rounded-md bg-muted/5 transition-colors hover:bg-muted/10"
-                                  initial={{ scale: 0.9, opacity: 0 }}
-                                  animate={{ scale: 1, opacity: 1 }}
-                                  transition={{ duration: 0.2, delay: 0.15 }}
-                                >
-                                  <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground/80">
-                                    <StatusIcon
-                                      className={`h-3.5 w-3.5 ${statusColor}`}
-                                    />
-                                    <span>Status</span>
-                                  </div>
-                                  <p className="mt-1 pl-5 text-xs font-medium">
-                                    {getStatus()}
-                                  </p>
-                                </motion.div>
-
-                                <motion.div
-                                  className="flex flex-col rounded-md bg-muted/5 transition-colors hover:bg-muted/10"
-                                  initial={{ scale: 0.9, opacity: 0 }}
-                                  animate={{ scale: 1, opacity: 1 }}
-                                  transition={{ duration: 0.2, delay: 0.2 }}
-                                >
-                                  <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground/80">
-                                    <TrendingUp className="h-3.5 w-3.5 text-primary/70" />
-                                    <span>Progress</span>
-                                  </div>
-                                  <p className="mt-1 pl-5 text-xs font-medium">
-                                    {skillAssessments.length > 1
-                                      ? "Improving"
-                                      : "Initial"}
-                                  </p>
-                                </motion.div>
-                              </motion.div>
-                            ) : isEnabled ? (
-                              <motion.div
-                                className="p col-span-3 flex w-full items-center rounded-md bg-muted/5 pb-9 pl-0"
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.9 }}
-                                transition={{
-                                  type: "spring",
-                                  stiffness: 100,
-                                  damping: 15,
-                                }}
-                              >
-                                <motion.div
-                                  animate={{ rotate: 360 }}
-                                  transition={{
-                                    duration: 1.5,
-                                    repeat: Number.POSITIVE_INFINITY,
-                                    ease: "linear",
-                                  }}
-                                  className="mr-2 h-3 w-3 rounded-full border-2 border-primary/30 border-t-primary"
-                                />
-                                <p className="text-xs text-muted-foreground/80">
-                                  Waiting for your first skill assessment...
-                                </p>
-                              </motion.div>
-                            ) : (
-                              <motion.div
-                                className="col-span-3 mb-[1.625rem] flex items-center justify-center rounded-md border border-primary/20 bg-primary/5 px-2 py-1"
-                                initial={{ opacity: 0, y: 5 }}
-                                animate={{
-                                  opacity: 1,
-                                  y: 0,
-                                  transition: {
-                                    type: "spring",
-                                    stiffness: 100,
-                                    damping: 15,
-                                  },
-                                }}
-                                exit={{ opacity: 0, y: -5 }}
-                              >
-                                <p className="text-center text-xs font-medium text-primary/90">
-                                  Enable skill tracking to see progress
-                                  statistics
-                                </p>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      </motion.div>
-                    </div>
-                  </div>
-                </motion.div>
+        {isEnabled ? (
+          <SimplifiedGauge
+            value={totalScore * 100}
+            min={0}
+            max={100}
+            size="md"
+            className="h-48"
+          />
+        ) : (
+          <motion.div
+            className="z-10 -mx-6 flex h-48 flex-col items-center justify-center text-center"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+          >
+            <div className="mb-4 rounded-full bg-primary/20 p-4">
+              <div className="z-20">
+                <Trophy className="h-8 w-8 text-primary" />
               </div>
             </div>
-          </Card>
+            <p className="mb-4 max-w-xs text-center text-foreground">
+              Enable this skill to track your progress and receive personalized
+              feedback.
+            </p>
+          </motion.div>
+        )}
 
-          <AnimatePresence mode="wait">
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{
-                type: "spring",
-                stiffness: 70,
-                damping: 18,
-                delay: 0.1,
+        {/* Footer */}
+        {isEnabled ? (
+          <motion.div
+            className={cn(
+              "mt-auto flex h-16 items-center justify-between pb-4",
+            )}
+            {...(isEnabled && {
+              variants: {
+                hidden: { opacity: 0, y: 20 },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  transition: {
+                    type: "spring",
+                    stiffness: 100,
+                    damping: 20,
+                    delay: 0.8,
+                  },
+                },
+              },
+            })}
+          >
+            <div>
+              <p className="text-xs font-medium uppercase leading-none tracking-widest opacity-80">
+                LATEST REPORT
+              </p>
+              <p className="mt-1.5 text-lg font-semibold leading-none tracking-tight">
+                {latestAssessment ? (
+                  <>
+                    {dayjs(latestAssessment.created_at).format("MMM D")} to{" "}
+                    {dayjs(latestAssessment.created_at)
+                      .add(14, "days")
+                      .format("MMM D")}
+                  </>
+                ) : (
+                  "No assessment yet"
+                )}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              className="group flex items-center gap-2 rounded-full backdrop-blur-3xl transition-all duration-300 hover:scale-105 hover:bg-background/30 hover:shadow-lg"
+              disabled={isLoading}
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push(
+                  `/goals/reports/${latestSkillAssessmentStatus?.id}?goalId=${skillAssessmentGoal?.goal_id}`,
+                );
               }}
-              className="col-span-1 h-full w-full"
             >
-              <SkillProgressCard
-                skill={skill}
-                disabled={!isEnabled}
-                loading={isEnablingSkill}
-                completed={isCompleted}
-                completedAt={completedAt ?? undefined}
-                onEnable={
-                  skill.goal_templates.length > 0
-                    ? handleSkillEnable
-                    : undefined
-                }
-              />
-            </motion.div>
-          </AnimatePresence>
-        </div>
+              <span className="font-medium tracking-wide">Review</span>
+              <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
+            </Button>
+          </motion.div>
+        ) : (
+          <motion.div
+            className="flex h-16 items-center justify-center pb-4"
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              visible: {
+                opacity: 1,
+                y: 0,
+                transition: {
+                  type: "spring",
+                  stiffness: 100,
+                  damping: 20,
+                  delay: 0.8,
+                },
+              },
+            }}
+          >
+            <Button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSkillEnable();
+              }}
+              disabled={isLoading || skill.goal_templates.length === 0}
+              className="group z-20 flex items-center gap-2 bg-primary/90 hover:bg-primary"
+            >
+              <span>Enable skill</span>
+              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+            </Button>
+          </motion.div>
+        )}
       </motion.div>
     );
   },
 );
+
+export default function SimplifiedGauge({
+  value,
+  min = 0,
+  max = 100,
+  size = "md",
+  className,
+}: SimplifiedGaugeProps) {
+  const [displayValue, setDisplayValue] = useState(min);
+
+  // Normalize the value between min and max
+  const normalizedValue = Math.max(min, Math.min(max, value));
+  const percentage = ((normalizedValue - min) / (max - min)) * 100;
+
+  // Size mappings
+  const sizeClasses = {
+    sm: "w-32 h-32",
+    md: "w-48 h-48",
+    lg: "w-64 h-64",
+    xl: "w-80 h-80",
+  };
+
+  // Animate the displayed value
+  useEffect(() => {
+    setDisplayValue(normalizedValue);
+  }, [normalizedValue]);
+
+  return (
+    <div className={cn("flex flex-col items-center justify-center", className)}>
+      <div className={cn("relative", sizeClasses[size])}>
+        {/* Gauge background */}
+        <svg viewBox="0 0 200 200" className="h-full w-full">
+          {/* Gray background arc */}
+          <path
+            d="M40 160 A 80 80 0 1 1 160 160"
+            fill="none"
+            className="stroke-muted-foreground/20"
+            strokeWidth="12"
+            strokeLinecap="round"
+          />
+
+          {/* Black progress arc */}
+          <motion.path
+            d="M40 160 A 80 80 0 1 1 160 160"
+            fill="none"
+            strokeWidth="12"
+            strokeLinecap="round"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: percentage / 100 }}
+            transition={{ duration: 1.5, ease: "easeOut" }}
+            strokeDasharray="1 1"
+            className="stroke-foreground"
+          />
+        </svg>
+
+        {/* Center Score Display */}
+        <motion.div
+          className="absolute inset-0 flex items-center justify-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+        >
+          <motion.span
+            className="text-5xl font-bold"
+            initial={{ value: min }}
+            animate={{ value: displayValue }}
+            transition={{ duration: 1.5, ease: "easeOut" }}
+          >
+            {Math.round(displayValue)}
+          </motion.span>
+        </motion.div>
+
+        {/* Left min score */}
+        {/* <motion.span
+          className="absolute bottom-4 left-12 text-sm font-medium"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+        >
+          {min}
+        </motion.span> */}
+
+        {/* Right max score */}
+        {/* <motion.span
+          className="absolute bottom-4 right-12 text-sm font-medium"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+        >
+          {max}
+        </motion.span> */}
+      </div>
+    </div>
+  );
+}

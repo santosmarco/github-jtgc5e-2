@@ -324,7 +324,7 @@ export default function GoalsPage() {
       initial="initial"
       animate="animate"
       variants={staggerAnimation}
-      className="container mx-auto space-y-6 py-6"
+      className="container mx-auto max-w-screen-xl space-y-6 py-6"
     >
       {hasSkills ? (
         <>
@@ -342,10 +342,11 @@ export default function GoalsPage() {
             initial="hidden"
             animate="show"
             exit="exit"
-            className="space-y-6"
+            className="grid auto-rows-max grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
           >
             <AnimatePresence mode="popLayout">
               {skills
+                .filter((s) => s.goal_templates.length > 0)
                 .sort((a, b) => {
                   // Assign a numeric score to each skill (lower = higher priority)
                   let aScore = 0;
@@ -530,6 +531,9 @@ export default function GoalsPage() {
                       profileId={profile.id ?? user.id ?? ""}
                       skill={skill}
                       onSkillEnabled={() => {
+                        apiUtils.skills.getAllSkills.invalidate();
+                      }}
+                      onSkillDisabled={() => {
                         apiUtils.skills.getAllSkills.invalidate();
                       }}
                     />

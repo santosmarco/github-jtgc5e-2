@@ -48,7 +48,7 @@ export const skillsRouter = createTRPCRouter({
       const { data: skills, error: skillsError } = await supabase
         .from("skills")
         .select(
-          "*, goal_templates(*), goals(*), reports(*, report_goals(*)), statuses:group_report_processing_status(*)",
+          "*, goal_templates(*), goals(*), reports(*, report_goals(*), report_moments!inner(*, moment:moments!inner(*, subtags:moment_subtags(*)), report_goal_signal:report_goal_signals!inner(*))), statuses:group_report_processing_status(*), scales:skill_scales(*)",
         );
 
       if (skillsError) {
@@ -62,7 +62,7 @@ export const skillsRouter = createTRPCRouter({
       const skillsFiltered = skills.map((skill) => ({
         ...skill,
         goals: skill.goals.filter(
-          (goal) => goal.profile_id === input.profileId,
+          (goal) => goal.profile_id === input.profileId && !goal.deleted_at,
         ),
         reports: skill.reports.filter(
           (report) => report.profile_id === input.profileId,
@@ -202,6 +202,45 @@ export const skillsRouter = createTRPCRouter({
           message: error,
         });
       }
+
+      return { success: true };
+    }),
+
+  disableSkill: publicProcedure
+    .input(z.object({ skillId: z.string(), profileId: z.string() }))
+    .mutation(async ({ input }) => {
+      const supabase = await createClient();
+      const now = new Date().toISOString();
+
+      const { data: goals, error: goalsError } = await supabase
+        .from("goals")
+        .select("*")
+        .eq("skill_id", input.skillId)
+        .eq("profile_id", input.profileId)
+        .eq("is_current", true)
+        .is("deleted_at", null);
+
+      if (goalsError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: goalsError.message,
+          cause: goalsError,
+        });
+      }
+
+      await Promise.all(
+        goals.map((goal) =>
+          supabase
+            .from("goals")
+            .update({
+              deleted_at: now,
+            })
+            .eq("id", goal.id)
+            .eq("skill_id", input.skillId)
+            .eq("profile_id", input.profileId)
+            .eq("is_current", true),
+        ),
+      );
 
       return { success: true };
     }),
