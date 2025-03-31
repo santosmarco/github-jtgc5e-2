@@ -573,7 +573,13 @@ export default function SimplifiedGauge({
   max = 100,
   size = "md",
   className,
-}: SimplifiedGaugeProps) {
+}: {
+  value: number;
+  min?: number;
+  max?: number;
+  size?: "sm" | "md" | "lg" | "xl";
+  className?: string;
+}) {
   const [displayValue, setDisplayValue] = useState(min);
 
   // Normalize the value between min and max
