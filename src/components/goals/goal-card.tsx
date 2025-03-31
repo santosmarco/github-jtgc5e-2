@@ -636,8 +636,8 @@ export default function SimplifiedGauge({
         >
           <motion.span
             className="text-5xl font-bold"
-            initial={{ value: min }}
-            animate={{ value: displayValue }}
+            initial={{ value: min } as any}
+            animate={{ value: displayValue } as any}
             transition={{ duration: 1.5, ease: "easeOut" }}
           >
             {Math.round(displayValue)}
