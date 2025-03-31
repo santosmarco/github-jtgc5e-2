@@ -180,6 +180,44 @@ export function createBotStatusChangeService(
           ),
         });
 
+        const {
+          data: meetingProcessingStatus,
+          error: meetingProcessingStatusInsertionError,
+        } = await supabase
+          .from("meeting_processing_status")
+          .insert({
+            action_items_status: "pending", // wont do
+            backend_call_status: "pending", // handled
+            embed_meeting_status: "pending", // wont do
+            embed_moments_status: "pending", // wont do
+            entity_extraction_status: "pending", // handled
+            interestingness_status: "pending", // wont do
+            meetings_status: "pending", // wont do
+            moments_status: "pending", // wont do
+            observation_status: "pending", // wont do
+            segments_status: "pending", // wont do
+            supabase_video_upload_status: "pending", // handled
+            topic_segmentation_status: "pending", // handled
+            topics_status: "pending", // wont do
+            transcript_slice_words_status: "pending", // handled
+            video_api_upload_status: "pending", // handled
+          })
+          .select("*")
+          .single();
+
+        if (meetingProcessingStatusInsertionError) {
+          logger.error("❌ Failed to create meeting bot status", {
+            error: meetingProcessingStatusInsertionError,
+            bot_id: meetingBot.id,
+            profile_id: meetingBot.profile_id,
+            user_email: meetingBot.profile?.email,
+          });
+          slack.error({
+            text: `❌ Failed to create meeting bot status ${meetingBot.id}: ${meetingProcessingStatusInsertionError.message}`,
+          });
+          return;
+        }
+
         logger.info("🎥 Starting meeting completion workflow", {
           bot_id: meetingBot.id,
           profile_id: meetingBot.profile_id,
@@ -208,6 +246,7 @@ export function createBotStatusChangeService(
               ? /* meeting_baas */ event.data.mp4
               : undefined),
           participants,
+          meetingProcessingStatus.id,
         );
 
         logger.info("✅ Video upload completed successfully", {
@@ -219,8 +258,29 @@ export function createBotStatusChangeService(
           user_email: meetingBot.profile?.email,
         });
 
+        if (apiVideoId) {
+          const { error: meetingProcessingStatusUpdateError } = await supabase
+            .from("meeting_processing_status")
+            .update({
+              video_id: apiVideoId,
+            })
+            .eq("id", meetingProcessingStatus.id);
+
+          if (meetingProcessingStatusUpdateError) {
+            logger.error("❌ Failed to update meeting processing status", {
+              error: meetingProcessingStatusUpdateError,
+              bot_id: meetingBot.id,
+              profile_id: meetingBot.profile_id,
+              user_email: meetingBot.profile?.email,
+            });
+            await slack.error({
+              text: `❌ Failed to update meeting processing status ${meetingBot.id}: ${meetingProcessingStatusUpdateError.message}`,
+            });
+          }
+        }
+
         const { error: meetingBotUpdateError } = await supabase
-          .from(isV2 ? "meeting_bots_v2" : "meeting_bots")
+          .from(meetingBotVersion === "v2" ? "meeting_bots_v2" : "meeting_bots")
           .update({
             speakers,
             ...(storageUrl && { mp4_source_url: storageUrl }),
@@ -272,19 +332,31 @@ export function createBotStatusChangeService(
           user_email: meetingBot.profile?.email,
         });
 
-        await handleTranscript(meetingBot, cleanedTranscript, isV2);
+        await handleTranscript(
+          meetingBot,
+          cleanedTranscript,
+          meetingBotVersion === "v2",
+          meetingProcessingStatus.id,
+        );
 
         if (apiVideoId && !meetingBotUpdateError) {
-          await handleVideoPreprocessing({
-            ...meetingBot,
-            transcript: cleanedTranscript,
-            api_video_id: apiVideoId,
-          });
-          await handleVideoProcessing({
-            ...meetingBot,
-            transcript: cleanedTranscript,
-            api_video_id: apiVideoId,
-          });
+          await handleVideoPreprocessing(
+            {
+              ...meetingBot,
+              transcript: cleanedTranscript,
+              api_video_id: apiVideoId,
+            },
+            meetingProcessingStatus.id,
+          );
+
+          await handleVideoProcessing(
+            {
+              ...meetingBot,
+              transcript: cleanedTranscript,
+              api_video_id: apiVideoId,
+            },
+            meetingProcessingStatus.id,
+          );
         }
       } else {
         await slack.info({
@@ -311,6 +383,7 @@ export function createBotStatusChangeService(
     bot: MeetingBotWithProfileAndEventAndCalendar,
     videoUrl: string | undefined,
     participants: string[],
+    meetingProcessingStatusId: string,
   ): Promise<VideoUploadResult> {
     try {
       logger.info("🎥 Starting video upload process", {
@@ -345,8 +418,13 @@ export function createBotStatusChangeService(
       });
 
       const [{ storageUrl }, { apiVideoId, speakers }] = await Promise.all([
-        uploadVideoToStorage(bot, videoUrl),
-        uploadVideoToApiVideo(bot, videoUrl, participants),
+        uploadVideoToStorage(bot, videoUrl, meetingProcessingStatusId),
+        uploadVideoToApiVideo(
+          bot,
+          videoUrl,
+          participants,
+          meetingProcessingStatusId,
+        ),
       ]);
 
       logger.info("✅ Video upload completed", {
@@ -386,6 +464,7 @@ export function createBotStatusChangeService(
   async function uploadVideoToStorage(
     bot: MeetingBotWithProfileAndEventAndCalendar,
     videoUrl: string,
+    meetingProcessingStatusId: string,
   ): Promise<Pick<VideoUploadResult, "storageUrl">> {
     try {
       const fileName = `${bot.id}.mp4`;
@@ -414,6 +493,25 @@ export function createBotStatusChangeService(
 
       const storageUrl = `https://db.withtitan.com/storage/v1/object/public/meetings/${fileName}`;
 
+      const { error: meetingProcessingStatusUpdateError } = await supabase
+        .from("meeting_processing_status")
+        .update({
+          supabase_video_upload_status: "completed",
+        })
+        .eq("id", meetingProcessingStatusId);
+
+      if (meetingProcessingStatusUpdateError) {
+        logger.error("❌ Failed to update meeting processing status", {
+          error: meetingProcessingStatusUpdateError,
+          bot_id: bot.id,
+          profile_id: bot.profile_id,
+          user_email: bot.profile?.email,
+        });
+        await slack.error({
+          text: `❌ Failed to update meeting processing status ${bot.id}: ${meetingProcessingStatusUpdateError.message}`,
+        });
+      }
+
       return { storageUrl };
     } catch (error) {
       let errorMessage = (error as Error).message;
@@ -435,6 +533,26 @@ export function createBotStatusChangeService(
           `💾 Failed to upload video to storage: ${errorMessage}`,
         ),
       });
+
+      const { error: meetingProcessingStatusUpdateError } = await supabase
+        .from("meeting_processing_status")
+        .update({
+          supabase_video_upload_status: "failed",
+        })
+        .eq("id", meetingProcessingStatusId);
+
+      if (meetingProcessingStatusUpdateError) {
+        logger.error("❌ Failed to update meeting processing status", {
+          error: meetingProcessingStatusUpdateError,
+          bot_id: bot.id,
+          profile_id: bot.profile_id,
+          user_email: bot.profile?.email,
+        });
+        await slack.error({
+          text: `❌ Failed to update meeting processing status ${bot.id}: ${meetingProcessingStatusUpdateError.message}`,
+        });
+      }
+
       return { storageUrl: undefined };
     }
   }
@@ -443,6 +561,7 @@ export function createBotStatusChangeService(
     bot: MeetingBotWithProfileAndEventAndCalendar,
     videoUrl: string,
     participants: string[],
+    meetingProcessingStatusId: string,
   ): Promise<Pick<VideoUploadResult, "apiVideoId" | "speakers">> {
     try {
       logger.info("📤 Starting API.video upload", {
@@ -470,6 +589,25 @@ export function createBotStatusChangeService(
         });
 
         const firstExistingApiVideo = existingApiVideos.data[0];
+
+        const { error: meetingProcessingStatusUpdateError } = await supabase
+          .from("meeting_processing_status")
+          .update({
+            video_api_upload_status: "completed",
+          })
+          .eq("id", meetingProcessingStatusId);
+
+        if (meetingProcessingStatusUpdateError) {
+          logger.error("❌ Failed to update meeting processing status", {
+            error: meetingProcessingStatusUpdateError,
+            bot_id: bot.id,
+            profile_id: bot.profile_id,
+            user_email: bot.profile?.email,
+          });
+          await slack.error({
+            text: `❌ Failed to update meeting processing status ${bot.id}: ${meetingProcessingStatusUpdateError.message}`,
+          });
+        }
 
         return {
           apiVideoId: firstExistingApiVideo?.videoId,
@@ -503,6 +641,25 @@ export function createBotStatusChangeService(
             "🎥 Skipping API.video upload - No speakers detected",
           ),
         });
+
+        const { error: meetingProcessingStatusUpdateError } = await supabase
+          .from("meeting_processing_status")
+          .update({
+            video_api_upload_status: "completed",
+          })
+          .eq("id", meetingProcessingStatusId);
+
+        if (meetingProcessingStatusUpdateError) {
+          logger.error("❌ Failed to update meeting processing status", {
+            error: meetingProcessingStatusUpdateError,
+            bot_id: bot.id,
+            profile_id: bot.profile_id,
+            user_email: bot.profile?.email,
+          });
+          await slack.error({
+            text: `❌ Failed to update meeting processing status ${bot.id}: ${meetingProcessingStatusUpdateError.message}`,
+          });
+        }
 
         return { apiVideoId: undefined, speakers: [] };
       }
@@ -551,6 +708,25 @@ export function createBotStatusChangeService(
         ),
       });
 
+      const { error: meetingProcessingStatusUpdateError } = await supabase
+        .from("meeting_processing_status")
+        .update({
+          video_api_upload_status: "completed",
+        })
+        .eq("id", meetingProcessingStatusId);
+
+      if (meetingProcessingStatusUpdateError) {
+        logger.error("❌ Failed to update meeting processing status", {
+          error: meetingProcessingStatusUpdateError,
+          bot_id: bot.id,
+          profile_id: bot.profile_id,
+          user_email: bot.profile?.email,
+        });
+        await slack.error({
+          text: `❌ Failed to update meeting processing status ${bot.id}: ${meetingProcessingStatusUpdateError.message}`,
+        });
+      }
+
       return { apiVideoId: video.videoId, speakers: tags };
     } catch (error) {
       let errorMessage = (error as Error).message;
@@ -572,6 +748,26 @@ export function createBotStatusChangeService(
           `🎥 Failed to upload to API.video: ${errorMessage}`,
         ),
       });
+
+      const { error: meetingProcessingStatusUpdateError } = await supabase
+        .from("meeting_processing_status")
+        .update({
+          video_api_upload_status: "failed",
+        })
+        .eq("id", meetingProcessingStatusId);
+
+      if (meetingProcessingStatusUpdateError) {
+        logger.error("❌ Failed to update meeting processing status", {
+          error: meetingProcessingStatusUpdateError,
+          bot_id: bot.id,
+          profile_id: bot.profile_id,
+          user_email: bot.profile?.email,
+        });
+        await slack.error({
+          text: `❌ Failed to update meeting processing status ${bot.id}: ${meetingProcessingStatusUpdateError.message}`,
+        });
+      }
+
       return { apiVideoId: undefined, speakers: [] };
     }
   }
@@ -642,34 +838,13 @@ export function createBotStatusChangeService(
 
   async function handleVideoPreprocessing(
     bot: MeetingBotWithProfileAndEventAndCalendarAndTranscript,
+    meetingProcessingStatusId: string,
   ) {
     if (!bot.api_video_id) {
       logger.warn("⚠️ No API.video ID found for bot", {
         bot_id: bot.id,
         profile_id: bot.profile_id,
         user_email: bot.profile?.email,
-      });
-      return;
-    }
-
-    const { error: meetingProcessingStatusInsertError } = await supabase
-      .from("meeting_processing_status")
-      .insert({
-        video_id: bot.api_video_id,
-      });
-
-    if (meetingProcessingStatusInsertError) {
-      logger.error("❌ Failed to create meeting processing status", {
-        error: meetingProcessingStatusInsertError,
-        bot_id: bot.id,
-        profile_id: bot.profile_id,
-        user_email: bot.profile?.email,
-      });
-      await slack.error({
-        text: formatSlackMessage(
-          bot,
-          `❌ Failed to create meeting processing status: ${meetingProcessingStatusInsertError.message}`,
-        ),
       });
       return;
     }
@@ -704,7 +879,7 @@ export function createBotStatusChangeService(
         .update({
           topic_segmentation_status: "failed",
         })
-        .eq("video_id", bot.api_video_id);
+        .eq("id", meetingProcessingStatusId);
 
       if (meetingProcessingStatusUpdateError) {
         logger.error("❌ Failed to update meeting processing status", {
@@ -714,13 +889,8 @@ export function createBotStatusChangeService(
           user_email: bot.profile?.email,
         });
         await slack.error({
-          text: formatSlackMessage(
-            bot,
-            `❌ Failed to update meeting processing status: ${meetingProcessingStatusUpdateError.message}`,
-          ),
+          text: `❌ Failed to update meeting processing status ${bot.id}: ${meetingProcessingStatusUpdateError.message}`,
         });
-
-        return;
       }
 
       return;
@@ -732,7 +902,7 @@ export function createBotStatusChangeService(
         .update({
           topic_segmentation_status: "completed",
         })
-        .eq("video_id", bot.api_video_id);
+        .eq("id", meetingProcessingStatusId);
 
     if (meetingProcessingStatusTopicSegmentationUpdateError) {
       logger.error("❌ Failed to update meeting processing status", {
@@ -742,13 +912,8 @@ export function createBotStatusChangeService(
         user_email: bot.profile?.email,
       });
       await slack.error({
-        text: formatSlackMessage(
-          bot,
-          `❌ Failed to update meeting processing status: ${meetingProcessingStatusTopicSegmentationUpdateError.message}`,
-        ),
+        text: `❌ Failed to update meeting processing status ${bot.id}: ${meetingProcessingStatusTopicSegmentationUpdateError.message}`,
       });
-
-      return;
     }
 
     const entityExtractionResult = await entityExtraction.triggerAndWait(
@@ -782,7 +947,7 @@ export function createBotStatusChangeService(
         .update({
           entity_extraction_status: "failed",
         })
-        .eq("video_id", bot.api_video_id);
+        .eq("id", meetingProcessingStatusId);
 
       if (meetingProcessingStatusUpdateError) {
         logger.error("❌ Failed to update meeting processing status", {
@@ -792,13 +957,8 @@ export function createBotStatusChangeService(
           user_email: bot.profile?.email,
         });
         await slack.error({
-          text: formatSlackMessage(
-            bot,
-            `❌ Failed to update meeting processing status: ${meetingProcessingStatusUpdateError.message}`,
-          ),
+          text: `❌ Failed to update meeting processing status ${bot.id}: ${meetingProcessingStatusUpdateError.message}`,
         });
-
-        return;
       }
 
       return;
@@ -810,7 +970,7 @@ export function createBotStatusChangeService(
         .update({
           entity_extraction_status: "completed",
         })
-        .eq("video_id", bot.api_video_id);
+        .eq("id", meetingProcessingStatusId);
 
     if (meetingProcessingStatusEntityExtractionUpdateError) {
       logger.error("❌ Failed to update meeting processing status", {
@@ -820,18 +980,14 @@ export function createBotStatusChangeService(
         user_email: bot.profile?.email,
       });
       await slack.error({
-        text: formatSlackMessage(
-          bot,
-          `❌ Failed to update meeting processing status: ${meetingProcessingStatusEntityExtractionUpdateError.message}`,
-        ),
+        text: `❌ Failed to update meeting processing status ${bot.id}: ${meetingProcessingStatusEntityExtractionUpdateError.message}`,
       });
-
-      return;
     }
   }
 
   async function handleVideoProcessing(
     bot: MeetingBotWithProfileAndEventAndCalendarAndTranscript,
+    meetingProcessingStatusId: string,
   ) {
     try {
       logger.info("🎬 Starting video processing", {
@@ -850,6 +1006,25 @@ export function createBotStatusChangeService(
         profile_id: bot.profile_id,
         user_email: bot.profile?.email,
       });
+
+      const { error: meetingProcessingStatusUpdateError } = await supabase
+        .from("meeting_processing_status")
+        .update({
+          backend_call_status: "completed",
+        })
+        .eq("id", meetingProcessingStatusId);
+
+      if (meetingProcessingStatusUpdateError) {
+        logger.error("❌ Failed to update meeting processing status", {
+          error: meetingProcessingStatusUpdateError,
+          bot_id: bot.id,
+          profile_id: bot.profile_id,
+          user_email: bot.profile?.email,
+        });
+        await slack.error({
+          text: `❌ Failed to update meeting processing status ${bot.id}: ${meetingProcessingStatusUpdateError.message}`,
+        });
+      }
     } catch (error) {
       let errorMessage = (error as Error).message;
       if (isAxiosError(error)) {
@@ -864,6 +1039,26 @@ export function createBotStatusChangeService(
         profile_id: bot.profile_id,
         user_email: bot.profile?.email,
       });
+
+      const { error: meetingProcessingStatusUpdateError } = await supabase
+        .from("meeting_processing_status")
+        .update({
+          backend_call_status: "failed",
+        })
+        .eq("id", meetingProcessingStatusId);
+
+      if (meetingProcessingStatusUpdateError) {
+        logger.error("❌ Failed to update meeting processing status", {
+          error: meetingProcessingStatusUpdateError,
+          bot_id: bot.id,
+          profile_id: bot.profile_id,
+          user_email: bot.profile?.email,
+        });
+        await slack.error({
+          text: `❌ Failed to update meeting processing status ${bot.id}: ${meetingProcessingStatusUpdateError.message}`,
+        });
+      }
+
       await slack.error({
         text: formatSlackMessage(
           bot,
@@ -890,6 +1085,7 @@ export function createBotStatusChangeService(
     bot: MeetingBotWithProfileAndEventAndCalendar,
     transcript: RecallTranscript,
     isV2: boolean,
+    meetingProcessingStatusId: string,
   ) {
     logger.info("📝 Processing transcript", {
       bot_id: bot.id,
@@ -956,6 +1152,26 @@ export function createBotStatusChangeService(
           `📝 Failed to delete existing transcript words: ${deleteWordsError.message}`,
         ),
       });
+
+      const { error: meetingProcessingStatusUpdateError } = await supabase
+        .from("meeting_processing_status")
+        .update({
+          transcript_slice_words_status: "failed",
+        })
+        .eq("id", meetingProcessingStatusId);
+
+      if (meetingProcessingStatusUpdateError) {
+        logger.error("❌ Failed to update meeting processing status", {
+          error: meetingProcessingStatusUpdateError,
+          bot_id: bot.id,
+          profile_id: bot.profile_id,
+          user_email: bot.profile?.email,
+        });
+        await slack.error({
+          text: `❌ Failed to update meeting processing status ${bot.id}: ${meetingProcessingStatusUpdateError.message}`,
+        });
+      }
+
       return;
     }
 
@@ -984,6 +1200,26 @@ export function createBotStatusChangeService(
           `📝 Failed to delete existing transcript slices: ${deleteSlicesError.message}`,
         ),
       });
+
+      const { error: meetingProcessingStatusUpdateError } = await supabase
+        .from("meeting_processing_status")
+        .update({
+          transcript_slice_words_status: "failed",
+        })
+        .eq("id", meetingProcessingStatusId);
+
+      if (meetingProcessingStatusUpdateError) {
+        logger.error("❌ Failed to update meeting processing status", {
+          error: meetingProcessingStatusUpdateError,
+          bot_id: bot.id,
+          profile_id: bot.profile_id,
+          user_email: bot.profile?.email,
+        });
+        await slack.error({
+          text: `❌ Failed to update meeting processing status ${bot.id}: ${meetingProcessingStatusUpdateError.message}`,
+        });
+      }
+
       return;
     }
 
@@ -1026,6 +1262,26 @@ export function createBotStatusChangeService(
           `📝 Failed to insert transcript slices: ${transcriptSlicesError.message}`,
         ),
       });
+
+      const { error: meetingProcessingStatusUpdateError } = await supabase
+        .from("meeting_processing_status")
+        .update({
+          transcript_slice_words_status: "failed",
+        })
+        .eq("id", meetingProcessingStatusId);
+
+      if (meetingProcessingStatusUpdateError) {
+        logger.error("❌ Failed to update meeting processing status", {
+          error: meetingProcessingStatusUpdateError,
+          bot_id: bot.id,
+          profile_id: bot.profile_id,
+          user_email: bot.profile?.email,
+        });
+        await slack.error({
+          text: `❌ Failed to update meeting processing status ${bot.id}: ${meetingProcessingStatusUpdateError.message}`,
+        });
+      }
+
       return;
     }
 
@@ -1053,6 +1309,26 @@ export function createBotStatusChangeService(
           `📝 Failed to insert transcript slices: ${error.message}`,
         ),
       });
+
+      const { error: meetingProcessingStatusUpdateError } = await supabase
+        .from("meeting_processing_status")
+        .update({
+          transcript_slice_words_status: "completed",
+        })
+        .eq("id", meetingProcessingStatusId);
+
+      if (meetingProcessingStatusUpdateError) {
+        logger.error("❌ Failed to update meeting processing status", {
+          error: meetingProcessingStatusUpdateError,
+          bot_id: bot.id,
+          profile_id: bot.profile_id,
+          user_email: bot.profile?.email,
+        });
+        await slack.error({
+          text: `❌ Failed to update meeting processing status ${bot.id}: ${meetingProcessingStatusUpdateError.message}`,
+        });
+      }
+
       return;
     }
 
@@ -1119,6 +1395,26 @@ export function createBotStatusChangeService(
           `📝 Failed to insert transcript words: ${wordsError.message}`,
         ),
       });
+
+      const { error: meetingProcessingStatusUpdateError } = await supabase
+        .from("meeting_processing_status")
+        .update({
+          transcript_slice_words_status: "failed",
+        })
+        .eq("id", meetingProcessingStatusId);
+
+      if (meetingProcessingStatusUpdateError) {
+        logger.error("❌ Failed to update meeting processing status", {
+          error: meetingProcessingStatusUpdateError,
+          bot_id: bot.id,
+          profile_id: bot.profile_id,
+          user_email: bot.profile?.email,
+        });
+        await slack.error({
+          text: `❌ Failed to update meeting processing status ${bot.id}: ${meetingProcessingStatusUpdateError.message}`,
+        });
+      }
+
       return;
     }
 
@@ -1131,6 +1427,25 @@ export function createBotStatusChangeService(
       unique_speakers: _.uniq(transcriptSlices.map((s) => s.speaker_name))
         .length,
     });
+
+    const { error: meetingProcessingStatusUpdateError } = await supabase
+      .from("meeting_processing_status")
+      .update({
+        transcript_slice_words_status: "completed",
+      })
+      .eq("id", meetingProcessingStatusId);
+
+    if (meetingProcessingStatusUpdateError) {
+      logger.error("❌ Failed to update meeting processing status", {
+        error: meetingProcessingStatusUpdateError,
+        bot_id: bot.id,
+        profile_id: bot.profile_id,
+        user_email: bot.profile?.email,
+      });
+      await slack.error({
+        text: `❌ Failed to update meeting processing status ${bot.id}: ${meetingProcessingStatusUpdateError.message}`,
+      });
+    }
 
     await slack.success({
       text: `[${bot.profile?.email}] Successfully processed transcript with ${transcriptSlices.length} slices and ${words.length} words`,
