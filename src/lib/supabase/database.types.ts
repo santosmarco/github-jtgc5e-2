@@ -306,6 +306,65 @@ export type Database = {
           },
         ]
       }
+      coach_sessions: {
+        Row: {
+          coach_id: string | null
+          created_at: string
+          date: string | null
+          id: string
+          summary: string | null
+          title: string | null
+          user_id: string | null
+        }
+        Insert: {
+          coach_id?: string | null
+          created_at?: string
+          date?: string | null
+          id?: string
+          summary?: string | null
+          title?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          coach_id?: string | null
+          created_at?: string
+          date?: string | null
+          id?: string
+          summary?: string | null
+          title?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_sessions_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "coach_sessions_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "coach_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coaching_frameworks: {
         Row: {
           created_at: string
@@ -1197,6 +1256,7 @@ export type Database = {
           status: string | null
           sub_code: string | null
           title: string | null
+          updated_at: string | null
         }
         Insert: {
           api_video_id?: string | null
@@ -1217,6 +1277,7 @@ export type Database = {
           status?: string | null
           sub_code?: string | null
           title?: string | null
+          updated_at?: string | null
         }
         Update: {
           api_video_id?: string | null
@@ -1237,6 +1298,7 @@ export type Database = {
           status?: string | null
           sub_code?: string | null
           title?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -1691,6 +1753,7 @@ export type Database = {
           transcript_slice_words_status:
             | Database["public"]["Enums"]["processing_status"]
             | null
+          updated_at: string | null
           video_api_upload_status:
             | Database["public"]["Enums"]["processing_status"]
             | null
@@ -1721,6 +1784,7 @@ export type Database = {
           transcript_slice_words_status?:
             | Database["public"]["Enums"]["processing_status"]
             | null
+          updated_at?: string | null
           video_api_upload_status?:
             | Database["public"]["Enums"]["processing_status"]
             | null
@@ -1751,6 +1815,7 @@ export type Database = {
           transcript_slice_words_status?:
             | Database["public"]["Enums"]["processing_status"]
             | null
+          updated_at?: string | null
           video_api_upload_status?:
             | Database["public"]["Enums"]["processing_status"]
             | null
