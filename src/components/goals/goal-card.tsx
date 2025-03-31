@@ -1,7 +1,7 @@
 "use client";
 
 import dayjs from "dayjs";
-import { motion, useSpring } from "framer-motion";
+import { AnimatePresence, motion, useSpring } from "framer-motion";
 import _ from "lodash";
 import type { LucideProps } from "lucide-react";
 import {
@@ -19,7 +19,6 @@ import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
-import { Switch } from "~/components/ui/switch";
 import { transformMoment } from "~/lib/db/moments";
 import { cn } from "~/lib/utils";
 import { type RouterOutputs, api } from "~/trpc/react";
@@ -54,20 +53,6 @@ const gaugeVariants = {
   },
 };
 
-const scoreVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: "spring",
-      stiffness: 100,
-      damping: 20,
-      delay: 0.4,
-    },
-  },
-};
-
 export type SkillCardProps = {
   skill: RouterOutputs["skills"]["getAllSkills"][number];
   profileId: string;
@@ -88,6 +73,7 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
       damping: 30,
       mass: 1,
     });
+    const [isHovered, setIsHovered] = useState(false);
 
     useEffect(() => {
       springScore.set(73);
@@ -129,8 +115,6 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
         ),
       [skill.icon],
     );
-
-    const angle = (score / 100) * 180;
 
     const { mutate: enableSkill, isPending: isEnablingSkill } =
       api.skills.enableSkill.useMutation({
@@ -285,8 +269,6 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
 
     const { icon: StatusIcon, color: statusColor } = getStatusIconAndColor();
 
-    console.log(isLoading);
-
     const reportSkillPositiveScaleTags =
       skill.scales.map((s) => s.positive_tag_title) ?? [];
     const reportSkillNegativeScaleTags =
@@ -335,7 +317,12 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
       denominator <= 0 ? 0 : 0.5 + 0.5 * (numerator / denominator);
 
     const navigateToReport = () => {
-      if (isEnabled && !isLoading && latestSkillAssessmentStatus) {
+      if (
+        isEnabled &&
+        !isLoading &&
+        latestSkillAssessmentStatus &&
+        hasAssessments
+      ) {
         router.push(
           `/goals/reports/${latestSkillAssessmentStatus?.id}?goalId=${skillAssessmentGoal?.goal_id}`,
         );
@@ -348,69 +335,114 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
         variants={cardVariants}
         initial="hidden"
         animate="visible"
+        onHoverStart={() => setIsHovered(true)}
+        onHoverEnd={() => setIsHovered(false)}
         className={cn(
-          "relative overflow-hidden rounded-xl px-6 shadow-[0_10px_50px_rgba(0,0,0,0.1)] backdrop-blur-sm",
+          "relative overflow-hidden rounded-xl bg-gradient-to-br from-background/90 to-background/70 shadow-lg transition-all duration-500",
           isLoading && "pointer-events-none opacity-80",
-          !isEnabled &&
-            "after:absolute after:inset-0 after:bg-background/30 after:backdrop-blur-[2px]",
+          !isEnabled
+            ? "after:absolute after:inset-0 after:z-10 after:bg-background/50 after:backdrop-blur-[6px]"
+            : "after:absolute after:inset-0 after:z-0 after:bg-gradient-to-br after:from-background/10 after:to-background/5 after:backdrop-blur-[1px]",
           isEnabled &&
             !isLoading &&
-            "cursor-pointer transition-shadow duration-300 hover:shadow-xl",
+            hasAssessments &&
+            "cursor-pointer hover:shadow-xl hover:after:backdrop-blur-0",
+          isHovered && isEnabled && hasAssessments && "scale-[1.02]",
         )}
-        onClick={isEnabled ? navigateToReport : undefined}
+        onClick={isEnabled && hasAssessments ? navigateToReport : undefined}
+        style={{
+          boxShadow: isEnabled
+            ? "0 10px 30px rgba(0,0,0,0.1), 0 1px 8px rgba(0,0,0,0.05)"
+            : "0 10px 30px rgba(0,0,0,0.05), 0 1px 5px rgba(0,0,0,0.03)",
+        }}
       >
         {/* Background pattern */}
         <motion.div
           className={cn(
-            "pointer-events-none absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.40),transparent)] opacity-30",
+            "pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-30",
+            isEnabled ? "opacity-40" : "opacity-20",
           )}
           style={{
-            backgroundImage: `url(/skills/${skill.title.toLowerCase().replace(/[\s\(\)]+/g, "-")}.svg)`,
+            backgroundImage: `url(/skills/${skill.title.toLowerCase().replace(/[\s$$$$]+/g, "-")}.svg)`,
             backgroundSize: "cover",
             backgroundPosition: "center",
             backgroundRepeat: "no-repeat",
           }}
+          animate={{
+            opacity: isEnabled ? (isHovered ? 0.5 : 0.4) : 0.2,
+          }}
+          transition={{ duration: 0.5 }}
         />
 
+        {/* Glow effect for enabled cards */}
+        {isEnabled && (
+          <motion.div
+            className="absolute inset-0 z-0 bg-gradient-to-br from-primary/5 to-primary/10 opacity-0"
+            animate={{ opacity: isHovered ? 0.8 : 0 }}
+            transition={{ duration: 0.3 }}
+          />
+        )}
+
         {/* Loading overlay */}
-        {isLoading && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm">
+        <AnimatePresence>
+          {isLoading && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex flex-col items-center gap-2"
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm"
             >
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="font-medium text-primary">
-                {isEnablingSkill ? "Enabling skill..." : "Disabling skill..."}
-              </p>
+              <div className="flex flex-col items-center gap-2">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{
+                    duration: 1.5,
+                    repeat: Number.POSITIVE_INFINITY,
+                    ease: "linear",
+                  }}
+                >
+                  <Loader2 className="h-8 w-8 text-primary" />
+                </motion.div>
+                <p className="font-medium text-primary">
+                  {isEnablingSkill ? "Enabling skill..." : "Disabling skill..."}
+                </p>
+              </div>
             </motion.div>
-          </div>
-        )}
+          )}
+        </AnimatePresence>
 
-        {/* Header */}
-        <div className="relative flex h-16 items-center justify-between">
-          <motion.div
-            className="flex items-center gap-4"
-            variants={{
-              hidden: { opacity: 0, x: -20 },
-              visible: {
-                opacity: 1,
-                x: 0,
-                transition: {
-                  type: "spring",
-                  stiffness: 100,
-                  damping: 20,
+        <div className="relative z-20 px-6">
+          {/* Header */}
+          <div className="relative flex h-16 items-center justify-between">
+            <motion.div
+              className="flex items-center gap-4"
+              variants={{
+                hidden: { opacity: 0, x: -20 },
+                visible: {
+                  opacity: 1,
+                  x: 0,
+                  transition: {
+                    type: "spring",
+                    stiffness: 100,
+                    damping: 20,
+                  },
                 },
-              },
-            }}
-          >
-            <Icon className="h-8 w-8 drop-shadow-md" />
-            <h2 className="text-lg font-bold leading-none tracking-tight drop-shadow-sm">
-              {skill.title}
-            </h2>
-          </motion.div>
-          {isEnabled && (
+              }}
+            >
+              <div className="relative">
+                <motion.div
+                  className="absolute -inset-1 rounded-full bg-primary/10 opacity-0"
+                  animate={{ opacity: isHovered && isEnabled ? 0.8 : 0 }}
+                  transition={{ duration: 0.3 }}
+                />
+                <Icon className="h-8 w-8 drop-shadow-md" />
+              </div>
+              <h2 className="text-lg font-bold leading-none tracking-tight drop-shadow-sm">
+                {skill.title}
+              </h2>
+            </motion.div>
+
+            {/* Toggle Switch */}
             <motion.div
               className="flex items-center gap-3 pl-4"
               variants={{
@@ -428,64 +460,58 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="relative flex items-center gap-2">
-                <span className="text-xs font-medium text-muted-foreground">
-                  Off
-                </span>
-                <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-emerald-400/20 to-emerald-400/30 blur-sm" />
-                <Switch
-                  checked={isEnabled}
-                  onCheckedChange={
-                    skill.goal_templates.length > 0
-                      ? isEnabled
-                        ? handleSkillDisable
-                        : handleSkillEnable
-                      : undefined
-                  }
-                  disabled={skill.goal_templates.length === 0 || isLoading}
-                  className="relative z-10 data-[state=checked]:bg-emerald-400"
-                />
-                <span className="text-xs font-medium text-emerald-500">On</span>
-              </div>
+              <ToggleSwitch
+                checked={isEnabled}
+                onCheckedChange={
+                  skill.goal_templates.length > 0
+                    ? isEnabled
+                      ? handleSkillDisable
+                      : handleSkillEnable
+                    : undefined
+                }
+                disabled={skill.goal_templates.length === 0 || isLoading}
+              />
+            </motion.div>
+          </div>
+
+          {/* Content */}
+          {isEnabled ? (
+            <motion.div variants={gaugeVariants} className="relative z-20 h-48">
+              <SimplifiedGauge
+                value={totalScore * 100}
+                min={0}
+                max={100}
+                size="md"
+                className="h-48"
+                hasAssessments={hasAssessments}
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              className="z-20 flex h-48 flex-col items-center justify-center py-4 text-center"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+            >
+              <motion.div
+                className="mb-4 rounded-full bg-primary/20 p-4"
+                whileHover={{ scale: 1.05 }}
+                transition={{ type: "spring", stiffness: 400, damping: 10 }}
+              >
+                <Trophy className="h-8 w-8 text-primary" />
+              </motion.div>
+              <p className="mb-4 max-w-xs text-center text-base text-foreground">
+                Enable this skill to track your progress and receive
+                personalized feedback.
+              </p>
             </motion.div>
           )}
-        </div>
 
-        {isEnabled ? (
-          <SimplifiedGauge
-            value={totalScore * 100}
-            min={0}
-            max={100}
-            size="md"
-            className="h-48"
-          />
-        ) : (
-          <motion.div
-            className="z-10 -mx-6 flex h-48 flex-col items-center justify-center text-center"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
-          >
-            <div className="mb-4 rounded-full bg-primary/20 p-4">
-              <div className="z-20">
-                <Trophy className="h-8 w-8 text-primary" />
-              </div>
-            </div>
-            <p className="mb-4 max-w-xs text-center text-foreground">
-              Enable this skill to track your progress and receive personalized
-              feedback.
-            </p>
-          </motion.div>
-        )}
-
-        {/* Footer */}
-        {isEnabled ? (
-          <motion.div
-            className={cn(
-              "mt-auto flex h-16 items-center justify-between pb-4",
-            )}
-            {...(isEnabled && {
-              variants: {
+          {/* Footer */}
+          {isEnabled ? (
+            <motion.div
+              className="mt-auto flex h-16 items-center justify-between pb-4"
+              variants={{
                 hidden: { opacity: 0, y: 20 },
                 visible: {
                   opacity: 1,
@@ -497,88 +523,161 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
                     delay: 0.8,
                   },
                 },
-              },
-            })}
-          >
-            <div>
-              <p className="text-xs font-medium uppercase leading-none tracking-widest opacity-80">
-                LATEST REPORT
-              </p>
-              <p className="mt-1.5 text-lg font-semibold leading-none tracking-tight">
-                {latestAssessment ? (
-                  <>
-                    {dayjs(latestAssessment.created_at).format("MMM D")} to{" "}
-                    {dayjs(latestAssessment.created_at)
-                      .add(14, "days")
-                      .format("MMM D")}
-                  </>
-                ) : (
-                  "No assessment yet"
-                )}
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              className="group flex items-center gap-2 rounded-full backdrop-blur-3xl transition-all duration-300 hover:scale-105 hover:bg-background/30 hover:shadow-lg"
-              disabled={isLoading}
-              onClick={(e) => {
-                e.stopPropagation();
-                router.push(
-                  `/goals/reports/${latestSkillAssessmentStatus?.id}?goalId=${skillAssessmentGoal?.goal_id}`,
-                );
               }}
             >
-              <span className="font-medium tracking-wide">Review</span>
-              <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
-            </Button>
-          </motion.div>
-        ) : (
-          <motion.div
-            className="flex h-16 items-center justify-center pb-4"
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              visible: {
-                opacity: 1,
-                y: 0,
-                transition: {
-                  type: "spring",
-                  stiffness: 100,
-                  damping: 20,
-                  delay: 0.8,
+              <div>
+                <p className="text-xs font-medium uppercase leading-none tracking-widest opacity-80">
+                  LATEST REPORT
+                </p>
+                <p className="mt-1.5 text-lg font-semibold leading-none tracking-tight">
+                  {latestAssessment ? (
+                    <>
+                      {dayjs(latestAssessment.start_date).format("MMM D")} to{" "}
+                      {dayjs(latestAssessment.end_date).format("MMM D")}
+                    </>
+                  ) : (
+                    "No assessment yet"
+                  )}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                className="group flex items-center gap-2 rounded-full bg-background/50 backdrop-blur-3xl transition-all duration-300 hover:scale-105 hover:bg-background/70 hover:shadow-lg"
+                disabled={isLoading || !hasAssessments}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (hasAssessments) {
+                    router.push(
+                      `/goals/reports/${latestSkillAssessmentStatus?.id}?goalId=${skillAssessmentGoal?.goal_id}`,
+                    );
+                  }
+                }}
+              >
+                <span className="font-medium tracking-wide">Review</span>
+                <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
+              </Button>
+            </motion.div>
+          ) : (
+            <motion.div
+              className="flex h-16 items-center justify-center pb-4"
+              variants={{
+                hidden: { opacity: 0, y: 20 },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  transition: {
+                    type: "spring",
+                    stiffness: 100,
+                    damping: 20,
+                    delay: 0.8,
+                  },
                 },
-              },
-            }}
-          >
-            <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleSkillEnable();
               }}
-              disabled={isLoading || skill.goal_templates.length === 0}
-              className="group z-20 flex items-center gap-2 bg-primary/90 hover:bg-primary"
             >
-              <span>Enable skill</span>
-              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-            </Button>
-          </motion.div>
-        )}
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSkillEnable();
+                }}
+                disabled={isLoading || skill.goal_templates.length === 0}
+                className="group z-20 flex items-center gap-2 bg-primary/90 hover:bg-primary"
+              >
+                <span>Enable skill</span>
+                <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+              </Button>
+            </motion.div>
+          )}
+        </div>
       </motion.div>
     );
   },
 );
 
-export default function SimplifiedGauge({
+function ToggleSwitch({
+  checked,
+  onCheckedChange,
+  disabled,
+}: {
+  checked: boolean;
+  onCheckedChange?: (checked: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span
+        className={cn(
+          "text-xs font-medium transition-colors duration-200",
+          checked ? "text-muted-foreground" : "text-foreground/80",
+        )}
+      >
+        Off
+      </span>
+      <div
+        className={cn(
+          "relative h-6 w-12 cursor-pointer rounded-full p-1 transition-colors duration-300",
+          checked
+            ? "bg-gradient-to-r from-emerald-400 to-emerald-500"
+            : "bg-muted",
+          disabled && "cursor-not-allowed opacity-50",
+        )}
+        onClick={() => !disabled && onCheckedChange?.(!checked)}
+      >
+        {/* Glow effect */}
+        <motion.div
+          className="absolute inset-0 rounded-full bg-emerald-400/20 blur-md"
+          initial={false}
+          animate={{
+            opacity: checked ? 1 : 0,
+            scale: checked ? 1.2 : 1,
+          }}
+          transition={{ duration: 0.3 }}
+        />
+
+        {/* Track */}
+        <div className="relative z-10 h-full w-full">
+          {/* Thumb */}
+          <motion.div
+            className="absolute top-0 h-4 w-4 rounded-full bg-white shadow-md"
+            initial={false}
+            animate={{
+              x: checked ? "150%" : "0%",
+              scale: checked ? 1.1 : 1,
+              backgroundColor: checked ? "#ffffff" : "#ffffff",
+            }}
+            transition={{
+              type: "spring",
+              stiffness: 500,
+              damping: 30,
+            }}
+          />
+        </div>
+      </div>
+      <span
+        className={cn(
+          "text-xs font-medium transition-colors duration-200",
+          checked ? "text-emerald-500" : "text-muted-foreground",
+        )}
+      >
+        On
+      </span>
+    </div>
+  );
+}
+
+function SimplifiedGauge({
   value,
   min = 0,
   max = 100,
   size = "md",
   className,
+  hasAssessments = false,
 }: {
   value: number;
   min?: number;
   max?: number;
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
+  hasAssessments?: boolean;
 }) {
   const [displayValue, setDisplayValue] = useState(min);
 
@@ -601,9 +700,26 @@ export default function SimplifiedGauge({
 
   return (
     <div className={cn("flex flex-col items-center justify-center", className)}>
-      <div className={cn("relative", sizeClasses[size])}>
-        {/* Gauge background */}
+      <motion.div
+        className={cn("relative", sizeClasses[size])}
+        variants={gaugeVariants}
+      >
+        {/* SVG gauge */}
         <svg viewBox="0 0 200 200" className="h-full w-full">
+          {/* Background arc with gradient */}
+          <defs>
+            <linearGradient
+              id="gaugeGradient"
+              x1="0%"
+              y1="0%"
+              x2="100%"
+              y2="0%"
+            >
+              <stop offset="0%" stopColor="rgba(200, 200, 200, 0.1)" />
+              <stop offset="100%" stopColor="rgba(200, 200, 200, 0.2)" />
+            </linearGradient>
+          </defs>
+
           {/* Gray background arc */}
           <path
             d="M40 160 A 80 80 0 1 1 160 160"
@@ -613,7 +729,21 @@ export default function SimplifiedGauge({
             strokeLinecap="round"
           />
 
-          {/* Black progress arc */}
+          {/* Progress arc with gradient */}
+          <defs>
+            <linearGradient
+              id="progressGradient"
+              x1="0%"
+              y1="0%"
+              x2="100%"
+              y2="0%"
+            >
+              <stop offset="0%" stopColor="rgba(30, 30, 30, 0.9)" />
+              <stop offset="100%" stopColor="rgba(50, 50, 50, 1)" />
+            </linearGradient>
+          </defs>
+
+          {/* Progress arc */}
           <motion.path
             d="M40 160 A 80 80 0 1 1 160 160"
             fill="none"
@@ -625,45 +755,63 @@ export default function SimplifiedGauge({
             strokeDasharray="1 1"
             className="stroke-foreground"
           />
+
+          {/* Subtle tick marks */}
+          {[...Array(11)].map((_, i) => {
+            const angle = (i / 10) * Math.PI;
+            const x1 = 100 - 90 * Math.cos(angle);
+            const y1 = 160 - 90 * Math.sin(angle);
+            const x2 = 100 - 80 * Math.cos(angle);
+            const y2 = 160 - 80 * Math.sin(angle);
+            return (
+              <line
+                key={i}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke="rgba(150, 150, 150, 0.2)"
+                strokeWidth="1"
+              />
+            );
+          })}
         </svg>
 
-        {/* Center Score Display */}
+        {/* Center Score Display with animation */}
         <motion.div
           className="absolute inset-0 flex items-center justify-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
         >
-          <motion.span
-            className="text-5xl font-bold"
-            initial={{ value: min } as any}
-            animate={{ value: displayValue } as any}
-            transition={{ duration: 1.5, ease: "easeOut" }}
+          <motion.div
+            className="flex flex-col items-center"
+            initial={{ scale: 0.8 }}
+            animate={{ scale: 1 }}
+            transition={{
+              type: "spring",
+              stiffness: 400,
+              damping: 20,
+              delay: 0.7,
+            }}
           >
-            {Math.round(displayValue)}
-          </motion.span>
+            {hasAssessments ? (
+              <motion.span
+                className="text-5xl font-bold"
+                initial={{ value: min } as any}
+                animate={{ value: displayValue } as any}
+                transition={{ duration: 1.5, ease: "easeOut" }}
+              >
+                {Math.round(displayValue)}
+              </motion.span>
+            ) : (
+              <span className="text-5xl font-bold text-muted-foreground">
+                N/A
+              </span>
+            )}
+          </motion.div>
         </motion.div>
-
-        {/* Left min score */}
-        {/* <motion.span
-          className="absolute bottom-4 left-12 text-sm font-medium"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-        >
-          {min}
-        </motion.span> */}
-
-        {/* Right max score */}
-        {/* <motion.span
-          className="absolute bottom-4 right-12 text-sm font-medium"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-        >
-          {max}
-        </motion.span> */}
-      </div>
+      </motion.div>
     </div>
   );
 }
