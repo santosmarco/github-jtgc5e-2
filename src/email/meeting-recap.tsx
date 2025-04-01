@@ -63,6 +63,7 @@ export function MeetingRecapEmail({ meeting }: MeetingRecapEmailProps) {
 
 const previewProps: MeetingRecapEmailProps = {
   meeting: {
+    date: "2024-01-01",
     video_api_id: "1",
     name: "Weekly Strategy Sync",
     summary:
