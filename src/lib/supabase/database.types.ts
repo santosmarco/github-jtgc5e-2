@@ -3418,6 +3418,52 @@ export type Database = {
         }
         Relationships: []
       }
+      session_notes: {
+        Row: {
+          author_id: string | null
+          content: string | null
+          created_at: string
+          id: string
+          session_id: string | null
+        }
+        Insert: {
+          author_id?: string | null
+          content?: string | null
+          created_at?: string
+          id?: string
+          session_id?: string | null
+        }
+        Update: {
+          author_id?: string | null
+          content?: string | null
+          created_at?: string
+          id?: string
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_notes_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "session_notes_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_notes_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sessions: {
         Row: {
           coach_id: string | null
