@@ -487,7 +487,6 @@ export function createCalendarSyncService(
               coach_id: coachProfile.id,
               event_id: event.id,
               date: event.start_time,
-              title: event.raw?.summary || "Coaching Session",
             })),
           )
           .select("*");
