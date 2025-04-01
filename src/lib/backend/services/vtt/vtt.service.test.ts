@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { type RecallTranscript, Vtt, VttCue } from "./vtt.service";
+import { type RecallTranscript, Vtt, VttCue, VttWord } from "./vtt.service";
 
 describe("VTT Parsing", () => {
   describe("Basic Functionality", () => {
@@ -543,7 +543,62 @@ Text without speaker tag
         startTimestamp: "00:00:01.000",
         endTimestamp: "00:00:02.000",
         speaker: "Isolated Speaker",
-        text: "This cue is not part of a VTT file",
+        words: [
+          new VttWord({
+            content: "This",
+            startTimestamp: "00:00:01.000",
+            endTimestamp: "00:00:01.200",
+            index: 1,
+          }),
+          new VttWord({
+            content: "cue",
+            startTimestamp: "00:00:01.200",
+            endTimestamp: "00:00:01.400",
+            index: 2,
+          }),
+          new VttWord({
+            content: "is",
+            startTimestamp: "00:00:01.400",
+            endTimestamp: "00:00:01.500",
+            index: 3,
+          }),
+          new VttWord({
+            content: "not",
+            startTimestamp: "00:00:01.500",
+            endTimestamp: "00:00:01.600",
+            index: 4,
+          }),
+          new VttWord({
+            content: "part",
+            startTimestamp: "00:00:01.600",
+            endTimestamp: "00:00:01.700",
+            index: 5,
+          }),
+          new VttWord({
+            content: "of",
+            startTimestamp: "00:00:01.700",
+            endTimestamp: "00:00:01.800",
+            index: 6,
+          }),
+          new VttWord({
+            content: "a",
+            startTimestamp: "00:00:01.800",
+            endTimestamp: "00:00:01.850",
+            index: 7,
+          }),
+          new VttWord({
+            content: "VTT",
+            startTimestamp: "00:00:01.850",
+            endTimestamp: "00:00:01.950",
+            index: 8,
+          }),
+          new VttWord({
+            content: "file",
+            startTimestamp: "00:00:01.950",
+            endTimestamp: "00:00:02.000",
+            index: 9,
+          }),
+        ],
       });
 
       // Both next and previous should return undefined
@@ -770,7 +825,20 @@ Text without speaker tag
         startTimestamp: "00:00:01.000",
         endTimestamp: "00:00:02.000",
         speaker: "Speaker",
-        text: "Test text",
+        words: [
+          new VttWord({
+            content: "Test",
+            startTimestamp: "00:00:01.000",
+            endTimestamp: "00:00:01.500",
+            index: 1,
+          }),
+          new VttWord({
+            content: "text",
+            startTimestamp: "00:00:01.500",
+            endTimestamp: "00:00:02.000",
+            index: 2,
+          }),
+        ],
       });
 
       const expected =
@@ -784,7 +852,62 @@ Text without speaker tag
         startTimestamp: "00:00:03.000",
         endTimestamp: "00:00:04.000",
         speaker: "John O'Connor",
-        text: 'Text with "quotes" and special chars: ™ ® ©',
+        words: [
+          new VttWord({
+            content: "Text",
+            startTimestamp: "00:00:03.000",
+            endTimestamp: "00:00:03.500",
+            index: 1,
+          }),
+          new VttWord({
+            content: "with",
+            startTimestamp: "00:00:03.500",
+            endTimestamp: "00:00:04.000",
+            index: 2,
+          }),
+          new VttWord({
+            content: '"quotes"',
+            startTimestamp: "00:00:04.000",
+            endTimestamp: "00:00:04.500",
+            index: 3,
+          }),
+          new VttWord({
+            content: "and",
+            startTimestamp: "00:00:04.500",
+            endTimestamp: "00:00:05.000",
+            index: 4,
+          }),
+          new VttWord({
+            content: "special",
+            startTimestamp: "00:00:05.000",
+            endTimestamp: "00:00:05.500",
+            index: 5,
+          }),
+          new VttWord({
+            content: "chars:",
+            startTimestamp: "00:00:05.500",
+            endTimestamp: "00:00:06.000",
+            index: 6,
+          }),
+          new VttWord({
+            content: "™",
+            startTimestamp: "00:00:06.000",
+            endTimestamp: "00:00:06.500",
+            index: 7,
+          }),
+          new VttWord({
+            content: "®",
+            startTimestamp: "00:00:06.500",
+            endTimestamp: "00:00:07.000",
+            index: 8,
+          }),
+          new VttWord({
+            content: "©",
+            startTimestamp: "00:00:07.000",
+            endTimestamp: "00:00:07.500",
+            index: 9,
+          }),
+        ],
       });
 
       const expected =
@@ -1554,7 +1677,44 @@ Text without speaker tag
         startTimestamp: "00:00:01.000",
         endTimestamp: "00:00:02.000",
         speaker: "Speaker",
-        text: "Hello world, this is a test!",
+        words: [
+          new VttWord({
+            content: "Hello",
+            startTimestamp: "00:00:01.000",
+            endTimestamp: "00:00:01.200",
+            index: 1,
+          }),
+          new VttWord({
+            content: "world,",
+            startTimestamp: "00:00:01.200",
+            endTimestamp: "00:00:01.400",
+            index: 2,
+          }),
+          new VttWord({
+            content: "this",
+            startTimestamp: "00:00:01.400",
+            endTimestamp: "00:00:01.600",
+            index: 3,
+          }),
+          new VttWord({
+            content: "is",
+            startTimestamp: "00:00:01.600",
+            endTimestamp: "00:00:01.700",
+            index: 4,
+          }),
+          new VttWord({
+            content: "a",
+            startTimestamp: "00:00:01.700",
+            endTimestamp: "00:00:01.800",
+            index: 5,
+          }),
+          new VttWord({
+            content: "test!",
+            startTimestamp: "00:00:01.800",
+            endTimestamp: "00:00:02.000",
+            index: 6,
+          }),
+        ],
       });
 
       expect(cue.wordStrings).toEqual([
@@ -1567,13 +1727,13 @@ Text without speaker tag
       ]);
     });
 
-    test("should handle empty text", () => {
+    test("should handle empty words array", () => {
       const cue = new VttCue({
         index: 1,
         startTimestamp: "00:00:01.000",
         endTimestamp: "00:00:02.000",
         speaker: "Speaker",
-        text: "",
+        words: [],
       });
 
       expect(cue.wordStrings).toEqual([]);
@@ -1585,7 +1745,32 @@ Text without speaker tag
         startTimestamp: "00:00:01.000",
         endTimestamp: "00:00:02.000",
         speaker: "Speaker",
-        text: "  Multiple   spaces   and... special-characters!  ",
+        words: [
+          new VttWord({
+            content: "  Multiple  ",
+            startTimestamp: "00:00:01.000",
+            endTimestamp: "00:00:01.200",
+            index: 1,
+          }),
+          new VttWord({
+            content: " spaces  ",
+            startTimestamp: "00:00:01.200",
+            endTimestamp: "00:00:01.400",
+            index: 2,
+          }),
+          new VttWord({
+            content: " and...",
+            startTimestamp: "00:00:01.400",
+            endTimestamp: "00:00:01.600",
+            index: 3,
+          }),
+          new VttWord({
+            content: " special-characters!  ",
+            startTimestamp: "00:00:01.600",
+            endTimestamp: "00:00:01.800",
+            index: 4,
+          }),
+        ],
       });
 
       expect(cue.wordStrings).toEqual([
@@ -1602,7 +1787,44 @@ Text without speaker tag
         startTimestamp: "00:00:01.000",
         endTimestamp: "00:00:02.000",
         speaker: "Speaker",
-        text: "Testing 123 with $symbols% and (punctuation)",
+        words: [
+          new VttWord({
+            content: "Testing",
+            startTimestamp: "00:00:01.000",
+            endTimestamp: "00:00:01.200",
+            index: 1,
+          }),
+          new VttWord({
+            content: "123",
+            startTimestamp: "00:00:01.200",
+            endTimestamp: "00:00:01.400",
+            index: 2,
+          }),
+          new VttWord({
+            content: "with",
+            startTimestamp: "00:00:01.400",
+            endTimestamp: "00:00:01.600",
+            index: 3,
+          }),
+          new VttWord({
+            content: "$symbols%",
+            startTimestamp: "00:00:01.600",
+            endTimestamp: "00:00:01.800",
+            index: 4,
+          }),
+          new VttWord({
+            content: "and",
+            startTimestamp: "00:00:01.800",
+            endTimestamp: "00:00:01.900",
+            index: 5,
+          }),
+          new VttWord({
+            content: "(punctuation)",
+            startTimestamp: "00:00:01.900",
+            endTimestamp: "00:00:02.000",
+            index: 6,
+          }),
+        ],
       });
 
       expect(cue.wordStrings).toEqual([

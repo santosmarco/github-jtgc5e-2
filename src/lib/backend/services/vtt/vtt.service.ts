@@ -61,7 +61,7 @@ export class VttWord {
   public durationInMilliseconds: number;
 
   constructor(input: VttWordInput) {
-    this.content = input.content;
+    this.content = input.content.trim();
     this.startTimestamp = input.startTimestamp;
     this.endTimestamp = input.endTimestamp;
     this.index = input.index;
