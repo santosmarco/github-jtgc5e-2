@@ -312,65 +312,6 @@ export type Database = {
           },
         ]
       }
-      coach_sessions: {
-        Row: {
-          coach_id: string | null
-          created_at: string
-          date: string | null
-          id: string
-          summary: string | null
-          title: string | null
-          user_id: string | null
-        }
-        Insert: {
-          coach_id?: string | null
-          created_at?: string
-          date?: string | null
-          id?: string
-          summary?: string | null
-          title?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          coach_id?: string | null
-          created_at?: string
-          date?: string | null
-          id?: string
-          summary?: string | null
-          title?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "coach_sessions_coach_id_fkey"
-            columns: ["coach_id"]
-            isOneToOne: false
-            referencedRelation: "meetings_with_profile"
-            referencedColumns: ["profile_id"]
-          },
-          {
-            foreignKeyName: "coach_sessions_coach_id_fkey"
-            columns: ["coach_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "coach_sessions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "meetings_with_profile"
-            referencedColumns: ["profile_id"]
-          },
-          {
-            foreignKeyName: "coach_sessions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       coaching_frameworks: {
         Row: {
           created_at: string
@@ -3476,6 +3417,82 @@ export type Database = {
           word_count?: number | null
         }
         Relationships: []
+      }
+      sessions: {
+        Row: {
+          coach_id: string | null
+          created_at: string
+          date: string | null
+          event_id: string | null
+          id: string
+          summary: string | null
+          title: string | null
+          user_id: string | null
+        }
+        Insert: {
+          coach_id?: string | null
+          created_at?: string
+          date?: string | null
+          event_id?: string | null
+          id?: string
+          summary?: string | null
+          title?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          coach_id?: string | null
+          created_at?: string
+          date?: string | null
+          event_id?: string | null
+          id?: string
+          summary?: string | null
+          title?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_sessions_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "coach_sessions_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "coach_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_event_details_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events_v2"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       skill_scales: {
         Row: {
