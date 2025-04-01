@@ -4,10 +4,15 @@ import type {
   Bot as RecallBot,
   CalendarEvent as RecallCalendarEvent,
 } from "~/lib/recall/client";
-import type { Json, Tables, TablesInsert } from "~/lib/supabase/database.types";
+import type {
+  Enums,
+  Json,
+  Tables,
+  TablesInsert,
+} from "~/lib/supabase/database.types";
 
 import _ from "lodash";
-import { z } from "zod";
+import { GoogleCalendarEvent } from "~/lib/google-calendar/schemas";
 import { BOT_AUTOMATIC_LEAVE } from "../constants";
 import {
   type CalendarSyncEvent,
@@ -101,6 +106,14 @@ export function createCalendarSyncService(
           return;
         }
 
+        const { data: coachProfile } = calendar.profile.coach_id
+          ? await supabase
+              .from("profiles")
+              .select("*")
+              .eq("id", calendar.profile.coach_id)
+              .maybeSingle()
+          : { data: null };
+
         const allResults: NonNullable<
           Awaited<
             ReturnType<typeof recall.calendarV2.calendar_events_list>
@@ -164,7 +177,7 @@ export function createCalendarSyncService(
         });
 
         for (const calendarEvent of events.results ?? []) {
-          await processCalendarEvent(calendar, calendarEvent);
+          await processCalendarEvent(calendar, calendarEvent, coachProfile);
         }
 
         logger.info("✅ Completed calendar sync event processing", {
@@ -187,6 +200,7 @@ export function createCalendarSyncService(
   async function processCalendarEvent(
     calendar: RecallCalendarWithProfile,
     event: RecallCalendarEvent,
+    coachProfile: Tables<"profiles"> | null,
   ) {
     return logger.trace("calendar-sync.process-event", async (trace) => {
       trace.setAttributes({
@@ -196,6 +210,8 @@ export function createCalendarSyncService(
       });
 
       try {
+        const eventType = await getEventType(calendar, event, coachProfile);
+
         const upsertResult = await supabase
           .from("calendar_events_v2")
           .upsert(
@@ -216,6 +232,7 @@ export function createCalendarSyncService(
               raw: event.raw as Json,
               updated_at: event.updated_at,
               profile_id: calendar.profile.id,
+              event_type: eventType,
             },
             { onConflict: "id" },
           )
@@ -323,6 +340,82 @@ export function createCalendarSyncService(
         });
       }
     });
+  }
+
+  async function getEventType(
+    calendar: RecallCalendarWithProfile,
+    event: RecallCalendarEvent,
+    coachProfile: Tables<"profiles"> | null,
+  ): Promise<Enums<"event_type">> {
+    try {
+      // Early validation of required data
+      if (!coachProfile?.email) {
+        const reason = !coachProfile
+          ? "No coach profile associated with this event"
+          : "Coach profile has no email";
+
+        logger.info(`${reason}, defaulting to 'meeting' type`, {
+          event_id: event.id,
+          calendar_id: calendar.id,
+          profile_email: calendar.profile.email,
+          ...(coachProfile ? { coach_profile_id: coachProfile.id } : {}),
+        });
+        return "meeting";
+      }
+
+      // Parse and validate event data
+      const parseResult = GoogleCalendarEvent.safeParse(event.raw ?? {});
+      if (!parseResult.success) {
+        logger.error(
+          "Failed to parse event data, defaulting to 'meeting' type",
+          {
+            error: parseResult.error,
+            data: event.raw,
+            profile_id: calendar.profile.id,
+            validation_errors: parseResult.error.errors,
+          },
+        );
+        return "meeting";
+      }
+
+      const calendarEvent = parseResult.data;
+
+      // Check if coach is an attendee using normalized email comparison
+      const coachEmailNormalized = coachProfile.email.toLowerCase().trim();
+      const hasCoachAsAttendee = calendarEvent.attendees?.some(
+        (attendee) =>
+          attendee.email &&
+          attendee.email.toLowerCase().trim() === coachEmailNormalized,
+      );
+
+      if (hasCoachAsAttendee) {
+        logger.info("Coach is an attendee, identifying as 'coaching_session'", {
+          event_id: event.id,
+          calendar_id: calendar.id,
+          profile_email: calendar.profile.email,
+          coach_email: coachProfile.email,
+        });
+        return "coaching_session";
+      }
+
+      logger.info("Coach is not an attendee, identifying as 'meeting'", {
+        event_id: event.id,
+        calendar_id: calendar.id,
+        profile_email: calendar.profile.email,
+      });
+      return "meeting";
+    } catch (error) {
+      logger.error(
+        "Error determining event type, defaulting to 'meeting' type",
+        {
+          error,
+          event_id: event.id,
+          calendar_id: calendar.id,
+          profile_id: calendar.profile.id,
+        },
+      );
+      return "meeting";
+    }
   }
 
   async function isEventRelevant(event: RecallCalendarEvent) {
