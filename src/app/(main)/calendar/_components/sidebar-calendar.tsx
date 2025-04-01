@@ -202,7 +202,6 @@ export function SidebarCalendar({
                 "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
               today: "font-medium text-primary",
             }}
-            fromMonth={new Date()}
           />
         </Card>
       </motion.div>
