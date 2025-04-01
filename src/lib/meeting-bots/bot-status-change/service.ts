@@ -406,8 +406,6 @@ export function createBotStatusChangeService(
             "🎥 Cannot upload video - Missing video URL",
           ),
         });
-
-        return { storageUrl: undefined, apiVideoId: undefined, speakers: [] };
       }
 
       logger.info("🚀 Initiating parallel video uploads", {
@@ -463,7 +461,7 @@ export function createBotStatusChangeService(
 
   async function uploadVideoToStorage(
     bot: MeetingBotWithProfileAndEventAndCalendar,
-    videoUrl: string,
+    videoUrl: string | undefined,
     meetingProcessingStatusId: string,
   ): Promise<Pick<VideoUploadResult, "storageUrl">> {
     try {
@@ -476,6 +474,45 @@ export function createBotStatusChangeService(
         profile_id: bot.profile_id,
         user_email: bot.profile?.email,
       });
+
+      if (!videoUrl) {
+        logger.warn("⚠️ No video URL found for storage upload, skipping...", {
+          bot_id: bot.id,
+          profile_id: bot.profile_id,
+          user_email: bot.profile?.email,
+        });
+
+        await slack.error({
+          text: formatSlackMessage(
+            bot,
+            "⚠️ No video URL found for storage upload, skipping...",
+          ),
+        });
+
+        const { error: meetingProcessingStatusUpdateError } = await supabase
+          .from("meeting_processing_status")
+          .update({
+            supabase_video_upload_status: "skipped",
+          })
+          .eq("id", meetingProcessingStatusId);
+
+        if (meetingProcessingStatusUpdateError) {
+          logger.error("❌ Failed to update meeting processing status", {
+            error: meetingProcessingStatusUpdateError,
+            bot_id: bot.id,
+            profile_id: bot.profile_id,
+            user_email: bot.profile?.email,
+          });
+          await slack.error({
+            text: formatSlackMessage(
+              bot,
+              "❌ Failed to update meeting processing status",
+            ),
+          });
+        }
+
+        return { storageUrl: undefined };
+      }
 
       void uploadVideoToSupabaseStorage.trigger({
         botId: bot.id,
@@ -559,7 +596,7 @@ export function createBotStatusChangeService(
 
   async function uploadVideoToApiVideo(
     bot: MeetingBotWithProfileAndEventAndCalendar,
-    videoUrl: string,
+    videoUrl: string | undefined,
     participants: string[],
     meetingProcessingStatusId: string,
   ): Promise<Pick<VideoUploadResult, "apiVideoId" | "speakers">> {
@@ -682,6 +719,36 @@ export function createBotStatusChangeService(
       await slack.info({
         text: formatSlackMessage(bot, "🎥 Starting API.video upload"),
       });
+
+      if (!videoUrl) {
+        logger.error("❌ No video URL found for upload", {
+          bot_id: bot.id,
+          profile_id: bot.profile_id,
+          user_email: bot.profile?.email,
+        });
+
+        await slack.error({
+          text: formatSlackMessage(bot, "❌ No video URL found for upload"),
+        });
+
+        const { error: meetingProcessingStatusUpdateError } = await supabase
+          .from("meeting_processing_status")
+          .update({
+            video_api_upload_status: "failed",
+          })
+          .eq("id", meetingProcessingStatusId);
+
+        if (meetingProcessingStatusUpdateError) {
+          logger.error("❌ Failed to update meeting processing status", {
+            error: meetingProcessingStatusUpdateError,
+            bot_id: bot.id,
+            profile_id: bot.profile_id,
+            user_email: bot.profile?.email,
+          });
+        }
+
+        return { apiVideoId: undefined, speakers: [] };
+      }
 
       const video = await apiVideo.videos.create({
         title,
