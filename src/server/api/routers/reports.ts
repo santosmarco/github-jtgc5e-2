@@ -369,6 +369,7 @@ export const reportsRouter = createTRPCRouter({
             report.report_sections,
             (rs) => rs.index ?? 0,
           ),
+          report_moments: report.report_moments.filter((rm) => rm.is_visible),
         })),
       };
     }),
