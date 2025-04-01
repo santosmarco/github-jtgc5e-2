@@ -13,6 +13,7 @@ export type Database = {
         Row: {
           created_at: string
           end_time: string
+          event_type: Database["public"]["Enums"]["event_type"] | null
           ical_uid: string
           id: string
           is_deleted: boolean
@@ -32,6 +33,7 @@ export type Database = {
         Insert: {
           created_at: string
           end_time: string
+          event_type?: Database["public"]["Enums"]["event_type"] | null
           ical_uid: string
           id?: string
           is_deleted: boolean
@@ -51,6 +53,7 @@ export type Database = {
         Update: {
           created_at?: string
           end_time?: string
+          event_type?: Database["public"]["Enums"]["event_type"] | null
           ical_uid?: string
           id?: string
           is_deleted?: boolean
@@ -81,6 +84,7 @@ export type Database = {
         Row: {
           created_at: string
           end_time: string
+          event_type: Database["public"]["Enums"]["event_type"] | null
           ical_uid: string
           id: string
           is_deleted: boolean
@@ -103,6 +107,7 @@ export type Database = {
         Insert: {
           created_at: string
           end_time: string
+          event_type?: Database["public"]["Enums"]["event_type"] | null
           ical_uid: string
           id?: string
           is_deleted: boolean
@@ -125,6 +130,7 @@ export type Database = {
         Update: {
           created_at?: string
           end_time?: string
+          event_type?: Database["public"]["Enums"]["event_type"] | null
           ical_uid?: string
           id?: string
           is_deleted?: boolean
@@ -4256,6 +4262,7 @@ export type Database = {
       }
     }
     Enums: {
+      event_type: "meeting" | "coaching_session"
       goal_signal_direction_type: "positive" | "negative"
       icon_enum:
         | "Brain"
