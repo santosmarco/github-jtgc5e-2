@@ -8,7 +8,10 @@ import { EmailContainer } from "./_components/email-container";
 import { MeetingSummarySection } from "./_components/meeting-summary-section";
 
 export type MeetingRecapEmailProps = {
-  meeting: Pick<Tables<"meetings">, "video_api_id" | "name" | "summary"> & {
+  meeting: Pick<
+    Tables<"meetings">,
+    "video_api_id" | "name" | "summary" | "date"
+  > & {
     profile: Pick<Tables<"profiles">, "nickname" | "email">;
     topics: Pick<Tables<"meeting_topics">, "title" | "summary">[];
     actionItems: RouterOutputs["actionItems"]["getByVideoId"];

@@ -21,7 +21,7 @@ export async function sendInvitationEmail({ invite }: InvitationEmailProps) {
     const emailHtml = await render(InvitationEmail({ invite }));
 
     const data = await resend.emails.send({
-      from: "onboarding@emails.withtitan.com",
+      from: "Titan <onboarding@emails.withtitan.com>",
       to: invite.email,
       subject: "Create Your Account On Titan GameTape",
       html: emailHtml,
@@ -45,7 +45,7 @@ export async function sendExploreUnlockedEmail({
   const emailHtml = await render(ExploreUnlockedEmail({ profile }));
 
   const data = await resend.emails.send({
-    from: "onboarding@emails.withtitan.com",
+    from: "Titan <onboarding@emails.withtitan.com>",
     to: profile.email,
     subject: "🎉 Congrats! Start Exploring Your Performance with GameTape",
     html: emailHtml,
@@ -59,10 +59,46 @@ export async function sendMeetingRecapEmail({
 }: MeetingRecapEmailProps) {
   const emailHtml = await render(MeetingRecapEmail({ meeting }));
 
+  // Format date if available
+  const meetingDate = meeting.date
+    ? new Date(meeting.date).toLocaleDateString()
+    : "";
+
+  // Get meeting name or use a fallback
+  const meetingName = meeting.name || "Meeting";
+
+  // Get assignees if available (as a representation of attendees)
+  let attendeeNames = "";
+  if (meeting.actionItems && meeting.actionItems.length > 0) {
+    const uniqueAttendees = new Set<string>();
+
+    for (const item of meeting.actionItems) {
+      if (item.assignees) {
+        for (const assignee of item.assignees) {
+          if (assignee.assignee?.name) {
+            uniqueAttendees.add(assignee.assignee.name);
+          }
+        }
+      }
+    }
+
+    if (uniqueAttendees.size > 0) {
+      const attendeesList = Array.from(uniqueAttendees);
+      if (attendeesList.length <= 3) {
+        attendeeNames = ` with ${attendeesList.join(", ")}`;
+      } else {
+        attendeeNames = ` with ${attendeesList.slice(0, 2).join(", ")} and ${attendeesList.length - 2} others`;
+      }
+    }
+  }
+
+  // Create a subject that includes date, title, and attendees
+  const subject = `Meeting Recap: ${meetingName}${meetingDate ? ` (${meetingDate})` : ""}${attendeeNames}`;
+
   const data = await resend.emails.send({
-    from: "onboarding@emails.withtitan.com",
+    from: "Titan <onboarding@emails.withtitan.com>",
     to: meeting.profile.email,
-    subject: "Your Meeting Recap is Ready",
+    subject,
     html: emailHtml,
   });
 
