@@ -295,7 +295,7 @@ export class TopicSegmentationService extends BackendService {
           });
 
           const topicSegmentationResult = await this.topicSegmentation(
-            { vtt },
+            { vtt: new Vtt(meeting.clean_vtt_file) },
             ctx,
           );
 
