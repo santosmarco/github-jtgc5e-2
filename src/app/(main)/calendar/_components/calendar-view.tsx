@@ -207,7 +207,10 @@ export function CalendarView({
     );
   }
 
-  if (!selectedDate && events.length === 0) {
+  if (
+    (!selectedDate && events.length === 0) ||
+    (selectedDate && selectedDateEvents.length === 0)
+  ) {
     return (
       <AnimatePresence>
         <motion.div
@@ -220,7 +223,7 @@ export function CalendarView({
           }}
           className="py-8"
         >
-          <NoMeetings />
+          <NoMeetings isPastDate={isSelectedDatePast} />
         </motion.div>
       </AnimatePresence>
     );
