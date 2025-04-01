@@ -353,7 +353,11 @@ export const reportsRouter = createTRPCRouter({
             });
           }
 
-          return { ...report, ...updatedReport };
+          return {
+            ...report,
+            ...updatedReport,
+            report_moments: report.report_moments.filter((rm) => rm.is_visible),
+          };
         }),
       );
 
