@@ -180,6 +180,9 @@ export function createCalendarSyncService(
           await processCalendarEvent(calendar, calendarEvent, coachProfile);
         }
 
+        // After processing all events, create sessions as needed
+        await createSessionsAsNeeded(calendar, coachProfile);
+
         logger.info("✅ Completed calendar sync event processing", {
           calendar_id: event.data.calendar_id,
           processed_events: events.results?.length ?? 0,
@@ -416,6 +419,109 @@ export function createCalendarSyncService(
       );
       return "meeting";
     }
+  }
+
+  async function createSessionsAsNeeded(
+    calendar: RecallCalendarWithProfile,
+    coachProfile: Tables<"profiles"> | null,
+  ) {
+    return logger.trace("calendar-sync.create-sessions", async (trace) => {
+      trace.setAttributes({
+        "calendar.id": calendar.id,
+        "profile.id": calendar.profile.id,
+        "profile.email": calendar.profile.email,
+      });
+
+      try {
+        if (!coachProfile) {
+          logger.info("⏭️ Skipping session creation - No coach profile", {
+            calendar_id: calendar.id,
+            profile_id: calendar.profile.id,
+            profile_email: calendar.profile.email,
+          });
+          return;
+        }
+
+        // Find all coaching session events that don't have associated sessions
+        const { data: coachingEvents, error: eventsError } = await supabase
+          .from("calendar_events_v2")
+          .select("*, sessions:sessions!left(id)")
+          .eq("profile_id", calendar.profile.id)
+          .eq("event_type", "coaching_session")
+          .is("is_deleted", false);
+
+        if (eventsError) {
+          logger.error("❌ Failed to fetch coaching events", {
+            error: eventsError,
+            calendar_id: calendar.id,
+            profile_id: calendar.profile.id,
+          });
+          return;
+        }
+
+        // Filter events that don't have sessions
+        const eventsWithoutSessions = coachingEvents.filter(
+          (event) => !event.sessions || event.sessions.length === 0,
+        );
+
+        if (eventsWithoutSessions.length === 0) {
+          logger.info("✅ No new sessions needed", {
+            calendar_id: calendar.id,
+            profile_id: calendar.profile.id,
+          });
+          return;
+        }
+
+        logger.info("🔄 Creating sessions for coaching events", {
+          calendar_id: calendar.id,
+          profile_id: calendar.profile.id,
+          events_count: eventsWithoutSessions.length,
+        });
+
+        // Create sessions for each event
+        const { data: createdSessions, error: sessionsError } = await supabase
+          .from("sessions")
+          .insert(
+            eventsWithoutSessions.map((event) => ({
+              user_id: calendar.profile.id,
+              coach_id: coachProfile.id,
+              event_id: event.id,
+              date: event.start_time,
+              title: event.raw?.summary || "Coaching Session",
+            })),
+          )
+          .select("*");
+
+        if (sessionsError) {
+          logger.error("❌ Failed to create sessions", {
+            error: sessionsError,
+            calendar_id: calendar.id,
+            profile_id: calendar.profile.id,
+          });
+          return;
+        }
+
+        logger.info("✅ Successfully created sessions", {
+          calendar_id: calendar.id,
+          profile_id: calendar.profile.id,
+          sessions_count: createdSessions.length,
+          session_ids: createdSessions.map((s) => s.id),
+        });
+
+        await slack.success({
+          text: `[${calendar.profile.email}] Created ${createdSessions.length} coaching sessions`,
+        });
+      } catch (error) {
+        logger.error("Failed to create sessions", {
+          error,
+          calendar_id: calendar.id,
+          profile_id: calendar.profile.id,
+        });
+        await slack.error({
+          text: `[${calendar.profile.email}] Failed to create sessions: ${(error as Error).message}`,
+        });
+      }
+    });
   }
 
   async function isEventRelevant(event: RecallCalendarEvent) {
