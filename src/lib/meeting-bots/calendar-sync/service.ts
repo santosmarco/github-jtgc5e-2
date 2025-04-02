@@ -482,12 +482,32 @@ export function createCalendarSyncService(
         const { data: createdSessions, error: sessionsError } = await supabase
           .from("sessions")
           .insert(
-            eventsWithoutSessions.map((event) => ({
-              user_id: calendar.profile.id,
-              coach_id: coachProfile.id,
-              event_id: event.id,
-              date: event.start_time,
-            })),
+            eventsWithoutSessions
+              .map((event) => {
+                const eventRawParseResult = GoogleCalendarEvent.safeParse(
+                  event.raw,
+                );
+
+                if (!eventRawParseResult.success) {
+                  logger.warn("⚠️ Failed to parse event raw data", {
+                    error: eventRawParseResult.error,
+                    event_id: event.id,
+                  });
+                }
+
+                const eventRaw = eventRawParseResult.data;
+
+                return {
+                  user_id: calendar.profile.id,
+                  coach_id: coachProfile.id,
+                  event_id: event.id,
+                  date: event.start_time,
+                  title: eventRaw?.summary ?? "Coaching Session",
+                } satisfies TablesInsert<"sessions">;
+              })
+              .filter(
+                (event): event is NonNullable<typeof event> => event !== null,
+              ),
           )
           .select("*");
 
