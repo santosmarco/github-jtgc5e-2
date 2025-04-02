@@ -2707,6 +2707,7 @@ export type Database = {
           explore_email_sent: boolean | null
           force_post_ten_meeting_onboarding: boolean
           id: string
+          image_url: string | null
           is_admin: boolean
           nickname: string | null
           role: Database["public"]["Enums"]["user_role_enum"]
@@ -2723,6 +2724,7 @@ export type Database = {
           explore_email_sent?: boolean | null
           force_post_ten_meeting_onboarding?: boolean
           id: string
+          image_url?: string | null
           is_admin?: boolean
           nickname?: string | null
           role?: Database["public"]["Enums"]["user_role_enum"]
@@ -2739,6 +2741,7 @@ export type Database = {
           explore_email_sent?: boolean | null
           force_post_ten_meeting_onboarding?: boolean
           id?: string
+          image_url?: string | null
           is_admin?: boolean
           nickname?: string | null
           role?: Database["public"]["Enums"]["user_role_enum"]
@@ -3420,25 +3423,46 @@ export type Database = {
       }
       session_notes: {
         Row: {
-          author_id: string | null
-          content: string | null
+          attachment_url: string | null
+          author_id: string
+          color: Database["public"]["Enums"]["note_color"]
+          content: string
           created_at: string
           id: string
-          session_id: string | null
+          minimized: boolean
+          position_x: number
+          position_y: number
+          session_id: string
+          updated_at: string
+          z_index: number
         }
         Insert: {
-          author_id?: string | null
-          content?: string | null
+          attachment_url?: string | null
+          author_id: string
+          color?: Database["public"]["Enums"]["note_color"]
+          content: string
           created_at?: string
           id?: string
-          session_id?: string | null
+          minimized?: boolean
+          position_x?: number
+          position_y?: number
+          session_id: string
+          updated_at?: string
+          z_index?: number
         }
         Update: {
-          author_id?: string | null
-          content?: string | null
+          attachment_url?: string | null
+          author_id?: string
+          color?: Database["public"]["Enums"]["note_color"]
+          content?: string
           created_at?: string
           id?: string
-          session_id?: string | null
+          minimized?: boolean
+          position_x?: number
+          position_y?: number
+          session_id?: string
+          updated_at?: string
+          z_index?: number
         }
         Relationships: [
           {
@@ -3466,6 +3490,7 @@ export type Database = {
       }
       sessions: {
         Row: {
+          api_video_id: string | null
           coach_id: string | null
           created_at: string
           date: string | null
@@ -3476,6 +3501,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          api_video_id?: string | null
           coach_id?: string | null
           created_at?: string
           date?: string | null
@@ -3486,6 +3512,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          api_video_id?: string | null
           coach_id?: string | null
           created_at?: string
           date?: string | null
@@ -3523,6 +3550,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_api_video_id_fkey"
+            columns: ["api_video_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["video_api_id"]
+          },
+          {
+            foreignKeyName: "sessions_api_video_id_fkey"
+            columns: ["api_video_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["video_api_id"]
           },
           {
             foreignKeyName: "sessions_event_id_fkey"
@@ -3873,6 +3914,7 @@ export type Database = {
     Views: {
       calendar_event_details_v2: {
         Row: {
+          attendees: Json | null
           created: string | null
           created_at: string | null
           creator_email: string | null
@@ -3901,66 +3943,6 @@ export type Database = {
           summary: string | null
           tags: string[] | null
           updated_at: string | null
-        }
-        Insert: {
-          created?: never
-          created_at?: string | null
-          creator_email?: never
-          end_date_time?: never
-          end_time?: string | null
-          event_id?: never
-          html_link?: never
-          ical_uid?: string | null
-          id?: string | null
-          is_deleted?: boolean | null
-          meeting_platform?:
-            | Database["public"]["Enums"]["meeting_platform_enum"]
-            | null
-          meeting_url?: string | null
-          platform?:
-            | Database["public"]["Enums"]["recall_calendar_platform_type"]
-            | null
-          platform_id?: string | null
-          profile_id?: string | null
-          raw?: Json | null
-          recall_calendar_id?: string | null
-          should_join_user_override?: boolean | null
-          start_date_time?: never
-          start_time?: string | null
-          status?: never
-          summary?: never
-          tags?: string[] | null
-          updated_at?: string | null
-        }
-        Update: {
-          created?: never
-          created_at?: string | null
-          creator_email?: never
-          end_date_time?: never
-          end_time?: string | null
-          event_id?: never
-          html_link?: never
-          ical_uid?: string | null
-          id?: string | null
-          is_deleted?: boolean | null
-          meeting_platform?:
-            | Database["public"]["Enums"]["meeting_platform_enum"]
-            | null
-          meeting_url?: string | null
-          platform?:
-            | Database["public"]["Enums"]["recall_calendar_platform_type"]
-            | null
-          platform_id?: string | null
-          profile_id?: string | null
-          raw?: Json | null
-          recall_calendar_id?: string | null
-          should_join_user_override?: boolean | null
-          start_date_time?: never
-          start_time?: string | null
-          status?: never
-          summary?: never
-          tags?: string[] | null
-          updated_at?: string | null
         }
         Relationships: [
           {
@@ -4373,6 +4355,7 @@ export type Database = {
         | "webrtc"
         | "slack_huddle_observer"
       moment_reaction_type: "thumbs_up" | "thumbs_down"
+      note_color: "yellow" | "blue" | "green" | "pink" | "purple"
       onboarding_task_name_enum:
         | "explore_team_conflict_chat"
         | "explore_feedback_chat"
