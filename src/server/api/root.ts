@@ -18,6 +18,7 @@ import { skillsRouter } from "./routers/skills";
 import { transcriptsRouter } from "./routers/transcripts";
 import { userInvitesRouter } from "./routers/user-invites";
 import { videosRouter } from "./routers/videos";
+import { sessionsRouter } from "./routers/sessions";
 
 export const appRouter = createTRPCRouter({
   auth: authRouter,
@@ -38,6 +39,7 @@ export const appRouter = createTRPCRouter({
   actionItems: actionItemsRouter,
   meetingTopics: meetingTopicsRouter,
   skills: skillsRouter,
+  sessions: sessionsRouter,
 });
 
 export type AppRouter = typeof appRouter;
