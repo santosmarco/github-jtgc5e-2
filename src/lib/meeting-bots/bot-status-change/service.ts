@@ -1451,7 +1451,26 @@ export function createBotStatusChangeService(
         .length,
     });
 
-    const words = transcript.flatMap((slice, transcriptSliceIndex) =>
+    // Calculate total words count for logging
+    const totalWordsCount = transcript.reduce(
+      (acc, slice) => acc + slice.words.length,
+      0,
+    );
+
+    logger.info("📝 Inserting transcript words", {
+      bot_id: bot.id,
+      profile_id: bot.profile_id,
+      user_email: bot.profile?.email,
+      words_count: totalWordsCount,
+    });
+
+    // Process words in batches to avoid statement timeout
+    const BATCH_SIZE = 1000;
+    let successfulInserts = 0;
+    let hasError = false;
+
+    // Prepare all words first
+    const allWords = transcript.flatMap((slice, transcriptSliceIndex) =>
       slice.words
         .map(
           (word, wordIndex) =>
@@ -1469,42 +1488,68 @@ export function createBotStatusChangeService(
         .filter((word) => !!word.transcript_slice_id),
     );
 
-    logger.info("📝 Inserting transcript words", {
-      bot_id: bot.id,
-      profile_id: bot.profile_id,
-      user_email: bot.profile?.email,
-      words_count: words.length,
-    });
+    // Process in batches
+    for (let i = 0; i < allWords.length; i += BATCH_SIZE) {
+      const batch = allWords.slice(i, i + BATCH_SIZE);
 
-    const { error: wordsError } = await supabase.from(wordsTable).insert(words);
+      logger.info(
+        `📝 Inserting words batch ${i / BATCH_SIZE + 1}/${Math.ceil(allWords.length / BATCH_SIZE)}`,
+        {
+          bot_id: bot.id,
+          batch_size: batch.length,
+          progress: `${i + batch.length}/${allWords.length}`,
+        },
+      );
 
-    if (wordsError) {
-      logger.error("❌ Failed to insert transcript words", {
-        error: wordsError,
+      const { error: batchError } = await supabase
+        .from(wordsTable)
+        .insert(batch);
+
+      if (batchError) {
+        hasError = true;
+        logger.error("❌ Failed to insert transcript words batch", {
+          error: batchError,
+          bot_id: bot.id,
+          profile_id: bot.profile_id,
+          user_email: bot.profile?.email,
+          batch_index: i / BATCH_SIZE + 1,
+          batch_size: batch.length,
+        });
+
+        await slack.error({
+          text: formatSlackMessage(
+            bot,
+            `📝 Failed to insert transcript words: ${batchError.message}`,
+          ),
+        });
+
+        break;
+      }
+
+      successfulInserts += batch.length;
+    }
+
+    if (hasError) {
+      // Cleanup and restore original data if any batch failed
+      logger.warn("⚠️ Rolling back due to batch insertion failure", {
         bot_id: bot.id,
         profile_id: bot.profile_id,
         user_email: bot.profile?.email,
-        words_count: words.length,
+        successful_inserts: successfulInserts,
+        total_words: allWords.length,
       });
 
-      // Restore original data
-      if (existingSlices && existingSlices.length > 0) {
-        // Delete the newly inserted slices first
-        await supabase.from(slicesTable).delete().eq("bot_id", bot.id);
+      // Delete all newly inserted data
+      await supabase.from(wordsTable).delete().eq("bot_id", bot.id);
+      await supabase.from(slicesTable).delete().eq("bot_id", bot.id);
 
-        // Restore original slices and words
+      // Restore original data if available
+      if (existingSlices && existingSlices.length > 0) {
         await supabase.from(slicesTable).insert(existingSlices);
         if (existingWords && existingWords.length > 0) {
           await supabase.from(wordsTable).insert(existingWords);
         }
       }
-
-      await slack.error({
-        text: formatSlackMessage(
-          bot,
-          `📝 Failed to insert transcript words: ${wordsError.message}`,
-        ),
-      });
 
       const { error: meetingProcessingStatusUpdateError } = await supabase
         .from("meeting_processing_status")
@@ -1533,7 +1578,7 @@ export function createBotStatusChangeService(
       profile_id: bot.profile_id,
       user_email: bot.profile?.email,
       slices_count: transcriptSlices.length,
-      words_count: words.length,
+      words_count: successfulInserts,
       unique_speakers: _.uniq(transcriptSlices.map((s) => s.speaker_name))
         .length,
     });
@@ -1558,7 +1603,7 @@ export function createBotStatusChangeService(
     }
 
     await slack.success({
-      text: `[${bot.profile?.email}] Successfully processed transcript with ${transcriptSlices.length} slices and ${words.length} words`,
+      text: `[${bot.profile?.email}] Successfully processed transcript with ${transcriptSlices.length} slices and ${successfulInserts} words`,
     });
   }
 
