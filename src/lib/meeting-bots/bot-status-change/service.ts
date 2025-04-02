@@ -185,23 +185,27 @@ export function createBotStatusChangeService(
           error: meetingProcessingStatusInsertionError,
         } = await supabase
           .from("meeting_processing_status")
-          .insert({
-            action_items_status: "pending", // wont do
-            backend_call_status: "pending", // handled
-            embed_meeting_status: "pending", // wont do
-            embed_moments_status: "pending", // wont do
-            entity_extraction_status: "pending", // handled
-            interestingness_status: "pending", // wont do
-            meetings_status: "pending", // wont do
-            moments_status: "pending", // wont do
-            observation_status: "pending", // wont do
-            segments_status: "pending", // wont do
-            supabase_video_upload_status: "pending", // handled
-            topic_segmentation_status: "pending", // handled
-            topics_status: "pending", // wont do
-            transcript_slice_words_status: "pending", // handled
-            video_api_upload_status: "pending", // handled
-          })
+          .upsert(
+            {
+              meeting_bot_id: meetingBot.id,
+              action_items_status: "pending", // wont do
+              backend_call_status: "pending", // handled
+              embed_meeting_status: "pending", // wont do
+              embed_moments_status: "pending", // wont do
+              entity_extraction_status: "pending", // handled
+              interestingness_status: "pending", // wont do
+              meetings_status: "pending", // wont do
+              moments_status: "pending", // wont do
+              observation_status: "pending", // wont do
+              segments_status: "pending", // wont do
+              supabase_video_upload_status: "pending", // handled
+              topic_segmentation_status: "pending", // handled
+              topics_status: "pending", // wont do
+              transcript_slice_words_status: "pending", // handled
+              video_api_upload_status: "pending", // handled
+            },
+            { onConflict: "meeting_bot_id" },
+          )
           .select("*")
           .single();
 

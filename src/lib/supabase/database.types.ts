@@ -1687,6 +1687,7 @@ export type Database = {
           id: string
           interestingness_status: string | null
           internal: boolean | null
+          meeting_bot_id: string | null
           meetings_status: string | null
           moments_status: string | null
           observation_status: string | null
@@ -1718,6 +1719,7 @@ export type Database = {
           id?: string
           interestingness_status?: string | null
           internal?: boolean | null
+          meeting_bot_id?: string | null
           meetings_status?: string | null
           moments_status?: string | null
           observation_status?: string | null
@@ -1749,6 +1751,7 @@ export type Database = {
           id?: string
           interestingness_status?: string | null
           internal?: boolean | null
+          meeting_bot_id?: string | null
           meetings_status?: string | null
           moments_status?: string | null
           observation_status?: string | null
@@ -1768,7 +1771,15 @@ export type Database = {
             | null
           video_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "meeting_processing_status_meeting_bot_id_fkey"
+            columns: ["meeting_bot_id"]
+            isOneToOne: true
+            referencedRelation: "meeting_bots_v2"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       meeting_topic_events_v2: {
         Row: {
