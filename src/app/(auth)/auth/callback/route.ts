@@ -403,6 +403,7 @@ async function handleInvitedUserProfile(
     company: inviteData.company,
     coach_id: inviteData.invited_by,
     role: inviteData.role === "user" ? "user" : "coach",
+    image_url: user.user_metadata.picture,
   } satisfies TablesUpdate<"profiles">;
   logger.info("Profile data prepared", { profileData });
 
