@@ -1154,6 +1154,45 @@ export function createBotStatusChangeService(
     isV2: boolean,
     meetingProcessingStatusId: string,
   ) {
+    // Fail early if transcript is empty
+    if (!transcript || transcript.length === 0) {
+      const error = new Error("Empty transcript provided");
+      logger.warn("⚠️ Empty transcript provided", {
+        error,
+        bot_id: bot.id,
+        profile_id: bot.profile_id,
+        user_email: bot.profile?.email,
+      });
+
+      await slack.warn({
+        text: formatSlackMessage(
+          bot,
+          `📝 Cannot process transcript: ${error.message}`,
+        ),
+      });
+
+      const { error: meetingProcessingStatusUpdateError } = await supabase
+        .from("meeting_processing_status")
+        .update({
+          transcript_slice_words_status: "skipped",
+        })
+        .eq("id", meetingProcessingStatusId);
+
+      if (meetingProcessingStatusUpdateError) {
+        logger.error("❌ Failed to update meeting processing status", {
+          error: meetingProcessingStatusUpdateError,
+          bot_id: bot.id,
+          profile_id: bot.profile_id,
+          user_email: bot.profile?.email,
+        });
+        await slack.error({
+          text: `❌ Failed to update meeting processing status ${bot.id}: ${meetingProcessingStatusUpdateError.message}`,
+        });
+      }
+
+      return;
+    }
+
     logger.info("📝 Processing transcript", {
       bot_id: bot.id,
       profile_id: bot.profile_id,
