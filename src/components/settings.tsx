@@ -48,7 +48,8 @@ export function Settings({ user, settings: initialSettings }: SettingsProps) {
       key: Parameters<typeof updateSettingMutation.mutateAsync>[0]["key"],
       value: Parameters<typeof updateSettingMutation.mutateAsync>[0]["value"],
     ) => {
-      if (isCoach || initialSettings[key] === value) return;
+      // we are enabling coaches to change client settings for now @marco
+      if (/* isCoach || */ initialSettings[key] === value) return;
 
       // Optimistically update the UI
       utils.settings.retrieveForProfile.setData(
@@ -80,7 +81,7 @@ export function Settings({ user, settings: initialSettings }: SettingsProps) {
       }
     },
     [
-      isCoach,
+      // isCoach,
       utils.settings.retrieveForProfile,
       initialSettings,
       updateSettingMutation,
@@ -170,7 +171,7 @@ export function Settings({ user, settings: initialSettings }: SettingsProps) {
                       debouncedUpdateBotName(e.target.value);
                     }}
                     onBlur={handleBotNameBlur}
-                    disabled={isCoach}
+                    // disabled={isCoach}
                     className="max-w-full"
                   />
                   <p className="text-xs text-muted-foreground">
@@ -220,7 +221,7 @@ export function Settings({ user, settings: initialSettings }: SettingsProps) {
                         )}
                       </p>
                     }
-                    disabled={isCoach}
+                    // disabled={isCoach}
                   />
 
                   <ToggleSetting
@@ -245,7 +246,7 @@ export function Settings({ user, settings: initialSettings }: SettingsProps) {
                         )}
                       </>
                     }
-                    disabled={isCoach}
+                    // disabled={isCoach}
                   />
 
                   <ToggleSetting
@@ -255,7 +256,7 @@ export function Settings({ user, settings: initialSettings }: SettingsProps) {
                     }
                     title="Pending meetings"
                     description="Meetings you haven't yet accepted or declined"
-                    disabled={isCoach}
+                    // disabled={isCoach}
                   />
 
                   <ToggleSetting
@@ -268,7 +269,7 @@ export function Settings({ user, settings: initialSettings }: SettingsProps) {
                     }
                     title="Meetings organized by others"
                     description="Meetings where you are an invitee, not the organizer"
-                    disabled={isCoach}
+                    // disabled={isCoach}
                   />
                 </div>
               </div>
