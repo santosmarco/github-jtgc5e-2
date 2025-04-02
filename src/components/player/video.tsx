@@ -51,6 +51,8 @@ export type VideoPlayerProps = {
   ideal_time?: number | null;
   initialPlayTime?: number;
   isQAMode?: boolean;
+  playPauseButtonSize?: "xs" | "sm" | "md" | "lg";
+  hideHeader?: boolean;
 };
 
 const PLAYBACK_SPEEDS = [0.8, 1, 1.2, 1.5, 1.7, 2, 2.5];
@@ -65,6 +67,8 @@ export function VideoPlayer({
   ideal_time,
   initialPlayTime,
   isQAMode,
+  playPauseButtonSize = "md",
+  hideHeader = false,
 }: VideoPlayerProps) {
   const {
     videoRef,
@@ -230,7 +234,15 @@ export function VideoPlayer({
       <div className="group relative w-full rounded-lg">
         {isVideoLoading && (
           <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-accent">
-            <p className="text-sm text-muted-foreground">Loading video...</p>
+            {video.assets?.thumbnail ? (
+              <img
+                src={video.assets.thumbnail}
+                alt={video.title || "Video thumbnail"}
+                className="h-full w-full rounded-lg object-cover"
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">Loading video...</p>
+            )}
           </div>
         )}
 
@@ -264,6 +276,7 @@ export function VideoPlayer({
             }
           }}
           tabIndex={0}
+          poster={video.assets?.thumbnail ?? undefined}
         >
           <track kind="captions" />
         </video>
@@ -271,7 +284,17 @@ export function VideoPlayer({
         {/* Center Play/Pause Button */}
         {(!isPlaying || isControlsVisible) && (
           <motion.div
-            className="absolute left-[calc(50%-2.5rem)] top-[calc(50%-2.5rem)] z-10 -translate-x-1/2 -translate-y-1/2"
+            className={cn(
+              "absolute z-10 -translate-x-1/2 -translate-y-1/2",
+              playPauseButtonSize === "xs" &&
+                "left-[calc(50%-1.25rem)] top-[calc(50%-1.25rem)]",
+              playPauseButtonSize === "sm" &&
+                "left-[calc(50%-1.5rem)] top-[calc(50%-1.5rem)]",
+              playPauseButtonSize === "md" &&
+                "left-[calc(50%-2rem)] top-[calc(50%-2rem)] md:left-[calc(50%-2.5rem)] md:top-[calc(50%-2.5rem)]",
+              playPauseButtonSize === "lg" &&
+                "left-[calc(50%-2.5rem)] top-[calc(50%-2.5rem)] md:left-[calc(50%-3rem)] md:top-[calc(50%-3rem)]",
+            )}
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.8, opacity: 0 }}
@@ -291,18 +314,43 @@ export function VideoPlayer({
                   togglePlay();
                 }
               }}
-              className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-full bg-primary/80 shadow-lg backdrop-blur-sm transition-colors hover:bg-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 md:h-20 md:w-20"
+              className={cn(
+                "flex cursor-pointer items-center justify-center rounded-full bg-primary/80 shadow-lg backdrop-blur-sm transition-colors hover:bg-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                playPauseButtonSize === "xs" && "h-10 w-10",
+                playPauseButtonSize === "sm" && "h-12 w-12",
+                playPauseButtonSize === "md" && "h-16 w-16 md:h-20 md:w-20",
+                playPauseButtonSize === "lg" && "h-20 w-20 md:h-24 md:w-24",
+              )}
               aria-label={isPlaying ? "Pause" : "Play"}
             >
               <motion.div
                 initial={{ rotate: 0 }}
                 animate={{ rotate: isPlaying ? 0 : 360 }}
                 transition={{ duration: 0.5 }}
+                className="flex items-center justify-center"
               >
                 {isPlaying ? (
-                  <Pause className="h-8 w-8 text-background md:h-10 md:w-10" />
+                  <Pause
+                    className={cn(
+                      "text-background",
+                      playPauseButtonSize === "xs" && "h-5 w-5",
+                      playPauseButtonSize === "sm" && "h-6 w-6",
+                      playPauseButtonSize === "md" && "h-8 w-8 md:h-10 md:w-10",
+                      playPauseButtonSize === "lg" &&
+                        "h-10 w-10 md:h-12 md:w-12",
+                    )}
+                  />
                 ) : (
-                  <Play className="ml-1 h-8 w-8 text-background md:h-10 md:w-10" />
+                  <Play
+                    className={cn(
+                      "text-background",
+                      playPauseButtonSize === "xs" && "h-5 w-5",
+                      playPauseButtonSize === "sm" && "h-6 w-6",
+                      playPauseButtonSize === "md" && "h-8 w-8 md:h-10 md:w-10",
+                      playPauseButtonSize === "lg" &&
+                        "h-10 w-10 md:h-12 md:w-12",
+                    )}
+                  />
                 )}
               </motion.div>
             </button>
@@ -313,7 +361,7 @@ export function VideoPlayer({
           <div className="pointer-events-none absolute inset-0 rounded-lg bg-accent/50" />
         )}
 
-        {isControlsVisible && (
+        {isControlsVisible && !hideHeader && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
