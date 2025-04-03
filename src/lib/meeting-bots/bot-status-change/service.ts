@@ -634,7 +634,7 @@ export function createBotStatusChangeService(
         const { error: meetingProcessingStatusUpdateError } = await supabase
           .from("meeting_processing_status")
           .update({
-            video_api_upload_status: "completed",
+            video_api_upload_status: "skipped",
           })
           .eq("id", meetingProcessingStatusId);
 
@@ -686,7 +686,7 @@ export function createBotStatusChangeService(
         const { error: meetingProcessingStatusUpdateError } = await supabase
           .from("meeting_processing_status")
           .update({
-            video_api_upload_status: "completed",
+            video_api_upload_status: "skipped",
           })
           .eq("id", meetingProcessingStatusId);
 
@@ -738,7 +738,7 @@ export function createBotStatusChangeService(
         const { error: meetingProcessingStatusUpdateError } = await supabase
           .from("meeting_processing_status")
           .update({
-            video_api_upload_status: "failed",
+            video_api_upload_status: "skipped",
           })
           .eq("id", meetingProcessingStatusId);
 
