@@ -45,9 +45,13 @@ export default function MomentsPage() {
       limit: 12,
       options: {
         moments: {
-          includeNonRelevant: !profile || user?.id === profile.id,
+          includeNonRelevant:
+            user?.is_admin && (!profile || user.id === profile.id),
         },
-        user_id: !profile || user?.id === profile.id ? undefined : profile.id,
+        tags:
+          user?.is_admin && (!profile || user.id === profile.id)
+            ? undefined
+            : [profile?.id ?? user?.id ?? ""],
       },
     },
     {
@@ -57,7 +61,12 @@ export default function MomentsPage() {
     },
   );
 
-  const filteredVideos = videosData?.pages.flatMap((page) => page.videos) ?? [];
+  const filteredVideos =
+    (user?.is_admin && (!profile || user.id === profile.id)
+      ? videosData?.pages.flatMap((page) => page.videos)
+      : videosData?.pages
+          .flatMap((page) => page.videos)
+          .filter((v) => v.tags.includes(profile?.id ?? user?.id ?? ""))) ?? [];
 
   const videosEnriched = filteredVideos.map((video) => {
     const moments = video.moments ?? [];

@@ -62,7 +62,10 @@ export default function HomePage() {
     {
       limit: 12,
       options: {
-        user_id: !profile || user?.id === profile.id ? undefined : profile.id,
+        tags:
+          user?.is_admin && (!profile || user.id === profile.id)
+            ? undefined
+            : [profile?.id ?? user?.id ?? ""],
       },
     },
     {
@@ -75,7 +78,13 @@ export default function HomePage() {
 
   // Filter videos based on user role, profile, and search query
   const videos = React.useMemo(() => {
-    const allVideos = data?.pages.flatMap((page) => page.videos);
+    const allVideos = data?.pages.flatMap((page) =>
+      user?.is_admin && (!profile || user.id === profile.id)
+        ? page.videos
+        : page.videos.filter((v) =>
+            v.tags.includes(profile?.id ?? user?.id ?? ""),
+          ),
+    );
 
     if (!allVideos || !debouncedSearchQuery) return allVideos;
 
@@ -85,7 +94,7 @@ export default function HomePage() {
         video.title?.toLowerCase().includes(searchLower) ||
         video.description?.toLowerCase().includes(searchLower),
     );
-  }, [data?.pages, debouncedSearchQuery]);
+  }, [data?.pages, user, profile, debouncedSearchQuery]);
 
   const hasVideos = data?.pages.some((page) => page.videos.length > 0);
 

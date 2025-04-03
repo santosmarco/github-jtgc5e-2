@@ -1,19 +1,19 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 import dynamic from "next/dynamic";
 import posthog from "posthog-js";
 import { PostHogProvider as PHProvider } from "posthog-js/react";
-import { useEffect, useState } from "react";
-// Import web-vitals for performance tracking
-import { onCLS, onFID, onLCP } from "web-vitals";
-
 import { env } from "~/env";
-import { identifyUser, trackPerformanceMetric } from "~/lib/analytics";
-import { checkUserFlags, Flag } from "~/lib/flags/flags";
 import {
   createAnonymousSessionId,
   isPostHogBlocked,
 } from "~/lib/posthog-utils";
+import { identifyUser, trackPerformanceMetric } from "~/lib/analytics";
+
+// Import web-vitals for performance tracking
+import { onCLS, onFID, onLCP } from "web-vitals";
 import { api } from "~/trpc/react";
 
 const PostHogPageView = dynamic(() => import("./posthog-page-view"), {
@@ -133,11 +133,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       identifyUser(user.id, {
         email: user.email,
         name: user.nickname,
-        role: checkUserFlags(user, [Flag.ALLOW_ADMIN_ACCESS])
-          ? "admin"
-          : checkUserFlags(user, [Flag.ALLOW_CLIENT_ACCESS])
-            ? "coach"
-            : "user",
+        role: user.role,
         created_at: user.created_at,
         last_seen_at: new Date().toISOString(),
       });

@@ -26,7 +26,7 @@ export default async function MainLayout({
     api.videos.list.prefetch({
       limit: 12,
       options: {
-        user_id: user.id,
+        tags: [user.id],
       },
     }),
     api.moments.listForInsights.prefetch({

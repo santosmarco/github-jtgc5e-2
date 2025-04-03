@@ -1,12 +1,11 @@
 import { TRPCError } from "@trpc/server";
-import _ from "lodash";
 import { z } from "zod";
 
 import { env } from "~/env";
 import { sendInvitationEmail } from "~/lib/email";
-import { getAllFlagsForRole } from "~/lib/flags/flags";
 import { logger } from "~/lib/logging/server";
 import { createClient as createRecallClient } from "~/lib/recall/client";
+import { JsonObject } from "~/lib/schemas/utils";
 import { __dangerouslyCreateAdminClient__ } from "~/lib/supabase/admin";
 import { createClient } from "~/lib/supabase/server";
 import {
@@ -88,20 +87,14 @@ export const authRouter = createTRPCRouter({
           code: "NOT_FOUND",
           message: "Profile not found",
         });
-      const user = _.omit(session.user, ["role"]);
-      return {
-        ...session,
-        user: {
-          ...user,
-          nickname: profile.nickname,
-          did_complete_onboarding: profile.did_complete_onboarding,
-          did_complete_post_ten_meeting_onboarding:
-            profile.did_complete_post_ten_meeting_onboarding,
-          force_post_ten_meeting_onboarding:
-            profile.force_post_ten_meeting_onboarding,
-          flags: getAllFlagsForRole(profile.role),
-        },
+      const userRole = profile.role;
+      const user = {
+        ...session.user,
+        ...profile,
+        role: userRole,
+        is_admin: profile.is_admin || userRole === "admin",
       };
+      return { ...session, user };
     } catch (error) {
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
@@ -145,15 +138,14 @@ export const authRouter = createTRPCRouter({
           code: "NOT_FOUND",
           message: "Profile not found",
         });
+      const userMetadata = JsonObject.parse(user.user_metadata);
+      const userRole = profile.role;
       return {
-        ..._.omit(user, ["role"]),
-        nickname: profile.nickname,
-        did_complete_onboarding: profile.did_complete_onboarding,
-        did_complete_post_ten_meeting_onboarding:
-          profile.did_complete_post_ten_meeting_onboarding,
-        force_post_ten_meeting_onboarding:
-          profile.force_post_ten_meeting_onboarding,
-        flags: getAllFlagsForRole(profile.role),
+        ...user,
+        ...profile,
+        role: userRole,
+        is_admin: profile.is_admin || userRole === "admin",
+        user_metadata: userMetadata,
       };
     } catch (error) {
       throw new TRPCError({

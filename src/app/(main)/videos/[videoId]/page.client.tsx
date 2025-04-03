@@ -2,11 +2,10 @@
 
 import { motion } from "framer-motion";
 import _ from "lodash";
-import { Beaker, CameraIcon, ChevronLeft } from "lucide-react";
+import { CameraIcon, ChevronLeft, Beaker } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
-import { memo, useCallback, useState } from "react";
-
+import { memo, useState, useCallback } from "react";
 import { ActionItemList } from "~/components/action-items/action-item-list";
 import { DeleteMeetingButton } from "~/components/meetings/delete-meeting-button";
 import { MeetingTopics } from "~/components/meetings/meeting-topics";
@@ -15,7 +14,7 @@ import { VideoPlayer } from "~/components/player/video";
 import { TranscriptView } from "~/components/transcript-view";
 import { Button } from "~/components/ui/button";
 import { useProfile } from "~/hooks/use-profile";
-import { checkUserFlags, Flag } from "~/lib/flags/flags";
+import type { VideoMoment } from "~/lib/schemas/video-moment";
 import { emotionToMoment, getVideoEmotions } from "~/lib/videos";
 import { api } from "~/trpc/react";
 
@@ -41,7 +40,8 @@ export function VideoPageClient({ videoId }: VideoPageClientProps) {
     {
       videoId,
       includeReactions: true,
-      includeNonRelevant: !profile || user?.id === profile.id,
+      includeNonRelevant:
+        user?.is_admin && (!profile || user.id === profile.id),
     },
     {
       // Only fetch moments if we have basic video data
@@ -75,7 +75,10 @@ export function VideoPageClient({ videoId }: VideoPageClientProps) {
     (moment) => (moment.relevant ? 0 : 1),
     (m) =>
       m.reactions.reduce(
-        (acc, r) => acc + (r.reaction_type === "thumbs_up" ? -1 : 1),
+        (acc, r) =>
+          acc +
+          (r.reaction_type === "thumbs_up" ? -1 : 1) *
+            (user?.is_admin && (!profile || user.id === profile.id) ? -1 : 1),
         0,
       ),
   );
@@ -150,7 +153,7 @@ export function VideoPageClient({ videoId }: VideoPageClientProps) {
           transition={{ delay: 0.3, duration: 0.5 }}
           className="mr-4 flex items-center gap-2"
         >
-          {checkUserFlags(user, [Flag.ALLOW_QA_MODE]) && (
+          {user?.is_admin && (
             <Button
               variant="ghost"
               size="sm"
@@ -163,7 +166,7 @@ export function VideoPageClient({ videoId }: VideoPageClientProps) {
               <span className="text-sm">QA Mode</span>
             </Button>
           )}
-          {checkUserFlags(user, [Flag.ALLOW_MEETING_DELETE]) && (
+          {user?.role !== "coach" && (
             <DeleteMeetingButton meetingId={video.videoId} />
           )}
         </motion.div>

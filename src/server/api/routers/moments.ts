@@ -10,11 +10,7 @@ import {
 } from "~/lib/db/moments";
 import type { VideoMoment } from "~/lib/schemas/video-moment";
 import { createClient } from "~/lib/supabase/server";
-import {
-  createTRPCRouter,
-  protectedProcedure,
-  publicProcedure,
-} from "~/server/api/trpc";
+import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
 const reactionTypeSchema = z.enum(["thumbs_up", "thumbs_down"]);
 
@@ -381,7 +377,7 @@ export const momentsRouter = createTRPCRouter({
       }
     }),
 
-  listBasicByVideo: protectedProcedure
+  listBasicByVideo: publicProcedure
     .input(
       z.object({
         videoId: z.string(),
@@ -389,7 +385,7 @@ export const momentsRouter = createTRPCRouter({
         includeNonRelevant: z.boolean().default(false),
       }),
     )
-    .query(async ({ input, ctx: { user } }) => {
+    .query(async ({ input }) => {
       try {
         const { videoId, includeReactions, includeNonRelevant } = input;
         const supabase = await createClient();
@@ -403,7 +399,7 @@ export const momentsRouter = createTRPCRouter({
           .eq("video_api_id", videoId)
           .eq("latest", true);
 
-        if (user.role !== "admin" && !includeNonRelevant) {
+        if (!includeNonRelevant) {
           query = query.eq("relevant", true);
         }
 

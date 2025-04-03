@@ -1,7 +1,6 @@
 import { notFound, redirect } from "next/navigation";
-
-import { checkUserFlags, Flag } from "~/lib/flags/flags";
 import { logger } from "~/lib/logging/server";
+
 import { api } from "~/trpc/server";
 
 export default async function AdminLayout({
@@ -12,7 +11,7 @@ export default async function AdminLayout({
   let user: Awaited<ReturnType<typeof api.auth.getUser>> | null = null;
   try {
     user = await api.auth.getUser();
-    if (!checkUserFlags(user, [Flag.ALLOW_ADMIN_ACCESS])) {
+    if (!user.is_admin) {
       notFound();
     }
   } catch (error) {

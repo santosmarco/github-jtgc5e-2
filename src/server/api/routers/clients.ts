@@ -1,27 +1,25 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { checkUserFlags, Flag } from "~/lib/flags/flags";
 import { createClient } from "~/lib/supabase/server";
 import { transformUserInviteIntoProfile } from "~/lib/user-invites/transformations";
 
-import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
+import { createTRPCRouter, publicProcedure } from "../trpc";
 
 export const clientsRouter = createTRPCRouter({
-  getClients: protectedProcedure
+  getClients: publicProcedure
     .input(
       z.object({
         userId: z.string(),
+        loadAll: z.boolean().optional(),
       }),
     )
-    .query(async ({ input, ctx: { user } }) => {
+    .query(async ({ input }) => {
       const supabase = await createClient();
-
-      const shouldLoadAll = checkUserFlags(user, [Flag.ALLOW_LOAD_ALL_CLIENTS]);
 
       const clientsQuery = supabase.from("profiles").select("*");
 
-      if (!shouldLoadAll) {
+      if (!input.loadAll) {
         clientsQuery.eq("coach_id", input.userId);
       }
 
@@ -29,7 +27,7 @@ export const clientsRouter = createTRPCRouter({
         .from("user_invites")
         .select("*, invited_by_profile:profiles(*)");
 
-      if (!shouldLoadAll) {
+      if (!input.loadAll) {
         userInvitesQuery.eq("invited_by", input.userId);
       }
 

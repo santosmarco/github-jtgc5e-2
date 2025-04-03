@@ -39,6 +39,7 @@ const stagger = {
 export function Settings({ user, settings: initialSettings }: SettingsProps) {
   const utils = api.useUtils();
   const updateSettingMutation = api.settings.updateSetting.useMutation();
+  const isCoach = user.role === "coach";
   const [botName, setBotName] = useState(initialSettings.bot_name ?? "");
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
 

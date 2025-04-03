@@ -5,14 +5,14 @@ import {
   type CellContext,
   type ColumnDef,
   type ColumnFiltersState,
+  type SortingState,
+  type VisibilityState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  type SortingState,
   useReactTable,
-  type VisibilityState,
 } from "@tanstack/react-table";
 import dayjs from "dayjs";
 import _ from "lodash";
@@ -87,11 +87,10 @@ import {
   TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { useProfile } from "~/hooks/use-profile";
-import { checkUserFlags, Flag } from "~/lib/flags/flags";
 import { logger } from "~/lib/logging/client";
 import { UserInviteCreate } from "~/lib/user-invites/schemas";
 import { cn } from "~/lib/utils";
-import { api, type RouterOutputs } from "~/trpc/react";
+import { type RouterOutputs, api } from "~/trpc/react";
 
 function getSortIcon(sortDir: false | "asc" | "desc") {
   if (sortDir === "asc") return <ArrowUp className="ml-2 h-4 w-4" />;
@@ -294,7 +293,6 @@ function NewClientDialog() {
   const [isCoach, setIsCoach] = React.useState(false);
   const utils = api.useUtils();
   const { profile } = useProfile();
-  const { data: user } = api.auth.getUser.useQuery();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -351,7 +349,7 @@ function NewClientDialog() {
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {checkUserFlags(user, [Flag.ALLOW_INVITE_AS_COACH]) && (
+            {profile?.is_admin && (
               <div className="mb-10">
                 <div className="flex items-center gap-2">
                   <Label htmlFor="isCoach">Invite as Coach</Label>
@@ -459,12 +457,21 @@ export default function ClientsPage() {
   const { profile, setProfile } = useProfile();
   const { data: user } = api.auth.getUser.useQuery();
   const shouldLoadAll = React.useMemo(
-    () => checkUserFlags(user, [Flag.ALLOW_LOAD_ALL_CLIENTS]),
-    [user],
+    () => user?.is_admin && (!profile || user.id === profile.id),
+    [user, profile],
   );
+
+  // React.useEffect(() => {
+  //   if (shouldLoadAll === undefined) return;
+
+  //   if (profile?.role !== "coach" && !shouldLoadAll) {
+  //     router.push("/");
+  //   }
+  // }, [profile, shouldLoadAll, router]);
 
   const { data: clients_ } = api.clients.getClients.useQuery({
     userId: profile?.id ?? "",
+    loadAll: shouldLoadAll,
   });
 
   const clients = React.useMemo(() => clients_ ?? [], [clients_]);

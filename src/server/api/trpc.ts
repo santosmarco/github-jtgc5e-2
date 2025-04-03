@@ -2,10 +2,8 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import SuperJSON from "superjson";
 import { ZodError } from "zod";
 
-import { getAllFlagsForRole } from "~/lib/flags/flags";
 import { logger } from "~/lib/logging/server";
 import { JsonObject } from "~/lib/schemas/utils";
-import type { Tables } from "~/lib/supabase/database.types";
 import { createClient } from "~/lib/supabase/server";
 
 export const createTRPCContext = async (opts: { headers: Headers }) => {
@@ -118,25 +116,6 @@ const authMiddleware = t.middleware(async ({ ctx, next }) => {
   const userMetadata = JsonObject.parse(user.user_metadata);
   const userRole = profile.role;
   const isAdmin = profile.is_admin || userRole === "admin";
-  const isCoach = userRole === "coach";
-
-  let patients: Tables<"profiles">[] = [];
-  if (isCoach) {
-    const { data: patientsData, error: patientsError } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("coach_id", user.id);
-
-    if (patientsError) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: `Failed to get patients: ${patientsError.message}`,
-        cause: patientsError,
-      });
-    }
-
-    patients = patientsData;
-  }
 
   try {
     return next({
@@ -148,9 +127,6 @@ const authMiddleware = t.middleware(async ({ ctx, next }) => {
           user_metadata: userMetadata,
           role: userRole,
           is_admin: isAdmin,
-          is_coach: isCoach,
-          patients,
-          flags: getAllFlagsForRole(userRole),
         },
       },
     });
