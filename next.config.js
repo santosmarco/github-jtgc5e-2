@@ -56,7 +56,8 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: "/(.*)",
+        // Apply security headers to all routes except webhooks
+        source: "/:path((?!api/webhooks).*)*",
         headers: [
           {
             key: "Content-Security-Policy",
@@ -77,6 +78,16 @@ const nextConfig = {
           {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
+          },
+        ],
+      },
+      {
+        // Minimal security headers for webhook routes
+        source: "/api/webhooks/:path*",
+        headers: [
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
           },
         ],
       },
