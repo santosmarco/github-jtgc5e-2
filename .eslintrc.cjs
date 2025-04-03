@@ -6,11 +6,7 @@ const eslintConfig = {
   parserOptions: {
     project: true,
   },
-  plugins: [
-    "@typescript-eslint",
-    "simple-import-sort",
-    "plugin:security/recommended",
-  ],
+  plugins: ["@typescript-eslint", "simple-import-sort"],
   extends: [
     "next/core-web-vitals",
     "plugin:@typescript-eslint/recommended-type-checked",

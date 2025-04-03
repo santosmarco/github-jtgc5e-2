@@ -12,7 +12,7 @@ import {
   VideoOff,
 } from "lucide-react";
 import Image from "next/image";
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect } from "react";
 import { toast } from "sonner";
 
 import { Button } from "~/components/ui/button";
@@ -21,6 +21,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
+import { checkUserFlags, Flag } from "~/lib/flags/flags";
 import type { VideoMoment } from "~/lib/schemas/video-moment";
 import type { Tables } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
@@ -72,7 +73,6 @@ const ReportMomentCard = memo(function ReportMomentCard({
   );
 
   const { data: user } = api.auth.getUser.useQuery();
-  const isAdmin = user?.is_admin;
 
   return (
     <div
@@ -90,7 +90,7 @@ const ReportMomentCard = memo(function ReportMomentCard({
       }}
     >
       {isUpNext && <div className="absolute inset-0 z-30 bg-background/50" />}
-      {isAdmin && (
+      {checkUserFlags(user, [Flag.ALLOW_REPORT_SECTION_DEBUG_DISPLAY]) && (
         <div className="absolute left-0 top-0 z-50 flex flex-col items-end gap-1 rounded rounded-tl-lg bg-background/80 px-2 py-1 text-right text-xs text-muted-foreground">
           <span>
             Conf: {reportMoment.report_section_confidence?.toFixed(2)}

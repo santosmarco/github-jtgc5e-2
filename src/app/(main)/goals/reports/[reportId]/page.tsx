@@ -8,8 +8,8 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { z } from "zod";
-import { GoalCardMinimal } from "~/components/goals/goal-card-minimal";
 
+import { GoalCardMinimal } from "~/components/goals/goal-card-minimal";
 import {
   GoalCreationDrawer,
   type GoalFormValues,
@@ -22,6 +22,7 @@ import { ReportMetrics } from "~/components/reports/report-metrics";
 import { SectionsList } from "~/components/reports/sections-list";
 import { Button } from "~/components/ui/button";
 import { transformMoment } from "~/lib/db/moments";
+import { checkUserFlags, Flag } from "~/lib/flags/flags";
 import { createClient } from "~/lib/supabase/client";
 import type { Tables } from "~/lib/supabase/database.types";
 import { api } from "~/trpc/react";
@@ -581,7 +582,9 @@ export default function ReportPage({
                   reportMoments={reportMoments}
                   selectedSectionId={selectedReportSectionId}
                   onSectionSelect={handleSectionSelect}
-                  isAdmin={user?.is_admin}
+                  isAdmin={checkUserFlags(user, [
+                    Flag.ALLOW_REPORT_SECTION_DEBUG_DISPLAY,
+                  ])}
                 />
               </div>
 
