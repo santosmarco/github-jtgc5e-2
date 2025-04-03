@@ -42,6 +42,7 @@ export function Editor({
   const { completeTask } = useOnboardingTasks();
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit,
       Placeholder.configure({
