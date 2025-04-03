@@ -226,10 +226,12 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
         </AnimatePresence>
       </nav>
 
+      {/*
       {(selectedProfile ?? user).did_complete_post_ten_meeting_onboarding &&
         (!tasks || tasks.some((task) => !task.completed)) && (
           <TaskList tasks={tasks} />
         )}
+      */}
 
       <motion.div
         initial={{ opacity: 0 }}
