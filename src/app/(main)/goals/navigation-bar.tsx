@@ -90,7 +90,7 @@ export function NavigationBar() {
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
-      className="sticky top-0 z-10 -mx-12 border-b bg-background/10 backdrop-blur-md"
+      className="sticky top-0 z-50 -mx-12 border-b bg-background py-1"
     >
       <div
         className="relative -ml-2 flex h-12 items-center justify-between overflow-hidden px-6"

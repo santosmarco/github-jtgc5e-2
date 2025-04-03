@@ -1,12 +1,14 @@
 "use client";
 
+import dayjs from "dayjs";
 import { motion } from "framer-motion";
 import _ from "lodash";
-import { ArrowUpRight, FileX2Icon, GoalIcon, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileX2Icon, Loader2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { z } from "zod";
+import { GoalCardMinimal } from "~/components/goals/goal-card-minimal";
 
 import {
   GoalCreationDrawer,
@@ -18,11 +20,10 @@ import { GoalHeader } from "~/components/reports/goal-header";
 import { PersonalityProfile } from "~/components/reports/personality-profile";
 import { ReportMetrics } from "~/components/reports/report-metrics";
 import { SectionsList } from "~/components/reports/sections-list";
-import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { Button } from "~/components/ui/button";
 import { transformMoment } from "~/lib/db/moments";
 import { createClient } from "~/lib/supabase/client";
 import type { Tables } from "~/lib/supabase/database.types";
-import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import type { ReportComment } from "~/types/reports";
 
@@ -176,13 +177,13 @@ export default function ReportPage({
         }
       }
 
-      // Clear states before invalidating query
+      // Clear states
       setIsEditingGoalId(null);
       setPendingGoal(null);
 
       toast.success("Goal updated successfully");
 
-      // Invalidate query after a delay and only if component is still mounted
+      // Invalidate query after a delay
       const timeoutId = setTimeout(() => {
         void utils.reports.getGroupReports.invalidate({
           groupId: params.reportId,
@@ -349,11 +350,15 @@ export default function ReportPage({
     setSelectedReportSectionId(sectionId);
     setCurrentMomentIndex(0);
     setHasJustUpdatedCurrentMomentIndex(true);
+    setCurrentTab(
+      groupReports?.reports[0]?.report_sections.find((s) => s.id === sectionId)
+        ?.direction ?? "negative",
+    );
   };
 
   if (isLoading) {
     return (
-      <div className="grid min-h-[calc(100vh-4rem)] place-items-center">
+      <div className="grid min-h-[calc(100vh-4rem)] place-items-center bg-black">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -369,7 +374,7 @@ export default function ReportPage({
 
   if (!groupReports) {
     return (
-      <div className="grid min-h-[calc(100vh-4rem)] place-items-center">
+      <div className="grid min-h-[calc(100vh-4rem)] place-items-center bg-black">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -384,7 +389,66 @@ export default function ReportPage({
   }
 
   return (
-    <>
+    <div className="-mx-8 min-h-screen">
+      {/* Date Range Navigation */}
+      <div className="sticky top-12 z-40 -mx-4 mb-6 flex items-center justify-between border-b border-border bg-background/60 px-2 py-2 backdrop-blur-xl">
+        <motion.div whileHover={{ x: -5 }} whileTap={{ scale: 0.95 }}>
+          <Button
+            variant="ghost"
+            className="flex items-center gap-2 text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground"
+          >
+            <motion.div
+              initial={{ x: 0 }}
+              animate={{ x: [0, -4, 0] }}
+              transition={{
+                repeat: Number.POSITIVE_INFINITY,
+                repeatType: "reverse",
+                duration: 1.5,
+                ease: "easeInOut",
+                repeatDelay: 1,
+              }}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </motion.div>
+            <span>Previous</span>
+          </Button>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="flex flex-col items-center gap-1"
+        >
+          <h2 className="text-base font-medium tracking-tight">
+            {dayjs(groupReports.reports[0]?.start_date).format("MMM D")} to{" "}
+            {dayjs(groupReports.reports[0]?.end_date).format("MMM D")}
+          </h2>
+        </motion.div>
+
+        <motion.div whileHover={{ x: 5 }} whileTap={{ scale: 0.95 }}>
+          <Button
+            variant="ghost"
+            className="flex items-center gap-2 text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground"
+          >
+            <span>Next</span>
+            <motion.div
+              initial={{ x: 0 }}
+              animate={{ x: [0, 4, 0] }}
+              transition={{
+                repeat: Number.POSITIVE_INFINITY,
+                repeatType: "reverse",
+                duration: 1.5,
+                ease: "easeInOut",
+                repeatDelay: 1,
+              }}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </motion.div>
+          </Button>
+        </motion.div>
+      </div>
+
       {groupReports.reports.map((report) => {
         const unsortedReportMoments = report.report_moments;
         const reportMoments = _.orderBy(
@@ -486,129 +550,81 @@ export default function ReportPage({
         );
 
         return (
-          <div
-            key={report.id}
-            className={cn(
-              "flex flex-col gap-6 pt-6",
-              isExpanded && "min-h-[calc(100vh-4rem)]",
-            )}
-          >
-            {/* Goal Header */}
-            <GoalHeader
-              goal={goal}
-              videoCount={videoApiIds.length}
-              momentCount={momentIds.length}
-              commentCount={report.report_comments.length}
-              isExpanded={isExpanded}
-              onExpand={(goalId) => handleExpand(report.id, goalId)}
-              onEdit={handleGoalEdit}
-            />
+          <div key={report.id} className="space-y-6 px-6">
+            {/* First Row - Three Cards */}
+            <div className="grid grid-cols-4 gap-6">
+              {report.skill && report.profile_id && (
+                <GoalCardMinimal
+                  skill={{
+                    ...report.skill,
+                    report_goals: report.report_goals,
+                  }}
+                  profileId={report.profile_id}
+                />
+              )}
 
-            {isExpanded && (
-              <>
-                {/* Personality Profile */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                  className="mb-2"
-                >
-                  <PersonalityProfile report={report} />
-                </motion.div>
+              {/* Score Card */}
+              <div className="col-span-2 h-full">
+                <ReportMetrics metrics={metrics} selectedTab={currentTab} />
+              </div>
 
-                {/* Use responsive classes directly in the grid - automatically show comments on 2xl screens */}
-                <div
-                  className={cn(
-                    "grid h-full gap-6",
-                    "grid-cols-[1.25fr,1fr,0px]", // Default for small screens with comments hidden
-                    isCommentsVisible && "grid-cols-[1.25fr,1fr,298px]", // When comments toggled on small screens
-                  )}
-                >
-                  <div className="flex flex-col gap-4">
-                    <Tabs
-                      defaultValue="negative"
-                      className="w-full"
-                      onValueChange={(value) => {
-                        setCurrentTab(value as "positive" | "negative");
-                        handleTabChange(value, report);
-                      }}
-                    >
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 0.3 }}
-                        className="mb-8"
-                      >
-                        <ReportMetrics
-                          metrics={metrics}
-                          selectedTab={currentTab}
-                        />
-                      </motion.div>
+              <PersonalityProfile report={report} />
+            </div>
 
-                      <TabsList className="mb-4 flex w-full justify-between gap-2 bg-transparent px-0 pt-4">
-                        <TabsTrigger
-                          value="negative"
-                          className="flex w-full items-center gap-1.5 rounded-md border py-1.5 text-sm font-medium transition-colors hover:bg-accent data-[state=active]:border-amber-500 data-[state=active]:bg-amber-500/10 data-[state=inactive]:text-muted-foreground"
-                        >
-                          <GoalIcon className="h-4 w-4 text-amber-500" />
-                          Growth Areas
-                        </TabsTrigger>
-                        <TabsTrigger
-                          value="positive"
-                          className="flex w-full items-center gap-1.5 rounded-md border py-1.5 text-sm font-medium transition-colors hover:bg-accent data-[state=active]:border-primary data-[state=active]:bg-primary/10 data-[state=inactive]:text-muted-foreground"
-                        >
-                          <ArrowUpRight className="h-4 w-4 text-primary" />
-                          Doing Well
-                        </TabsTrigger>
-                      </TabsList>
+            {/* Second Row - Content */}
+            <div className="grid grid-cols-5 gap-6">
+              {/* Strengths & Growth Areas */}
+              <div className="col-span-3">
+                <SectionsList
+                  positiveSections={sortedPositiveSections}
+                  negativeSections={sortedNegativeSections}
+                  reportMoments={reportMoments}
+                  selectedSectionId={selectedReportSectionId}
+                  onSectionSelect={handleSectionSelect}
+                  isAdmin={user?.is_admin}
+                />
+              </div>
 
-                      <SectionsList
-                        positiveSections={sortedPositiveSections}
-                        negativeSections={sortedNegativeSections}
-                        reportMoments={reportMoments}
-                        selectedSectionId={selectedReportSectionId}
-                        onSectionSelect={handleSectionSelect}
-                        isAdmin={user?.is_admin}
-                      />
-                    </Tabs>
-                  </div>
+              {/* Video Player */}
+              <div className="col-span-2">
+                <MomentsPlayer
+                  reportMoments={filteredReportMoments.map((rm, idx) => ({
+                    ...rm,
+                    moment: transformMoment(rm.moment, idx),
+                  }))}
+                  currentMomentIndex={currentMomentIndex}
+                  setCurrentMomentIndex={setCurrentMomentIndex}
+                  hasJustUpdatedCurrentMomentIndex={
+                    hasJustUpdatedCurrentMomentIndex
+                  }
+                  setHasJustUpdatedCurrentMomentIndex={
+                    setHasJustUpdatedCurrentMomentIndex
+                  }
+                />
+              </div>
+            </div>
 
-                  <div
-                    className={cn(
-                      "-mr-6 flex max-h-20 flex-col gap-6",
-                      isCommentsVisible && "mr-0",
-                    )}
-                  >
-                    <MomentsPlayer
-                      reportMoments={filteredReportMoments.map((rm, idx) => ({
-                        ...rm,
-                        moment: transformMoment(rm.moment, idx),
-                      }))}
-                      currentMomentIndex={currentMomentIndex}
-                      setCurrentMomentIndex={setCurrentMomentIndex}
-                      hasJustUpdatedCurrentMomentIndex={
-                        hasJustUpdatedCurrentMomentIndex
-                      }
-                      setHasJustUpdatedCurrentMomentIndex={
-                        setHasJustUpdatedCurrentMomentIndex
-                      }
-                    />
-                  </div>
+            {/* Hidden components that can be toggled */}
+            <div className="hidden">
+              <GoalHeader
+                goal={goal}
+                videoCount={videoApiIds.length}
+                momentCount={momentIds.length}
+                commentCount={report.report_comments.length}
+                isExpanded={isExpanded}
+                onExpand={(goalId) => handleExpand(report.id, goalId)}
+                onEdit={handleGoalEdit}
+              />
 
-                  <CommentsPanel
-                    reportId={report.id}
-                    comments={report.report_comments as ReportComment[]}
-                    isVisible={isCommentsVisible}
-                    onToggleVisibility={() =>
-                      setIsCommentsVisible((prev) => !prev)
-                    }
-                    onSubmitComment={handleSubmitComment}
-                    isPendingSubmit={createComment.isPending}
-                    className="2xl:block 2xl:[&_button[variant='outline']]:hidden"
-                  />
-                </div>
-              </>
-            )}
+              <CommentsPanel
+                reportId={report.id}
+                comments={report.report_comments as ReportComment[]}
+                isVisible={isCommentsVisible}
+                onToggleVisibility={() => setIsCommentsVisible((prev) => !prev)}
+                onSubmitComment={handleSubmitComment}
+                isPendingSubmit={createComment.isPending}
+              />
+            </div>
           </div>
         );
       })}
@@ -622,7 +638,6 @@ export default function ReportPage({
         }
         setGoal={(goal) => {
           if (!goal) {
-            // Clear both states together to avoid multiple re-renders
             setPendingGoal(null);
             setIsEditingGoalId(null);
           } else {
@@ -631,6 +646,6 @@ export default function ReportPage({
         }}
         onSubmit={handleGoalSubmit}
       />
-    </>
+    </div>
   );
 }

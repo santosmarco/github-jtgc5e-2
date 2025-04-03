@@ -595,7 +595,7 @@ export function MomentsPlayer({
           variants={listItemVariants}
           custom={2}
         >
-          <h2 className="mb-4 text-xl font-semibold">Up Next</h2>
+          <h2 className="mb-4 text-base font-semibold">Up Next</h2>
           <div className="space-y-4">
             {nextMoments.map((moment, index) => (
               <motion.div

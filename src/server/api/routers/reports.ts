@@ -197,7 +197,7 @@ export const reportsRouter = createTRPCRouter({
         .select(
           `
             *,
-            skill:skills(*, scales:skill_scales(*)),
+            skill:skills(*, goal_templates(*), goals(*), reports(*, report_goals(*), report_moments!inner(*, moment:moments!inner(*, subtags:moment_subtags(*)), report_goal_signal:report_goal_signals!inner(*))), statuses:group_report_processing_status(*), scales:skill_scales(*)),
             report_sections(*),
             report_goals(*, goal:goals!inner(*, signals:goal_signals(*))),
             report_goal_signals(*, goal_signal:goal_signals!inner(*)),

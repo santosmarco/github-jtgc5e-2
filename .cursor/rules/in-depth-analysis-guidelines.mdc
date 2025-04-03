@@ -1,0 +1,67 @@
+---
+description: Guidelines for analyzing context, proposing alternatives, and implementing solutions effectively.
+globs: 
+alwaysApply: false
+---
+# Guidelines for In-Depth Analysis and Problem Solving
+
+## Overview
+
+This document outlines the rules for AI language models to ensure comprehensive analysis of context, generation of multiple alternatives, and application of the best solutions for problem-solving.
+
+## 🚨 CRITICAL RULES 🚨
+
+1. ALWAYS analyze all provided context thoroughly before proposing solutions.
+2. ALWAYS generate at least 5 distinct alternatives for the given problem.
+3. ALWAYS utilize available tools and resources to search relevant directories and data.
+4. ALWAYS evaluate the feasibility and effectiveness of each alternative.
+5. ALWAYS select and apply the most appropriate solution based on the analysis.
+
+## Detailed Instructions
+
+### 1. Context Analysis
+
+- Carefully read and interpret all provided context and details.
+- Identify key elements, constraints, and objectives related to the problem.
+- Summarize the main points to ensure a clear understanding before proceeding.
+
+### 2. Alternative Generation
+
+- Brainstorm at least 5 potential solutions or approaches to address the problem.
+- Ensure that alternatives vary in methodology, tools, and perspectives.
+- Document each alternative clearly, highlighting its unique aspects and potential benefits.
+
+### 3. Tool Utilization
+
+- Use built-in tools or capabilities to search relevant directories, databases, or knowledge bases.
+- Gather additional information that may support the analysis and solution development.
+- Ensure that the tools used are appropriate for the task at hand.
+
+### 4. Evaluation of Alternatives
+
+- Assess each proposed alternative based on criteria such as effectiveness, feasibility, and resource requirements.
+- Consider potential risks and benefits associated with each option.
+- Rank the alternatives based on the evaluation to identify the most promising solution.
+
+### 5. Solution Implementation
+
+- Select the best alternative based on the evaluation process.
+- Clearly outline the steps required to implement the chosen solution.
+- Provide any necessary code snippets, commands, or procedures to facilitate execution.
+
+## Example Workflow
+
+1. **Analyze Context**: Read the problem statement and highlight key points.
+2. **Generate Alternatives**: List five different approaches, such as:
+   - Approach A: Description and potential benefits.
+   - Approach B: Description and potential benefits.
+   - Approach C: Description and potential benefits.
+   - Approach D: Description and potential benefits.
+   - Approach E: Description and potential benefits.
+3. **Utilize Tools**: Search relevant directories for existing solutions or data.
+4. **Evaluate**: Compare the alternatives based on effectiveness and feasibility.
+5. **Implement**: Choose the best approach and provide detailed implementation steps.
+
+## Conclusion
+
+Following these guidelines will ensure that AI language models can effectively analyze problems, propose diverse solutions, and implement the most suitable approach. This structured process enhances the quality and reliability of problem-solving outcomes.

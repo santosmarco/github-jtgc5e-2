@@ -755,26 +755,6 @@ function SimplifiedGauge({
             strokeDasharray="1 1"
             className="stroke-foreground"
           />
-
-          {/* Subtle tick marks */}
-          {[...Array(11)].map((_, i) => {
-            const angle = (i / 10) * Math.PI;
-            const x1 = 100 - 90 * Math.cos(angle);
-            const y1 = 160 - 90 * Math.sin(angle);
-            const x2 = 100 - 80 * Math.cos(angle);
-            const y2 = 160 - 80 * Math.sin(angle);
-            return (
-              <line
-                key={i}
-                x1={x1}
-                y1={y1}
-                x2={x2}
-                y2={y2}
-                stroke="rgba(150, 150, 150, 0.2)"
-                strokeWidth="1"
-              />
-            );
-          })}
         </svg>
 
         {/* Center Score Display with animation */}

@@ -1,0 +1,20 @@
+---
+description: When a Figma design link is provided with a request to replicate it
+globs: 
+alwaysApply: false
+---
+# Rules for Following a Figma Design
+
+## WHEN TO USE:
+
+Refer to this rule whenever I provide a Figma link and request that you replicate the design shown in that link.
+
+## Tools You Must Use:
+
+- **`get_figma_data`**: This essential tool MUST be used to access the design data from Figma.
+- **`download_figma_images`**: This optional tool may be useful if you need to incorporate images from the design.
+
+### Guidelines for Implementation:
+
+- Follow the Figma design meticulously, implementing each aspect step by step. Attention to detail is crucial to ensure that the final output closely aligns with the original design.
+- If I request an update to a file based on a Figma design, remember that while Figma may not be the ultimate authority on every detail, it is the most reliable source for understanding layout and structural elements. Strive to maintain the integrity of current components and any existing changes while strictly adhering to the layout specified in the Figma design. This approach will help ensure consistency and fidelity to the original vision.
