@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { AxiosError } from "axios";
 import { z } from "zod";
+
 import { client as apiClient } from "~/lib/api/client";
 import { createClient } from "~/lib/supabase/server";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
@@ -131,7 +132,13 @@ export const skillsRouter = createTRPCRouter({
     }),
 
   enableSkill: publicProcedure
-    .input(z.object({ skillId: z.string(), profileId: z.string() }))
+    .input(
+      z.object({
+        skillId: z.string(),
+        profileId: z.string(),
+        generateAssessment: z.boolean().default(false),
+      }),
+    )
     .mutation(async ({ input }) => {
       const supabase = await createClient();
 
@@ -191,16 +198,8 @@ export const skillsRouter = createTRPCRouter({
         }),
       );
 
-      const { success, error } = await generateAssessment(
-        input.profileId,
-        goalIds,
-      );
-
-      if (!success) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error,
-        });
+      if (input.generateAssessment) {
+        void generateAssessment(input.profileId, goalIds);
       }
 
       return { success: true };
