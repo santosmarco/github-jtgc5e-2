@@ -303,10 +303,9 @@ export const GoalCardMinimal = React.forwardRef<HTMLDivElement, SkillCardProps>(
           isEnabled &&
             !isLoading &&
             hasAssessments &&
-            "cursor-pointer hover:shadow-xl hover:after:backdrop-blur-0",
+            "hover:shadow-xl hover:after:backdrop-blur-0",
           isHovered && isEnabled && hasAssessments && "scale-[1.02]",
         )}
-        onClick={isEnabled && hasAssessments ? navigateToReport : undefined}
         style={{
           boxShadow: isEnabled
             ? "0 10px 30px rgba(0,0,0,0.1), 0 1px 8px rgba(0,0,0,0.05)"
