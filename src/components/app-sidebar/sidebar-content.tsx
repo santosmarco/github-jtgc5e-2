@@ -31,10 +31,11 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { FeedbackDialog } from "~/components/ui/feedback-dialog";
 import { useProfile } from "~/hooks/use-profile";
+import { checkUserFlags, Flag } from "~/lib/flags/flags";
 import { createClient } from "~/lib/supabase/client";
 import type { Tables } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
-import { type RouterOutputs, api } from "~/trpc/react";
+import { api, type RouterOutputs } from "~/trpc/react";
 
 import { CoachBadge } from "../coach-badge";
 import { TaskList } from "../onboarding-task-list";
@@ -75,7 +76,7 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
 
     async function fetchProfiles() {
       let query = supabase.from("profiles").select("*").order("nickname");
-      if (!user.is_admin) {
+      if (!checkUserFlags(user, [Flag.ALLOW_LIST_ALL_USERS])) {
         query = query.or(`id.eq.${user.id},coach_id.eq.${user.id}`);
       }
       const { data: allProfiles } = await query;
@@ -329,7 +330,10 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
                       <div className="flex h-4 w-4 items-center justify-center">
                         <User className="h-3 w-3" />
                       </div>
-                      {user.is_admin ? "Admin" : "Coach"} • Switch Profile
+                      {checkUserFlags(user, [Flag.ALLOW_LIST_ALL_USERS])
+                        ? "Admin"
+                        : "Coach"}
+                      • Switch Profile
                     </DropdownMenuLabel>
                     <div className="max-h-[400px] overflow-y-auto">
                       {profiles.map((profile) => (
@@ -378,21 +382,11 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
                   </DropdownMenuItem>
                 </Link>
 
-                {(selectedProfile?.role === "coach" ||
-                  selectedProfile?.is_admin) && (
+                {checkUserFlags(user, [Flag.ALLOW_CLIENT_ACCESS]) && (
                   <Link href="/clients" onClick={onNavClick}>
                     <DropdownMenuItem className="cursor-pointer gap-2">
                       <UsersIcon className="h-4 w-4" />
                       Clients
-                    </DropdownMenuItem>
-                  </Link>
-                )}
-                {(user.role === "user" ||
-                  (user.is_admin && selectedProfile?.role !== "coach")) && (
-                  <Link href="/settings" onClick={onNavClick}>
-                    <DropdownMenuItem className="cursor-pointer gap-2">
-                      <CogIcon className="h-4 w-4" />
-                      Settings
                     </DropdownMenuItem>
                   </Link>
                 )}

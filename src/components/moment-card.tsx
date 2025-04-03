@@ -28,9 +28,10 @@ import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
 import { useOnboardingTasks } from "~/hooks/use-onboarding-tasks";
 import { useValidatedForm } from "~/hooks/use-validated-form";
+import { checkUserFlags, Flag } from "~/lib/flags/flags";
 import { getMomentStyles } from "~/lib/moments";
 import { cn } from "~/lib/utils";
-import { type RouterOutputs, api } from "~/trpc/react";
+import { api, type RouterOutputs } from "~/trpc/react";
 
 import {
   Tooltip,
@@ -287,7 +288,13 @@ export function MomentCard({
           {/* Title and Actions */}
           <div className="flex items-start justify-between">
             <TooltipProvider>
-              <Tooltip open={user?.is_admin ? undefined : false}>
+              <Tooltip
+                open={
+                  checkUserFlags(user, [Flag.ALLOW_VIDEO_DEBUG_DISPLAY])
+                    ? undefined
+                    : false
+                }
+              >
                 <TooltipTrigger asChild>
                   <h2 className="flex items-baseline font-bold leading-none">
                     {moment.title}
@@ -374,7 +381,7 @@ export function MomentCard({
           >
             {moment.activity_type}
           </Badge>
-          {user?.is_admin &&
+          {checkUserFlags(user, [Flag.ALLOW_VIDEO_DEBUG_DISPLAY]) &&
             moment.subtags &&
             moment.subtags.length > 0 &&
             moment.subtags.map((subtag) => (
