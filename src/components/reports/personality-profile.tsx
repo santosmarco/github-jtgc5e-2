@@ -139,7 +139,7 @@ export function PersonalityProfile({
               <Sparkles className="h-3.5 w-3.5 text-primary/70" />
             </div>
             <span className="ml-2 text-xs font-medium tracking-wide text-muted-foreground/80 transition-all duration-700 group-hover/personality:text-foreground">
-              Your Personality
+              Persona
             </span>
           </div>
 
