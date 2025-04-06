@@ -1,5 +1,7 @@
 import type { logger } from "@trigger.dev/sdk/v3";
+import _ from "lodash";
 
+import { GoogleCalendarEvent } from "~/lib/google-calendar/schemas";
 import type {
   Bot as RecallBot,
   CalendarEvent as RecallCalendarEvent,
@@ -11,8 +13,6 @@ import type {
   TablesInsert,
 } from "~/lib/supabase/database.types";
 
-import _ from "lodash";
-import { GoogleCalendarEvent } from "~/lib/google-calendar/schemas";
 import { BOT_AUTOMATIC_LEAVE } from "../constants";
 import {
   type CalendarSyncEvent,
@@ -789,10 +789,7 @@ export function createCalendarSyncService(
           data: { user },
         } = await supabase.auth.admin.getUserById(calendar.profile.id);
 
-        if (
-          user?.app_metadata.recall_zoom_oauth_credential &&
-          user?.email?.includes("zoom")
-        ) {
+        if (user?.app_metadata.recall_zoom_oauth_credential) {
           logger.info("🔑 User has Zoom integration", {
             user_id: user.id,
           });
