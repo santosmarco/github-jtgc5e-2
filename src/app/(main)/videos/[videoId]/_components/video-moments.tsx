@@ -1,13 +1,12 @@
 "use client";
 
 import _ from "lodash";
-import { cn } from "~/lib/utils";
 
 import { MomentCard } from "~/components/moment-card";
 import { Badge } from "~/components/ui/badge";
 import { ScrollArea, ScrollBar } from "~/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import type { VideoMoment } from "~/lib/schemas/video-moment";
+import { cn } from "~/lib/utils";
 import { handleMomentCategorySort } from "~/lib/videos";
 import type { RouterOutputs } from "~/trpc/react";
 
@@ -34,17 +33,27 @@ export function VideoMoments({
 }: VideoMomentsProps) {
   const categories = _.uniq(moments.map((moment) => moment.activity))
     .sort(handleMomentCategorySort)
-    .concat(["Analysis"])
     .map((category) => ({
       label: category.replace(/_.*$/, ""),
       value: category.replace(/_.*$/, ""),
-      disabled: category === "Analysis",
-      comingSoon: category === "Analysis",
-    }));
+      disabled: false,
+      comingSoon: false,
+    }))
+    .concat([
+      {
+        label: "Analysis",
+        value: "Analysis",
+        disabled: true,
+        comingSoon: true,
+      },
+    ]);
   const momentsByCategory = _.mapValues(
     _.groupBy(moments, (moment) => moment.activity),
     (moments) => moments,
   );
+
+  const defaultCategory = categories.find((c) => !c.disabled)?.value;
+  const activeCategory = selectedCategory ?? defaultCategory;
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -54,10 +63,7 @@ export function VideoMoments({
         </h2>
       </div>
 
-      <Tabs
-        defaultValue={selectedCategory ?? categories[0]?.value}
-        onValueChange={onCategoryChange}
-      >
+      <Tabs value={activeCategory} onValueChange={onCategoryChange}>
         <ScrollArea>
           <TabsList className="inline-flex h-11 items-center justify-start gap-2 bg-transparent p-1">
             {categories.map((category) => (
