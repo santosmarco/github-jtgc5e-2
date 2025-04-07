@@ -131,6 +131,13 @@ export function VideoPlayer({
     hasInitialSeek,
   ]);
 
+  // Handle startAt changes after initial load
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !startAt) return;
+    video.currentTime = startAt;
+  }, [startAt, videoRef]);
+
   // Auto-play when video source changes
   useEffect(() => {
     if (!videoRef.current || !hasInitialSeek) return;
