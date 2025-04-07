@@ -365,7 +365,17 @@ export function MomentCard({
         </div>
 
         {/* Activity Types */}
-        <div className="mb-4 flex flex-wrap gap-2">
+        <div
+          className={cn(
+            "flex flex-wrap gap-2",
+            (moment.target_person_type ||
+              moment.activity_type ||
+              (checkUserFlags(user, [Flag.ALLOW_VIDEO_DEBUG_DISPLAY]) &&
+                moment.subtags &&
+                moment.subtags.length > 0)) &&
+              "mb-4",
+          )}
+        >
           {moment.target_person_type && (
             <Badge
               variant="outline"
@@ -374,13 +384,15 @@ export function MomentCard({
               {moment.target_person_type}
             </Badge>
           )}
-          <Badge
-            variant="outline"
-            className="rounded-full border-foreground/50"
-            {...styles.activityTypeBadge}
-          >
-            {moment.activity_type}
-          </Badge>
+          {moment.activity_type && (
+            <Badge
+              variant="outline"
+              className="rounded-full border-foreground/50"
+              {...styles.activityTypeBadge}
+            >
+              {moment.activity_type}
+            </Badge>
+          )}
           {checkUserFlags(user, [Flag.ALLOW_VIDEO_DEBUG_DISPLAY]) &&
             moment.subtags &&
             moment.subtags.length > 0 &&
@@ -622,5 +634,18 @@ function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const remainingSeconds = Math.round(seconds % 60);
-  return `${hours}:${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+
+  if (hours > 0) {
+    return `${hours.toString().padStart(2, "0")}:${minutes
+      .toString()
+      .padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
+  }
+
+  if (minutes > 0) {
+    return `${minutes.toString().padStart(2, "0")}:${remainingSeconds
+      .toString()
+      .padStart(2, "0")}`;
+  }
+
+  return `0:${remainingSeconds.toString().padStart(2, "0")}`;
 }
