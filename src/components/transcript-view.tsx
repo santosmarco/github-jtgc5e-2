@@ -359,14 +359,16 @@ export function TranscriptView({
           Scroller: React.forwardRef<
             HTMLDivElement,
             React.HTMLAttributes<HTMLDivElement>
-          >((props, ref) => (
-            <div
-              ref={ref}
-              onWheel={handleUserScroll}
-              onTouchMove={handleUserScroll}
-              {...props}
-            />
-          )),
+          >(function Scroller(props, ref) {
+            return (
+              <div
+                ref={ref}
+                onWheel={handleUserScroll}
+                onTouchMove={handleUserScroll}
+                {...props}
+              />
+            );
+          }),
         }}
       />
     );
@@ -392,7 +394,7 @@ export function TranscriptView({
 
       {transcriptList}
 
-      {transcript?.length && !isAutoScrollEnabled && (
+      {transcript && transcript.length > 0 && !isAutoScrollEnabled && (
         <div className="absolute bottom-4 right-4 flex w-full justify-end">
           <Tooltip>
             <TooltipTrigger asChild>

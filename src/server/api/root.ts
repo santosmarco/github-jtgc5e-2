@@ -13,12 +13,12 @@ import { meetingsRouter } from "./routers/meetings";
 import { momentsRouter } from "./routers/moments";
 import { onboardingRouter } from "./routers/onboarding";
 import { reportsRouter } from "./routers/reports";
+import { sessionsRouter } from "./routers/sessions";
 import { settingsRouter } from "./routers/settings";
 import { skillsRouter } from "./routers/skills";
 import { transcriptsRouter } from "./routers/transcripts";
 import { userInvitesRouter } from "./routers/user-invites";
 import { videosRouter } from "./routers/videos";
-import { sessionsRouter } from "./routers/sessions";
 
 export const appRouter = createTRPCRouter({
   auth: authRouter,

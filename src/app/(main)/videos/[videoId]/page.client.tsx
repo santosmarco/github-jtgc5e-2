@@ -311,7 +311,7 @@ const InnerTranscriptView = memo(function InnerTranscriptView({
       ) : (
         <div className="space-y-4">
           <TranscriptView
-            transcript={minimalTranscript?.slices ?? []}
+            transcript={minimalTranscript?.slices}
             currentTime={currentTime ?? 0}
             onWordClick={seek}
           />

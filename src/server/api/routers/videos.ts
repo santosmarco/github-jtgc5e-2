@@ -2,7 +2,11 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import { deleteMeeting } from "~/lib/api/meetings";
-import { getVideo, listVideos } from "~/lib/api-video/videos";
+import {
+  getAppropriateVideoSource,
+  getVideo,
+  listVideos,
+} from "~/lib/api-video/videos";
 import { transformMoment } from "~/lib/db/moments";
 import type { Enums } from "~/lib/supabase/database.types";
 import { createClient } from "~/lib/supabase/server";
@@ -63,20 +67,35 @@ function determineVideoTags(
  * @returns The resolved video source URL
  */
 async function getVideoSourceUrl(videoId: string): Promise<string> {
-  const supabase = await createClient();
   const defaultUrl = `https://vod.api.video/vod/${videoId}/mp4/source.mp4`;
 
   try {
-    // First try the default API.video URL
-    const videoFetch = await fetchWithTimeout(defaultUrl, {
-      method: "HEAD",
-      timeout: 15000,
-      retries: 3,
-    });
+    try {
+      // First try the default API.video URL with HEAD request
+      // This avoids burning one-time tokens for private videos
+      const videoFetch = await fetchWithTimeout(defaultUrl, {
+        method: "HEAD",
+        timeout: 15000,
+        retries: 3,
+      });
 
-    if (videoFetch.status === 200) {
-      return defaultUrl;
+      if (videoFetch.status === 200) {
+        return defaultUrl;
+      }
+    } catch (fetchError) {
+      console.warn(`HEAD request failed for ${videoId}:`, fetchError);
+      // Continue to fallbacks if HEAD request fails
     }
+
+    // Try to get appropriate source for private videos
+    // This comes before database checks to handle private videos properly
+    const appropriateSource = await getAppropriateVideoSource(videoId);
+    if (appropriateSource) {
+      return appropriateSource;
+    }
+
+    // If no appropriate source found, check database for stored URLs
+    const supabase = await createClient();
 
     // First fallback: check meeting_bots table
     const { data: meetingBots } = await supabase
@@ -114,8 +133,6 @@ async function getVideoSourceUrl(videoId: string): Promise<string> {
 
 /**
  * Fetches comprehensive video data including moments, reactions, and source URL
- * @param videoId - The API video identifier
- * @param videoOptions - Options for filtering moments and other data
  */
 async function fetchVideoData(
   videoId: string,
