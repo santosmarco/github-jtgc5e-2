@@ -18,7 +18,7 @@ import {
 } from "~/components/ui/tooltip";
 import { getBotStatusInfo } from "~/lib/meeting-bots/status";
 import { cn } from "~/lib/utils";
-import { type RouterOutputs, api } from "~/trpc/react";
+import { api, type RouterOutputs } from "~/trpc/react";
 
 interface MeetingEntryProps {
   event: RouterOutputs["calendar"]["getCalendarEvents"][number];
@@ -438,7 +438,11 @@ export function MeetingEntry({ event, isNow = false }: MeetingEntryProps) {
                             <Info className="h-3.5 w-3.5 text-muted-foreground transition-colors hover:text-primary" />
                           </div>
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs">
+                        <TooltipContent
+                          side="top"
+                          className="max-w-xs"
+                          sideOffset={10}
+                        >
                           <p className="text-xs">
                             {event.should_join_calculated_reason}
                           </p>

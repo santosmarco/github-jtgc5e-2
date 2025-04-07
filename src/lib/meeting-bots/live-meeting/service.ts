@@ -74,7 +74,7 @@ export function createLiveMeetingService(deps: MeetingBotsServiceDependencies) {
             deduplication_key: botDeduplicationKey,
             recording_mode: "speaker_view",
             entry_message:
-              'Please update your Titan x Zoom integration by following this link and clicking "Connect": https://app.withtitan.com/integrations\n\nThe new Zoom experience has been upgraded significantly and the old Zoom experience will stop working on April 11th at 5pm ET.',
+              'Please update your Titan x Zoom integration by following this link and clicking "Connect": https://app.withtitan.com/integrations — The new Zoom experience has been upgraded significantly and the old Zoom experience will stop working on April 11th at 5pm ET.',
             speech_to_text: {
               provider: "Default",
             },
