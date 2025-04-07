@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { processMeetingBot } from "~/jobs/process-meeting-bot";
 
+import { processMeetingBot } from "~/jobs/process-meeting-bot";
 import { logger } from "~/lib/logging/server";
 import { MeetingBotsWebhookRequest } from "~/lib/meeting-bots/schemas";
 import { slack } from "~/lib/slack";
@@ -57,7 +57,13 @@ export async function POST(request: NextRequest) {
         try {
           // Determine status tag based on payload data
           let statusTag = "status:unknown";
-          if ("status" in parsedBody.data) {
+          if (
+            "status" in parsedBody.data &&
+            typeof parsedBody.data.status === "object" &&
+            !!parsedBody.data.status &&
+            "code" in parsedBody.data.status &&
+            typeof parsedBody.data.status.code === "string"
+          ) {
             statusTag = `status:${parsedBody.data.status.code}`;
           } else if ("error" in parsedBody.data) {
             statusTag = "status:fatal";

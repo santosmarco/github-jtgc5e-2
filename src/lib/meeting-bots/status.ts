@@ -7,6 +7,7 @@ import {
   Loader2,
   type LucideIcon,
 } from "lucide-react";
+
 import type { RouterOutputs } from "~/trpc/react";
 
 type MeetingBot =
@@ -124,15 +125,15 @@ export function getBotStatusInfo(
 ): BotStatusInfo {
   // Bot not present or not configured
   if (!meetingBot) {
+    if (isInPast) {
+      return statusInfoFactories.warning("Skipped due to settings");
+    }
+
     if (shouldJoin) {
       return statusInfoFactories.primary(
         "Scheduled",
         "Will join when meeting starts",
       );
-    }
-
-    if (isInPast) {
-      return statusInfoFactories.warning("Skipped due to settings");
     }
 
     return statusInfoFactories.muted("Disabled", "Recording disabled", BotOff);

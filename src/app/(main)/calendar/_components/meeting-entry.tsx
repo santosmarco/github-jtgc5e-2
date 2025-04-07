@@ -95,8 +95,6 @@ export function MeetingEntry({ event, isNow = false }: MeetingEntryProps) {
   const utils = api.useUtils();
   const prefersReducedMotion = useReducedMotion();
 
-  console.log(event);
-
   // Determine whether the meeting bot should join this meeting
   const [shouldJoin, setShouldJoin] = React.useState<boolean>(
     // Use the explicit override value if available, otherwise use the system-calculated value
@@ -536,41 +534,41 @@ export function MeetingEntry({ event, isNow = false }: MeetingEntryProps) {
                     </label>
                   </div>
                 )}
-                {isNow &&
-                  !event.meeting_bot?.api_video_id &&
-                  botStatusDetails.variant !== "primary" && (
-                    <motion.div
-                      variants={buttonVariants}
-                      initial="hidden"
-                      animate="visible"
-                      whileTap="tap"
-                      className="flex h-6 items-center justify-center gap-2 text-xs font-medium"
+                {isNow && !event.meeting_bot?.api_video_id && (
+                  <motion.div
+                    variants={buttonVariants}
+                    initial="hidden"
+                    animate="visible"
+                    whileTap="tap"
+                    className="flex h-6 items-center justify-center gap-2 text-xs font-medium"
+                  >
+                    <Button
+                      onClick={handleAddBot}
+                      disabled={addBotMutation.isPending}
+                      size="sm"
+                      className={cn(
+                        "flex h-full items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90",
+                        {
+                          primary:
+                            "border-primary bg-primary/5 text-primary hover:bg-primary/10",
+                          warning:
+                            "border-yellow-500 bg-yellow-500/5 text-yellow-500 hover:bg-yellow-500/10",
+                          error:
+                            "border-destructive bg-destructive/5 text-destructive hover:bg-destructive/10",
+                          muted:
+                            "border-border bg-background text-muted-foreground hover:bg-background",
+                          success:
+                            "border-emerald-500 bg-emerald-500/5 text-emerald-500 hover:bg-emerald-500/10",
+                        }[botStatusDetails.variant],
+                      )}
                     >
-                      <Button
-                        onClick={handleAddBot}
-                        disabled={addBotMutation.isPending}
-                        size="sm"
-                        className={cn(
-                          "flex h-full items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90",
-                          {
-                            warning:
-                              "border-yellow-500 bg-yellow-500/5 text-yellow-500 hover:bg-yellow-500/10",
-                            error:
-                              "border-destructive bg-destructive/5 text-destructive hover:bg-destructive/10",
-                            muted:
-                              "border-border bg-background text-muted-foreground hover:bg-background",
-                            success:
-                              "border-emerald-500 bg-emerald-500/5 text-emerald-500 hover:bg-emerald-500/10",
-                          }[botStatusDetails.variant],
-                        )}
-                      >
-                        {addBotMutation.isPending
-                          ? "Adding bot..."
-                          : "Add bot to meeting"}
-                        <ArrowRight className="!h-3.5 !w-3.5" />
-                      </Button>
-                    </motion.div>
-                  )}
+                      {addBotMutation.isPending
+                        ? "Adding bot..."
+                        : "Add bot to meeting"}
+                      <ArrowRight className="!h-3.5 !w-3.5" />
+                    </Button>
+                  </motion.div>
+                )}
                 {event.meeting_bot?.api_video_id && (
                   <Link
                     href={`/videos/${event.meeting_bot.api_video_id}`}

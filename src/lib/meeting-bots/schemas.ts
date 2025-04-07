@@ -36,20 +36,43 @@ export const BotStatusCode = z
 
     // MeetingBaas
     "in_waiting_for_host",
+    "invalid_meeting_url", // The provided meeting URL was invalid.
+    "waiting_room_timeout", // The bot timed out while waiting to be admitted.
+    "recording_paused", // The recording has been temporarily paused.
+    "recording_resumed", // The recording has resumed after being paused.
+    "bot_removed", // The bot was removed from the meeting.
+    "bot_rejected", // The bot was rejected from joining the meeting.
+    "meeting_error", // An unexpected error occurred during the meeting.
   ])
   .or(z.string());
 export type BotStatusCode = z.infer<typeof BotStatusCode>;
 
-export const CalendarSyncEventData = z.object({
-  calendar_id: z.string(),
-  last_updated_ts: z.string(),
-});
+export const MeetingBaasErrorType = z
+  .enum([
+    "CannotJoinMeeting", // Meeting URL only accessible for logged-in users invited to the meeting
+    "TimeoutWaitingToStart", // Bot quit after waiting to be accepted (default 10 minutes)
+    "BotNotAccepted", // Bot was refused in the meeting
+    "BotRemoved", // Bot was removed from the meeting by a participant
+    "InternalError", // An unexpected error occurred
+    "InvalidMeetingUrl", // The meeting URL provided is not valid
+  ])
+  .or(z.string());
+export type MeetingBaasErrorType = z.infer<typeof MeetingBaasErrorType>;
+
+export const CalendarSyncEventData = z
+  .object({
+    calendar_id: z.string(),
+    last_updated_ts: z.string(),
+  })
+  .passthrough();
 export type CalendarSyncEventData = z.infer<typeof CalendarSyncEventData>;
 
-export const CalendarSyncEvent = z.object({
-  event: z.literal("calendar.sync_events"),
-  data: CalendarSyncEventData,
-});
+export const CalendarSyncEvent = z
+  .object({
+    event: z.literal("calendar.sync_events"),
+    data: CalendarSyncEventData,
+  })
+  .passthrough();
 export type CalendarSyncEvent = z.infer<typeof CalendarSyncEvent>;
 
 export const CalendarSyncEventQuery = z.object({
@@ -57,88 +80,99 @@ export const CalendarSyncEventQuery = z.object({
 });
 export type CalendarSyncEventQuery = z.infer<typeof CalendarSyncEventQuery>;
 
-export const BotStatusChangeEventDataStatus = z.object({
-  code: BotStatusCode,
-  created_at: z.string(),
-  sub_code: z.string().nullish(),
-  message: z.string().nullish(),
-  recording_id: z.string().nullish(),
-});
+export const BotStatusChangeEventDataStatus = z
+  .object({
+    code: BotStatusCode,
+    created_at: z.string(),
+    sub_code: z.string().nullish(),
+    message: z.string().nullish(),
+    recording_id: z.string().nullish(),
+  })
+  .passthrough();
 export type BotStatusChangeEventDataStatus = z.infer<
   typeof BotStatusChangeEventDataStatus
 >;
 
-export const BotStatusChangeEventData = z.object({
-  bot_id: z.string(),
-  status: BotStatusChangeEventDataStatus,
-});
+export const BotStatusChangeEventData = z
+  .object({
+    bot_id: z.string(),
+    status: BotStatusChangeEventDataStatus,
+  })
+  .passthrough();
 export type BotStatusChangeEventData = z.infer<typeof BotStatusChangeEventData>;
 
-export const BotStatusChangeEvent = z.object({
-  event: z.literal("bot.status_change"),
-  data: BotStatusChangeEventData,
-});
+export const BotStatusChangeEvent = z
+  .object({
+    event: z.literal("bot.status_change"),
+    data: BotStatusChangeEventData,
+  })
+  .passthrough();
 export type BotStatusChangeEvent = z.infer<typeof BotStatusChangeEvent>;
 
-export const MeetingBaasTranscriptWord = z.object({
-  start: z.number(),
-  end: z.number(),
-  word: z.string(),
-});
+export const MeetingBaasTranscriptWord = z
+  .object({
+    start: z.number(),
+    end: z.number(),
+    word: z.string(),
+  })
+  .passthrough();
 export type MeetingBaasTranscriptWord = z.infer<
   typeof MeetingBaasTranscriptWord
 >;
 
-export const MeetingBaasTranscriptPart = z.object({
-  speaker: z.string(),
-  words: z.array(MeetingBaasTranscriptWord),
-});
+export const MeetingBaasTranscriptPart = z
+  .object({
+    speaker: z.string(),
+    words: z.array(MeetingBaasTranscriptWord),
+  })
+  .passthrough();
 export type MeetingBaasTranscriptPart = z.infer<
   typeof MeetingBaasTranscriptPart
 >;
 
-export const MeetingBaasCompleteEventData = z.object({
-  bot_id: z.string(),
-  mp4: z.string().url(),
-  speakers: z.array(z.string()),
-  transcript: z.array(MeetingBaasTranscriptPart),
-});
+export const MeetingBaasCompleteEventData = z
+  .object({
+    bot_id: z.string(),
+    mp4: z.string().url(),
+    speakers: z.array(z.string()),
+    transcript: z.array(MeetingBaasTranscriptPart).optional(),
+  })
+  .passthrough();
 export type MeetingBaasCompleteEventData = z.infer<
   typeof MeetingBaasCompleteEventData
 >;
 
-export const MeetingBaasCompleteEvent = z.object({
-  event: z.literal("complete"),
-  data: MeetingBaasCompleteEventData,
-});
+export const MeetingBaasCompleteEvent = z
+  .object({
+    event: z.literal("complete"),
+    data: MeetingBaasCompleteEventData,
+  })
+  .passthrough();
 export type MeetingBaasCompleteEvent = z.infer<typeof MeetingBaasCompleteEvent>;
 
-export const MeetingBaasFailedEventData = z.object({
-  bot_id: z.string(),
-  error: z
-    .string()
-    .transform((str) =>
-      str === "Waiting room timeout" ? "TimeoutWaitingToStart" : str,
-    )
-    .pipe(
-      z.enum([
-        "CannotJoinMeeting",
-        "TimeoutWaitingToStart",
-        "BotNotAccepted",
-        "InternalError",
-        "InvalidMeetingUrl",
-      ]),
-    )
-    .or(z.string()),
-});
+export const MeetingBaasFailedEventData = z
+  .object({
+    bot_id: z.string(),
+    error: z
+      .string()
+      .transform((str) =>
+        str === "Waiting room timeout"
+          ? ("TimeoutWaitingToStart" satisfies MeetingBaasErrorType)
+          : str,
+      )
+      .pipe(MeetingBaasErrorType),
+  })
+  .passthrough();
 export type MeetingBaasFailedEventData = z.infer<
   typeof MeetingBaasFailedEventData
 >;
 
-export const MeetingBaasFailedEvent = z.object({
-  event: z.literal("failed"),
-  data: MeetingBaasFailedEventData,
-});
+export const MeetingBaasFailedEvent = z
+  .object({
+    event: z.literal("failed"),
+    data: MeetingBaasFailedEventData,
+  })
+  .passthrough();
 export type MeetingBaasFailedEvent = z.infer<typeof MeetingBaasFailedEvent>;
 
 export const ProviderAgnosticBotStatusChangeEvent = z.union([
