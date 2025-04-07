@@ -334,6 +334,7 @@ async function uploadVideoToApiVideo(
       language: "en",
       tags,
       metadata,
+      _public: false,
     });
 
     log.info("✅ API.video upload successful", {

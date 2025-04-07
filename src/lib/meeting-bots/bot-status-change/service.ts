@@ -2,14 +2,14 @@ import { isAxiosError } from "axios";
 import _ from "lodash";
 import type { Except } from "type-fest";
 
-import { uploadVideoToSupabaseStorage } from "~/jobs/upload-video-to-supabase-storage";
-import { processVideo } from "~/lib/api/meetings";
-import type { Tables, TablesInsert } from "~/lib/supabase/database.types";
-
 import { entityExtraction } from "~/jobs/preprocessing/steps/entity-extraction";
 import { topicSegmentation } from "~/jobs/preprocessing/steps/topic-segmentation";
+import { uploadVideoToSupabaseStorage } from "~/jobs/upload-video-to-supabase-storage";
+import { processVideo } from "~/lib/api/meetings";
 import { Vtt } from "~/lib/backend/services/vtt/vtt.service";
+import type { Tables, TablesInsert } from "~/lib/supabase/database.types";
 import { isTruthy } from "~/lib/utils";
+
 import { createBotService } from "../bot/service";
 import type {
   MeetingBaasCompleteEventData,
@@ -761,6 +761,7 @@ export function createBotStatusChangeService(
         mp4Support: true,
         tags,
         metadata,
+        _public: false,
       });
 
       logger.info("✅ API.video upload successful", {

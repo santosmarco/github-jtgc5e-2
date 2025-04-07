@@ -262,6 +262,7 @@ async function uploadToApiVideo(
       mp4Support: true,
       tags,
       metadata,
+      _public: false,
     });
 
     log.info("API.video upload successful", {
