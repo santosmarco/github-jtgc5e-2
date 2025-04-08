@@ -294,11 +294,7 @@ export function MeetingEntry({ event, isNow = false }: MeetingEntryProps) {
     return <Video className="h-4 w-4" />;
   };
 
-  const botStatusDetails = getBotStatusInfo(
-    event.meeting_bot,
-    shouldJoin,
-    isInPast,
-  );
+  const botStatusDetails = getBotStatusInfo(event, shouldJoin, isInPast);
 
   // Add bot mutation
   const addBotMutation = api.calendar.launchMeetingBot.useMutation({

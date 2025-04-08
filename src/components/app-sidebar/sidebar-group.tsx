@@ -30,8 +30,7 @@ export function SidebarGroup({
     // Handle navigation for the rest of the group header
     if (
       pathname === defaultHref ||
-      (defaultHref === "/" && pathname.startsWith("/videos")) ||
-      (pathname.startsWith(defaultHref) && defaultHref !== "/")
+      (defaultHref === "/" && pathname.startsWith("/videos"))
     ) {
       e.preventDefault();
       return;

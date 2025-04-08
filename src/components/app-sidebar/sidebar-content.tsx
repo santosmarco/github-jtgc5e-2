@@ -124,8 +124,7 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
       // Prevent navigation if we're already on the page
       if (
         pathname === href ||
-        (href === "/" && pathname.startsWith("/videos")) ||
-        (pathname.startsWith(href) && href !== "/")
+        (href === "/" && pathname.startsWith("/videos"))
       ) {
         e.preventDefault();
         return;

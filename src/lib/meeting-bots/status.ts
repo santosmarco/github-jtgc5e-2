@@ -119,13 +119,26 @@ const statusInfoFactories = {
  * @returns Standardized status information for UI display
  */
 export function getBotStatusInfo(
-  meetingBot: MeetingBot,
+  event: RouterOutputs["calendar"]["getCalendarEvents"][number],
   shouldJoin = false,
   isInPast = false,
 ): BotStatusInfo {
+  const meetingBot = event.meeting_bot;
+
   // Bot not present or not configured
   if (!meetingBot) {
     if (isInPast) {
+      if (
+        event.should_join_user_override !== null &&
+        !event.should_join_user_override
+      ) {
+        return statusInfoFactories.muted(
+          "Skipped",
+          "You manually disabled recording",
+          BotOff,
+        );
+      }
+
       return statusInfoFactories.warning("Skipped due to settings");
     }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { AnimatePresence, type Variants, motion } from "framer-motion";
+import { AnimatePresence, motion, type Variants } from "framer-motion";
 import * as React from "react";
 
 import { Calendar } from "~/components/ui/calendar";
@@ -130,10 +130,8 @@ export function SidebarCalendar({
     };
 
     for (const event of filteredEvents) {
-      console.log(event);
-
       const status = getBotStatusInfo(
-        event.meeting_bot,
+        event,
         event.should_join_user_override !== null
           ? !!event.should_join_user_override
           : !!event.should_join_calculated,

@@ -151,6 +151,8 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
       enableSkill({
         skillId: skill.id,
         profileId: profileId,
+        generateAssessment:
+          profileId === "71b372dc-3d42-40c1-838d-248460d1e50d",
       });
     };
 
@@ -812,7 +814,9 @@ export function calculateSkillScore(
   );
   const totalTagCounts = positiveTagCounts + negativeTagCounts;
   const score =
-    totalTagCounts > 0 ? 0.5 + (0.5 * positiveTagCounts) / totalTagCounts : 0;
+    totalTagCounts > 0
+      ? 0.5 + 0.5 * (1 - positiveTagCounts / totalTagCounts)
+      : 0;
 
   return {
     positiveTagCounts,
