@@ -84,16 +84,7 @@ export const GoalCardMinimal = React.forwardRef<HTMLDivElement, SkillCardProps>(
     );
 
     // Calculate statistics about reviews and assessments
-    const skillAssessments =
-      skill.reports.filter((r) =>
-        r.report_goals
-          .map((rg) => rg.goal_id)
-          .some((goalId) =>
-            skill.goals
-              .filter((g) => g.is_default)
-              .some((g) => g.id === goalId),
-          ),
-      ) || [];
+    const skillAssessments = skill.reports;
     const latestAssessment =
       skillAssessments.length > 0
         ? _.orderBy(
@@ -251,7 +242,7 @@ function SimplifiedGauge({
       )}
     >
       <motion.div
-        className={cn("relative", sizeClasses[size])}
+        className={cn("relative mx-auto my-auto", sizeClasses[size])}
         variants={gaugeVariants}
       >
         {/* SVG gauge */}
