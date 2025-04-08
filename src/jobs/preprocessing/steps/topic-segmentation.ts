@@ -1,5 +1,6 @@
 import { logger, schemaTask } from "@trigger.dev/sdk/v3";
 import { z } from "zod";
+
 import { TopicSegmentationService } from "~/lib/backend/services/topic-segmentation/topic-segmentation.service";
 import type { MeetingBotWithProfileAndEventAndCalendarAndTranscript } from "~/lib/meeting-bots/bot-status-change/service";
 import { createClient } from "~/lib/supabase/client";

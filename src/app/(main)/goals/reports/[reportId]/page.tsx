@@ -4,7 +4,7 @@ import dayjs from "dayjs";
 import { motion } from "framer-motion";
 import _ from "lodash";
 import { ChevronLeft, ChevronRight, FileX2Icon, Loader2 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { z } from "zod";
@@ -21,10 +21,17 @@ import { PersonalityProfile } from "~/components/reports/personality-profile";
 import { ReportMetrics } from "~/components/reports/report-metrics";
 import { SectionsList } from "~/components/reports/sections-list";
 import { Button } from "~/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
 import { transformMoment } from "~/lib/db/moments";
 import { checkUserFlags, Flag } from "~/lib/flags/flags";
 import { createClient } from "~/lib/supabase/client";
 import type { Tables } from "~/lib/supabase/database.types";
+import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import type { ReportComment } from "~/types/reports";
 
@@ -34,6 +41,7 @@ export default function ReportPage({
   params: { reportId: string };
 }) {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const goalId = searchParams.get("goalId");
   const [expandedGoals, setExpandedGoals] = useState<Record<string, boolean>>(
     () => ({
@@ -67,6 +75,16 @@ export default function ReportPage({
     api.reports.getGroupReports.useQuery({
       groupId: params.reportId,
     });
+
+  // Fetch adjacent reports for navigation
+  const { data: adjacentReports } = api.reports.getAdjacentReports.useQuery(
+    {
+      groupId: params.reportId,
+    },
+    {
+      enabled: !isLoading && !!groupReports,
+    },
+  );
 
   const reviewGoal = api.reports.reviewGoal.useMutation();
 
@@ -357,6 +375,24 @@ export default function ReportPage({
     );
   };
 
+  const navigateToPreviousReport = () => {
+    if (adjacentReports?.previous?.id) {
+      const url = goalId
+        ? `/goals/reports/${adjacentReports.previous.id}?goalId=${goalId}`
+        : `/goals/reports/${adjacentReports.previous.id}`;
+      router.push(url);
+    }
+  };
+
+  const navigateToNextReport = () => {
+    if (adjacentReports?.next?.id) {
+      const url = goalId
+        ? `/goals/reports/${adjacentReports.next.id}?goalId=${goalId}`
+        : `/goals/reports/${adjacentReports.next.id}`;
+      router.push(url);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="grid min-h-[calc(100vh-4rem)] place-items-center bg-black">
@@ -390,30 +426,62 @@ export default function ReportPage({
   }
 
   return (
-    <div className="-mx-8 -mt-3 min-h-screen">
+    <div className="-mx-8 -mt-12 min-h-screen">
       {/* Date Range Navigation */}
       <div className="sticky top-0 z-40 -mx-4 mb-6 flex items-center justify-between border-b border-border bg-background/60 px-2 py-2 backdrop-blur-xl">
-        <motion.div whileHover={{ x: -5 }} whileTap={{ scale: 0.95 }}>
-          <Button
-            variant="ghost"
-            className="flex items-center gap-2 text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground"
-          >
-            <motion.div
-              initial={{ x: 0 }}
-              animate={{ x: [0, -4, 0] }}
-              transition={{
-                repeat: Number.POSITIVE_INFINITY,
-                repeatType: "reverse",
-                duration: 1.5,
-                ease: "easeInOut",
-                repeatDelay: 1,
-              }}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </motion.div>
-            <span>Previous</span>
-          </Button>
-        </motion.div>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <motion.div
+                whileHover={{ x: adjacentReports?.previous ? -5 : 0 }}
+                whileTap={{ scale: adjacentReports?.previous ? 0.95 : 1 }}
+              >
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "flex items-center gap-2 text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground",
+                    !adjacentReports?.previous &&
+                      "cursor-not-allowed opacity-50",
+                  )}
+                  onClick={navigateToPreviousReport}
+                  disabled={!adjacentReports?.previous}
+                >
+                  <motion.div
+                    initial={{ x: 0 }}
+                    animate={
+                      adjacentReports?.previous ? { x: [0, -4, 0] } : { x: 0 }
+                    }
+                    transition={{
+                      repeat: adjacentReports?.previous
+                        ? Number.POSITIVE_INFINITY
+                        : 0,
+                      repeatType: "reverse",
+                      duration: 1.5,
+                      ease: "easeInOut",
+                      repeatDelay: 1,
+                    }}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </motion.div>
+                  <span>Previous</span>
+                </Button>
+              </motion.div>
+            </TooltipTrigger>
+            {adjacentReports?.previous && (
+              <TooltipContent side="bottom" align="start" sideOffset={5}>
+                <p className="text-sm">
+                  {dayjs(adjacentReports.previous.start_date ?? "").format(
+                    "MMM D",
+                  )}{" "}
+                  to{" "}
+                  {dayjs(adjacentReports.previous.end_date ?? "").format(
+                    "MMM D",
+                  )}
+                </p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
 
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -422,32 +490,59 @@ export default function ReportPage({
           className="flex flex-col items-center gap-1"
         >
           <h2 className="text-base font-medium tracking-tight">
-            {dayjs(groupReports.reports[0]?.start_date).format("MMM D")} to{" "}
-            {dayjs(groupReports.reports[0]?.end_date).format("MMM D")}
+            {dayjs(groupReports?.reports[0]?.start_date).format("MMM D")} to{" "}
+            {dayjs(groupReports?.reports[0]?.end_date).format("MMM D")}
           </h2>
         </motion.div>
 
-        <motion.div whileHover={{ x: 5 }} whileTap={{ scale: 0.95 }}>
-          <Button
-            variant="ghost"
-            className="flex items-center gap-2 text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground"
-          >
-            <span>Next</span>
-            <motion.div
-              initial={{ x: 0 }}
-              animate={{ x: [0, 4, 0] }}
-              transition={{
-                repeat: Number.POSITIVE_INFINITY,
-                repeatType: "reverse",
-                duration: 1.5,
-                ease: "easeInOut",
-                repeatDelay: 1,
-              }}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </motion.div>
-          </Button>
-        </motion.div>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <motion.div
+                whileHover={{ x: adjacentReports?.next ? 5 : 0 }}
+                whileTap={{ scale: adjacentReports?.next ? 0.95 : 1 }}
+              >
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "flex items-center gap-2 text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground",
+                    !adjacentReports?.next && "cursor-not-allowed opacity-50",
+                  )}
+                  onClick={navigateToNextReport}
+                  disabled={!adjacentReports?.next}
+                >
+                  <span>Next</span>
+                  <motion.div
+                    initial={{ x: 0 }}
+                    animate={
+                      adjacentReports?.next ? { x: [0, 4, 0] } : { x: 0 }
+                    }
+                    transition={{
+                      repeat: adjacentReports?.next
+                        ? Number.POSITIVE_INFINITY
+                        : 0,
+                      repeatType: "reverse",
+                      duration: 1.5,
+                      ease: "easeInOut",
+                      repeatDelay: 1,
+                    }}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </motion.div>
+                </Button>
+              </motion.div>
+            </TooltipTrigger>
+            {adjacentReports?.next && (
+              <TooltipContent side="bottom" align="end" sideOffset={5}>
+                <p className="text-sm">
+                  {dayjs(adjacentReports.next.start_date ?? "").format("MMM D")}{" "}
+                  to{" "}
+                  {dayjs(adjacentReports.next.end_date ?? "").format("MMM D")}
+                </p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       {groupReports.reports.map((report) => {
@@ -558,6 +653,7 @@ export default function ReportPage({
                 <GoalCardMinimal
                   skill={{
                     ...report.skill,
+                    reports: [report],
                     report_goals: report.report_goals,
                   }}
                   profileId={report.profile_id}

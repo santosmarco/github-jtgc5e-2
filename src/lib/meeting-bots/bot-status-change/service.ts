@@ -1106,6 +1106,7 @@ export function createBotStatusChangeService(
 
       await processVideo({
         meetingBotId: bot.id,
+        processingId: meetingProcessingStatusId,
         steps: ["all"],
       });
 

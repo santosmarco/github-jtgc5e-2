@@ -530,11 +530,11 @@ export default function GoalsPage() {
                     <SkillCard
                       profileId={profile.id ?? user.id ?? ""}
                       skill={skill}
-                      onSkillEnabled={() => {
-                        apiUtils.skills.getAllSkills.invalidate();
+                      onSkillEnabled={async () => {
+                        await apiUtils.skills.getAllSkills.invalidate();
                       }}
-                      onSkillDisabled={() => {
-                        apiUtils.skills.getAllSkills.invalidate();
+                      onSkillDisabled={async () => {
+                        await apiUtils.skills.getAllSkills.invalidate();
                       }}
                     />
                   </motion.div>

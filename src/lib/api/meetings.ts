@@ -44,6 +44,7 @@ export type ProcessVideoStep = z.infer<typeof ProcessVideoStep>;
 
 export const ProcessVideoParams = z.object({
   meetingBotId: z.string(),
+  processingId: z.string(),
   steps: z.array(ProcessVideoStep).default(["all"]),
 });
 export type ProcessVideoParams = z.infer<typeof ProcessVideoParams>;

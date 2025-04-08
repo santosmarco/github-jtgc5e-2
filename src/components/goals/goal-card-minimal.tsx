@@ -1,26 +1,17 @@
 "use client";
 
 import dayjs from "dayjs";
-import { AnimatePresence, motion, useSpring } from "framer-motion";
+import { motion } from "framer-motion";
 import _ from "lodash";
 import type { LucideProps } from "lucide-react";
-import {
-  AlertTriangle,
-  ArrowRight,
-  ArrowUp,
-  CheckCircle2,
-  Clock,
-  Eye,
-  FileWarning,
-  Loader2,
-} from "lucide-react";
+import { ArrowUp } from "lucide-react";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
-import { transformMoment } from "~/lib/db/moments";
+
 import { cn } from "~/lib/utils";
-import { type RouterOutputs, api } from "~/trpc/react";
+import type { RouterOutputs } from "~/trpc/react";
+
+import { calculateSkillScore } from "./goal-card";
 
 // Enhanced animations
 const cardVariants = {
@@ -56,35 +47,11 @@ const gaugeVariants = {
 export type SkillCardProps = {
   skill: RouterOutputs["skills"]["getAllSkills"][number];
   profileId: string;
-  onSkillEnabled?: () => void;
-  onSkillDisabled?: () => void;
 };
 
 export const GoalCardMinimal = React.forwardRef<HTMLDivElement, SkillCardProps>(
-  function SkillCard(
-    { skill, profileId, onSkillEnabled, onSkillDisabled },
-    ref,
-  ) {
-    const utils = api.useUtils();
-    const router = useRouter();
-    const [score, setScore] = useState(0);
-    const springScore = useSpring(0, {
-      stiffness: 100,
-      damping: 30,
-      mass: 1,
-    });
+  function SkillCard({ skill, profileId }, ref) {
     const [isHovered, setIsHovered] = useState(false);
-
-    useEffect(() => {
-      springScore.set(73);
-    }, [springScore]);
-
-    useEffect(() => {
-      const unsubscribe = springScore.on("change", (latest) => {
-        setScore(Math.round(latest));
-      });
-      return () => unsubscribe();
-    }, [springScore]);
 
     const Icon = useMemo(
       () =>
@@ -116,53 +83,6 @@ export const GoalCardMinimal = React.forwardRef<HTMLDivElement, SkillCardProps>(
       [skill.icon],
     );
 
-    const { mutate: enableSkill, isPending: isEnablingSkill } =
-      api.skills.enableSkill.useMutation({
-        onSuccess: () => {
-          toast.success(`"${skill.title}" enabled`, {
-            description: "You can now track your skill progress",
-          });
-          utils.skills.getAllSkills.invalidate();
-          onSkillEnabled?.();
-        },
-        onError: (error) => {
-          console.log(error);
-          toast.error(error.message);
-        },
-      });
-
-    const { mutate: disableSkill, isPending: isDisablingSkill } =
-      api.skills.disableSkill.useMutation({
-        onSuccess: () => {
-          toast.success(`"${skill.title}" disabled`, {
-            description: "You can re-enable it anytime",
-          });
-          utils.skills.getAllSkills.invalidate();
-          onSkillDisabled?.();
-        },
-        onError: (error) => {
-          console.log(error);
-          toast.error(error.message);
-        },
-      });
-
-    const handleSkillEnable = () => {
-      enableSkill({
-        skillId: skill.id,
-        profileId: profileId,
-      });
-    };
-
-    const handleSkillDisable = () => {
-      disableSkill({
-        skillId: skill.id,
-        profileId: profileId,
-      });
-    };
-
-    const isEnabled = skill.goals.some((goal) => goal.is_default);
-    const isLoading = isEnablingSkill || isDisablingSkill;
-
     // Calculate statistics about reviews and assessments
     const skillAssessments =
       skill.reports.filter((r) =>
@@ -174,10 +94,6 @@ export const GoalCardMinimal = React.forwardRef<HTMLDivElement, SkillCardProps>(
               .some((g) => g.id === goalId),
           ),
       ) || [];
-    const reviewedAssessments =
-      skillAssessments.filter((r) =>
-        r.report_goals.every((rg) => rg.is_reviewed),
-      ) || [];
     const latestAssessment =
       skillAssessments.length > 0
         ? _.orderBy(
@@ -186,105 +102,11 @@ export const GoalCardMinimal = React.forwardRef<HTMLDivElement, SkillCardProps>(
             ["desc"],
           )[0]
         : null;
-    const hasAssessments = skillAssessments.length > 0;
 
-    const skillAssessmentGoal = latestAssessment?.report_goals.find(
-      (reportGoal) =>
-        skill.goals.some((goal) => goal.id === reportGoal.goal_id),
+    const skillScore = calculateSkillScore(
+      skill,
+      latestAssessment?.report_moments ?? [],
     );
-
-    const latestSkillAssessmentStatus = _.orderBy(
-      skill.statuses,
-      [(status) => dayjs(status.created_at).toDate()],
-      ["desc"],
-    )[0];
-
-    // Determine status for display
-    const getStatus = () => {
-      // Check if there's a processing status on the first goal
-      const processingStatus = _.maxBy(skill.statuses, (status) =>
-        dayjs(status.created_at).toDate(),
-      )?.status;
-
-      if (processingStatus === "pending") {
-        return "Processing";
-      }
-
-      if (processingStatus === "failed") {
-        return "Failed";
-      }
-
-      if (latestAssessment?.report_goals.every((rg) => rg.is_reviewed)) {
-        return "Reviewed";
-      }
-
-      if (latestAssessment?.report_goals.every((rg) => !rg.is_reviewed)) {
-        return "Pending Review";
-      }
-
-      return "In Review";
-    };
-
-    // Get status icon and color based on status
-    const getStatusIconAndColor = () => {
-      const status = getStatus();
-
-      switch (status) {
-        case "Processing":
-          return { icon: Clock, color: "text-chart-4" };
-        case "Failed":
-          return { icon: AlertTriangle, color: "text-destructive" };
-        case "Reviewed":
-          return { icon: CheckCircle2, color: "text-chart-2" };
-        case "Pending Review":
-          return { icon: FileWarning, color: "text-chart-4" };
-        case "In Review":
-          return { icon: Eye, color: "text-chart-1" };
-        default:
-          return { icon: ArrowRight, color: "text-primary" };
-      }
-    };
-
-    const { icon: StatusIcon, color: statusColor } = getStatusIconAndColor();
-
-    const reportSkillPositiveScaleTags =
-      skill.scales.map((s) => s.positive_tag_title) ?? [];
-    const reportSkillNegativeScaleTags =
-      skill.scales.map((s) => s.negative_tag_title) ?? [];
-    const reportSkillScaleTags = [
-      ...reportSkillPositiveScaleTags.flatMap((t) => t.split(",")),
-      ...reportSkillNegativeScaleTags.flatMap((t) => t.split(",")),
-    ];
-    const momentSubtagFrequencies = _.countBy(
-      latestAssessment?.report_moments.flatMap((rm, idx) =>
-        transformMoment(rm.moment, idx)
-          .subtags.map((s) => s.tag)
-          .filter((t) => t && reportSkillScaleTags.includes(t)),
-      ),
-    );
-
-    const numerator = _.sumBy(
-      Object.entries(momentSubtagFrequencies).filter(([label]) =>
-        reportSkillNegativeScaleTags.includes(label),
-      ),
-      ([, qty]) => qty,
-    );
-    const denominator = _.sum(Object.values(momentSubtagFrequencies));
-    const totalScore =
-      denominator <= 0 ? 0 : 0.5 + 0.5 * (numerator / denominator);
-
-    const navigateToReport = () => {
-      if (
-        isEnabled &&
-        !isLoading &&
-        latestSkillAssessmentStatus &&
-        hasAssessments
-      ) {
-        router.push(
-          `/goals/reports/${latestSkillAssessmentStatus?.id}?goalId=${skillAssessmentGoal?.goal_id}`,
-        );
-      }
-    };
 
     return (
       <motion.div
@@ -295,28 +117,17 @@ export const GoalCardMinimal = React.forwardRef<HTMLDivElement, SkillCardProps>(
         onHoverStart={() => setIsHovered(true)}
         onHoverEnd={() => setIsHovered(false)}
         className={cn(
-          "relative overflow-hidden rounded-xl bg-gradient-to-br from-background/90 to-background/70 shadow-lg transition-all duration-500",
-          isLoading && "pointer-events-none opacity-80",
-          !isEnabled
-            ? "after:absolute after:inset-0 after:z-10 after:bg-background/50 after:backdrop-blur-[6px]"
-            : "after:absolute after:inset-0 after:z-0 after:bg-gradient-to-br after:from-background/10 after:to-background/5 after:backdrop-blur-[1px]",
-          isEnabled &&
-            !isLoading &&
-            hasAssessments &&
-            "hover:shadow-xl hover:after:backdrop-blur-0",
-          isHovered && isEnabled && hasAssessments && "scale-[1.02]",
+          "relative overflow-hidden rounded-xl bg-gradient-to-br from-background/90 to-background/70 shadow-lg transition-all duration-500 hover:shadow-xl hover:after:backdrop-blur-0",
+          isHovered && "scale-[1.02]",
         )}
         style={{
-          boxShadow: isEnabled
-            ? "0 10px 30px rgba(0,0,0,0.1), 0 1px 8px rgba(0,0,0,0.05)"
-            : "0 10px 30px rgba(0,0,0,0.05), 0 1px 5px rgba(0,0,0,0.03)",
+          boxShadow: "0 10px 30px rgba(0,0,0,0.1), 0 1px 8px rgba(0,0,0,0.05)",
         }}
       >
         {/* Background pattern */}
         <motion.div
           className={cn(
-            "pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-30",
-            isEnabled ? "opacity-40" : "opacity-20",
+            "pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-30 opacity-40",
           )}
           style={{
             backgroundImage: `url(/skills/${skill.title.toLowerCase().replace(/[\s$$$$]+/g, "-")}.svg)`,
@@ -325,47 +136,17 @@ export const GoalCardMinimal = React.forwardRef<HTMLDivElement, SkillCardProps>(
             backgroundRepeat: "no-repeat",
           }}
           animate={{
-            opacity: isEnabled ? (isHovered ? 0.5 : 0.4) : 0.2,
+            opacity: isHovered ? 0.5 : 0.4,
           }}
           transition={{ duration: 0.5 }}
         />
 
         {/* Glow effect for enabled cards */}
-        {isEnabled && (
-          <motion.div
-            className="absolute inset-0 z-0 bg-gradient-to-br from-primary/5 to-primary/10 opacity-0"
-            animate={{ opacity: isHovered ? 0.8 : 0 }}
-            transition={{ duration: 0.3 }}
-          />
-        )}
-
-        {/* Loading overlay */}
-        <AnimatePresence>
-          {isLoading && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm"
-            >
-              <div className="flex flex-col items-center gap-2">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{
-                    duration: 1.5,
-                    repeat: Number.POSITIVE_INFINITY,
-                    ease: "linear",
-                  }}
-                >
-                  <Loader2 className="h-8 w-8 text-primary" />
-                </motion.div>
-                <p className="font-medium text-primary">
-                  {isEnablingSkill ? "Enabling skill..." : "Disabling skill..."}
-                </p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <motion.div
+          className="absolute inset-0 z-0 bg-gradient-to-br from-primary/5 to-primary/10 opacity-0"
+          animate={{ opacity: isHovered ? 0.8 : 0 }}
+          transition={{ duration: 0.3 }}
+        />
 
         <div className="relative z-20 flex h-full items-center justify-center">
           {/* Header */}
@@ -388,7 +169,7 @@ export const GoalCardMinimal = React.forwardRef<HTMLDivElement, SkillCardProps>(
               <div className="relative">
                 <motion.div
                   className="absolute -inset-1 rounded-full bg-primary/10 opacity-0"
-                  animate={{ opacity: isHovered && isEnabled ? 0.8 : 0 }}
+                  animate={{ opacity: isHovered ? 0.8 : 0 }}
                   transition={{ duration: 0.3 }}
                 />
                 <Icon className="h-6 w-6 drop-shadow-md" />
@@ -401,12 +182,12 @@ export const GoalCardMinimal = React.forwardRef<HTMLDivElement, SkillCardProps>(
 
           {/* Content */}
           <SimplifiedGauge
-            value={totalScore * 100}
+            value={skillScore.score * 100}
             min={0}
             max={100}
             size="md"
             className="h-48"
-            hasAssessments={hasAssessments}
+            hasAssessments={!!latestAssessment}
           />
 
           <div className="absolute bottom-4 left-4 flex items-center justify-between">
@@ -475,6 +256,7 @@ function SimplifiedGauge({
       >
         {/* SVG gauge */}
         <svg viewBox="0 0 200 200" className="h-full w-full">
+          <title>Skill progress gauge</title>
           {/* Background arc with gradient */}
           <defs>
             <linearGradient
@@ -547,8 +329,8 @@ function SimplifiedGauge({
             {hasAssessments ? (
               <motion.span
                 className="text-5xl font-bold"
-                initial={{ value: min } as any}
-                animate={{ value: displayValue } as any}
+                initial={{ value: min } as { value: number }}
+                animate={{ value: displayValue } as { value: number }}
                 transition={{ duration: 1.5, ease: "easeOut" }}
               >
                 {Math.round(displayValue)}

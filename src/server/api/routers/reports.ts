@@ -1,16 +1,15 @@
+import { openai } from "@ai-sdk/openai";
 import { TRPCError } from "@trpc/server";
+import { generateObject, generateText } from "ai";
 import _ from "lodash";
+import dedent from "ts-dedent";
 import { z } from "zod";
 
-import { createClient } from "~/lib/supabase/server";
-
-import { openai } from "@ai-sdk/openai";
-import { generateObject, generateText } from "ai";
-import dedent from "ts-dedent";
 import { formatReportToMarkdown } from "~/lib/reports/formatting";
 import { ReportPersonality } from "~/lib/reports/schemas";
+import { createClient } from "~/lib/supabase/server";
+
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
-import type { Enums } from "~/lib/supabase/database.types";
 
 export const reportsRouter = createTRPCRouter({
   getOne: publicProcedure
@@ -482,5 +481,132 @@ export const reportsRouter = createTRPCRouter({
       }
 
       return { success: true };
+    }),
+
+  getAdjacentReports: publicProcedure
+    .input(
+      z.object({
+        groupId: z.string(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const supabase = await createClient();
+
+      const { data: currentGroup, error: currentGroupError } = await supabase
+        .from("group_report_processing_status")
+        .select("*, skill:skills(id, title)")
+        .eq("id", input.groupId)
+        .single();
+
+      if (currentGroupError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: currentGroupError.message,
+          cause: currentGroupError,
+        });
+      }
+
+      if (!currentGroup) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Group report not found",
+        });
+      }
+
+      // Safely handle the skill_id and profile_id which might be null
+      const skillId = currentGroup.skill_id;
+      const profileId = currentGroup.profile_id;
+
+      if (!skillId || !profileId) {
+        return {
+          current: currentGroup,
+          previous: null,
+          next: null,
+        };
+      }
+
+      // Get previous report (earlier date)
+      const { data: previousGroup, error: previousGroupError } = await supabase
+        .from("group_report_processing_status")
+        .select("id, created_at, skill:skills(id, title)")
+        .eq("profile_id", profileId)
+        .eq("skill_id", skillId)
+        .eq("status", "completed")
+        .lt("created_at", currentGroup.created_at)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (previousGroupError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: previousGroupError.message,
+          cause: previousGroupError,
+        });
+      }
+
+      // Fetch report dates if we have a previous group
+      let previousReportDates = null;
+      if (previousGroup) {
+        const { data: previousReports } = await supabase
+          .from("reports")
+          .select("start_date, end_date")
+          .eq("group_processing_status_id", previousGroup.id)
+          .limit(1)
+          .maybeSingle();
+
+        previousReportDates = previousReports;
+      }
+
+      // Get next report (later date)
+      const { data: nextGroup, error: nextGroupError } = await supabase
+        .from("group_report_processing_status")
+        .select("id, created_at, skill:skills(id, title)")
+        .eq("profile_id", profileId)
+        .eq("skill_id", skillId)
+        .eq("status", "completed")
+        .gt("created_at", currentGroup.created_at)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (nextGroupError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: nextGroupError.message,
+          cause: nextGroupError,
+        });
+      }
+
+      // Fetch report dates if we have a next group
+      let nextReportDates = null;
+      if (nextGroup) {
+        const { data: nextReports } = await supabase
+          .from("reports")
+          .select("start_date, end_date")
+          .eq("group_processing_status_id", nextGroup.id)
+          .limit(1)
+          .maybeSingle();
+
+        nextReportDates = nextReports;
+      }
+
+      return {
+        current: currentGroup,
+        previous: previousGroup
+          ? {
+              ...previousGroup,
+              start_date: previousReportDates?.start_date || null,
+              end_date: previousReportDates?.end_date || null,
+            }
+          : null,
+        next: nextGroup
+          ? {
+              ...nextGroup,
+              start_date: nextReportDates?.start_date || null,
+              end_date: nextReportDates?.end_date || null,
+            }
+          : null,
+      };
     }),
 });

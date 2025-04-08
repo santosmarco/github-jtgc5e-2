@@ -49,8 +49,11 @@ export const skillsRouter = createTRPCRouter({
       const { data: skills, error: skillsError } = await supabase
         .from("skills")
         .select(
-          "*, goal_templates(*), goals(*), reports(*, report_goals(*), report_moments!inner(*, moment:moments!inner(*, subtags:moment_subtags(*)), report_goal_signal:report_goal_signals!inner(*))), statuses:group_report_processing_status(*), scales:skill_scales(*)",
-        );
+          "*, goal_templates(*), scales:skill_scales(*), goals!goals_skill_id_fkey(*)",
+        )
+        .eq("goals.profile_id", input.profileId)
+        .is("goals.deleted_at", null)
+        .is("goals.is_current", true);
 
       if (skillsError) {
         throw new TRPCError({
@@ -60,51 +63,53 @@ export const skillsRouter = createTRPCRouter({
         });
       }
 
-      const skillsFiltered = skills.map((skill) => ({
-        ...skill,
-        goals: skill.goals.filter(
-          (goal) => goal.profile_id === input.profileId && !goal.deleted_at,
-        ),
-        reports: skill.reports.filter(
-          (report) => report.profile_id === input.profileId,
-        ),
-        statuses: skill.statuses.filter(
-          (status) => status.profile_id === input.profileId,
-        ),
-      }));
+      // Fetch reports and their related data in a single query
+      const { data: reports, error: reportsError } = await supabase
+        .from("reports")
+        .select(
+          "*, report_goals(*), report_moments!inner(*, moment:moments!inner(*, subtags:moment_subtags(*)), report_goal_signal:report_goal_signals!inner(*))",
+        )
+        .eq("profile_id", input.profileId);
 
-      if (skillsFiltered.length > 0) {
-        const reportIds = skillsFiltered.flatMap((skill) =>
-          skill.reports.map((report) => report.id),
-        );
-
-        const { data: reportGoals, error: reportGoalsError } = await supabase
-          .from("report_goals")
-          .select("*")
-          .in("report_id", reportIds);
-
-        if (reportGoalsError) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: reportGoalsError.message,
-            cause: reportGoalsError,
-          });
-        }
-
-        const skillsWithReportGoals = skillsFiltered.map((skill) => ({
-          ...skill,
-          report_goals: reportGoals.filter((rg) =>
-            skill.reports.some((report) => report.id === rg.report_id),
-          ),
-        }));
-
-        return skillsWithReportGoals;
+      if (reportsError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: reportsError.message,
+          cause: reportsError,
+        });
       }
 
-      return skillsFiltered.map((skill) => ({
+      // Fetch statuses in a single query
+      const { data: statuses, error: statusesError } = await supabase
+        .from("group_report_processing_status")
+        .select("*")
+        .eq("profile_id", input.profileId);
+
+      if (statusesError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: statusesError.message,
+          cause: statusesError,
+        });
+      }
+
+      // Assemble the final result
+      const result = skills.map((skill) => ({
         ...skill,
-        report_goals: [],
+        goals: skill.goals ?? [],
+        reports: reports
+          .filter((report) => report.skill_id === skill.id)
+          .map((r) => ({
+            ...r,
+            report_moments: r.report_moments.filter((rm) => rm.is_visible),
+          })),
+        statuses: statuses.filter((status) => status.skill_id === skill.id),
+        report_goals: reports
+          .filter((report) => report.skill_id === skill.id)
+          .flatMap((report) => report.report_goals ?? []),
       }));
+
+      return result;
     }),
 
   getGoalsForSkillForProfile: publicProcedure
@@ -142,10 +147,30 @@ export const skillsRouter = createTRPCRouter({
     .mutation(async ({ input }) => {
       const supabase = await createClient();
 
+      // First, check if there are any existing goals for this skill and profile
+      const { data: existingDeletedGoals, error: existingDeletedGoalsError } =
+        await supabase
+          .from("goals")
+          .select("*")
+          .eq("skill_id", input.skillId)
+          .eq("profile_id", input.profileId)
+          .not("deleted_at", "is", null)
+          .is("is_current", true);
+
+      if (existingDeletedGoalsError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: existingDeletedGoalsError.message,
+          cause: existingDeletedGoalsError,
+        });
+      }
+
+      // Get all goal templates for this skill
       const { data: goalTemplates, error: goalTemplatesError } = await supabase
         .from("goal_templates")
         .select("*, goal_signal_templates(*)")
-        .eq("skill_id", input.skillId);
+        .eq("skill_id", input.skillId)
+        .eq("is_current", true);
 
       if (goalTemplatesError) {
         throw new TRPCError({
@@ -155,8 +180,39 @@ export const skillsRouter = createTRPCRouter({
         });
       }
 
-      const goalIds = await Promise.all(
-        goalTemplates.map(async (goalTemplate) => {
+      const goalIds: string[] = [];
+
+      // Turn on existing goals
+      if (existingDeletedGoals.length > 0) {
+        const { error: updateError } = await supabase
+          .from("goals")
+          .update({ deleted_at: null })
+          .in(
+            "id",
+            existingDeletedGoals.map((goal) => goal.id),
+          );
+
+        if (updateError) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: updateError.message,
+            cause: updateError,
+          });
+        }
+
+        for (const goal of existingDeletedGoals) {
+          goalIds.push(goal.id);
+        }
+      }
+
+      const goalsToCreate = goalTemplates.filter(
+        (template) =>
+          !existingDeletedGoals.some((goal) => goal.text === template.text),
+      );
+
+      // Create new goals from templates that don't exist yet
+      await Promise.all(
+        goalsToCreate.map(async (goalTemplate) => {
           const { data: goal, error: goalInsertionError } = await supabase
             .from("goals")
             .insert({
@@ -194,7 +250,7 @@ export const skillsRouter = createTRPCRouter({
             ),
           );
 
-          return goal.id;
+          goalIds.push(goal.id);
         }),
       );
 

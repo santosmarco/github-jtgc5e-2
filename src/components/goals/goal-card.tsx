@@ -18,10 +18,11 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+
 import { Button } from "~/components/ui/button";
-import { transformMoment } from "~/lib/db/moments";
+import type { Tables } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
-import { type RouterOutputs, api } from "~/trpc/react";
+import { api, type RouterOutputs } from "~/trpc/react";
 
 // Enhanced animations
 const cardVariants = {
@@ -118,11 +119,11 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
 
     const { mutate: enableSkill, isPending: isEnablingSkill } =
       api.skills.enableSkill.useMutation({
-        onSuccess: () => {
+        onSuccess: async () => {
           toast.success(`"${skill.title}" enabled`, {
             description: "You can now track your skill progress",
           });
-          utils.skills.getAllSkills.invalidate();
+          await utils.skills.getAllSkills.invalidate();
           onSkillEnabled?.();
         },
         onError: (error) => {
@@ -133,11 +134,11 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
 
     const { mutate: disableSkill, isPending: isDisablingSkill } =
       api.skills.disableSkill.useMutation({
-        onSuccess: () => {
+        onSuccess: async () => {
           toast.success(`"${skill.title}" disabled`, {
             description: "You can re-enable it anytime",
           });
-          utils.skills.getAllSkills.invalidate();
+          await utils.skills.getAllSkills.invalidate();
           onSkillDisabled?.();
         },
         onError: (error) => {
@@ -163,49 +164,16 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
     const isEnabled = skill.goals.some((goal) => goal.is_default);
     const isLoading = isEnablingSkill || isDisablingSkill;
 
-    const isCompleted =
-      skill.goals && skill.goals.length > 0
-        ? skill.goals.every((goal) => Boolean(goal.completed_at))
-        : false;
-    const completedAt = _.maxBy(
-      skill.goals.filter((x) => x.completed_at),
-      (x) => dayjs(x.completed_at),
-    )?.completed_at;
-
     // Calculate statistics about reviews and assessments
-    const skillAssessments =
-      skill.reports.filter((r) =>
-        r.report_goals
-          .map((rg) => rg.goal_id)
-          .some((goalId) =>
-            skill.goals
-              .filter((g) => g.is_default)
-              .some((g) => g.id === goalId),
-          ),
-      ) || [];
-    const reviewedAssessments =
-      skillAssessments.filter((r) =>
-        r.report_goals.every((rg) => rg.is_reviewed),
-      ) || [];
-    const totalReviews = reviewedAssessments.length;
-    const latestAssessment =
-      skillAssessments.length > 0
-        ? _.orderBy(
-            skillAssessments,
-            [(r) => dayjs(r.created_at).toDate()],
-            ["desc"],
-          )[0]
-        : null;
-
-    const latestReview =
-      reviewedAssessments.length > 0
-        ? _.orderBy(
-            reviewedAssessments,
-            [(r) => dayjs(r.created_at).toDate()],
-            ["desc"],
-          )[0]
-        : null;
+    const skillAssessments = skill.reports || [];
     const hasAssessments = skillAssessments.length > 0;
+    const latestAssessment = hasAssessments
+      ? _.orderBy(
+          skillAssessments,
+          [(r) => dayjs(r.created_at).toDate()],
+          ["desc"],
+        )[0]
+      : null;
 
     const skillAssessmentGoal = latestAssessment?.report_goals.find(
       (reportGoal) =>
@@ -218,8 +186,22 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
       ["desc"],
     )[0];
 
-    const latestSkillAssessmentProcessingStatus =
-      latestSkillAssessmentStatus?.status;
+    // Calculate next report date (2 weeks after the end_date of the previous one or after goal.created_at)
+    const getNextReportDate = () => {
+      if (hasAssessments && latestAssessment?.end_date) {
+        return dayjs(latestAssessment.end_date)
+          .add(2, "weeks")
+          .format("MMM D, YYYY");
+      } else if (skill.goals.length > 0) {
+        const defaultGoal = skill.goals.find((goal) => goal.is_default);
+        if (defaultGoal?.created_at) {
+          return dayjs(defaultGoal.created_at)
+            .add(2, "weeks")
+            .format("MMM D, YYYY");
+        }
+      }
+      return "Soon";
+    };
 
     // Determine status for display
     const getStatus = () => {
@@ -269,52 +251,10 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
 
     const { icon: StatusIcon, color: statusColor } = getStatusIconAndColor();
 
-    const reportSkillPositiveScaleTags =
-      skill.scales.map((s) => s.positive_tag_title) ?? [];
-    const reportSkillNegativeScaleTags =
-      skill.scales.map((s) => s.negative_tag_title) ?? [];
-    const reportSkillScaleTags = [
-      ...reportSkillPositiveScaleTags.flatMap((t) => t.split(",")),
-      ...reportSkillNegativeScaleTags.flatMap((t) => t.split(",")),
-    ];
-    const momentSubtagFrequencies = _.countBy(
-      latestAssessment?.report_moments.flatMap((rm, idx) =>
-        transformMoment(rm.moment, idx)
-          .subtags.map((s) => s.tag)
-          .filter((t) => t && reportSkillScaleTags.includes(t)),
-      ),
+    const skillScore = calculateSkillScore(
+      skill,
+      latestAssessment?.report_moments ?? [],
     );
-    const momentSubtagFrequenciesTotal = _.sum(
-      Object.values(momentSubtagFrequencies),
-    );
-
-    const metrics = reportSkillPositiveScaleTags.map((pt, i) => {
-      const nt = reportSkillNegativeScaleTags[i] ?? "";
-      const positiveCount = momentSubtagFrequencies[pt ?? ""] ?? 0;
-      const negativeCount = momentSubtagFrequencies[nt] ?? 0;
-      const total = positiveCount + negativeCount || 1;
-
-      return {
-        id: `${pt ?? ""}-${nt}`,
-        leftLabel: nt,
-        rightLabel: pt ?? "",
-        value: 100 * (positiveCount / total),
-      };
-    });
-
-    const total = _.sum(metrics.map((m) => m.value));
-    const numerator = _.sumBy(
-      Object.entries(momentSubtagFrequencies).filter(([label, qty]) =>
-        reportSkillNegativeScaleTags.includes(label),
-      ),
-      ([label, qty]) => qty,
-    );
-    const denominator = _.sumBy(
-      Object.values(momentSubtagFrequencies),
-      (qty) => qty,
-    );
-    const totalScore =
-      denominator <= 0 ? 0 : 0.5 + 0.5 * (numerator / denominator);
 
     const navigateToReport = () => {
       if (
@@ -476,9 +416,14 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
 
           {/* Content */}
           {isEnabled ? (
-            <motion.div variants={gaugeVariants} className="relative z-20 h-48">
+            <motion.div
+              variants={gaugeVariants}
+              initial="hidden"
+              animate="visible"
+              className="relative z-20 h-48"
+            >
               <SimplifiedGauge
-                value={totalScore * 100}
+                value={skillScore.score * 100}
                 min={0}
                 max={100}
                 size="md"
@@ -489,28 +434,49 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
           ) : (
             <motion.div
               className="z-20 flex h-48 flex-col items-center justify-center py-4 text-center"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.5 }}
+              variants={gaugeVariants}
+              initial="hidden"
+              animate="visible"
             >
               <motion.div
                 className="mb-4 rounded-full bg-primary/20 p-4"
+                variants={{
+                  hidden: { opacity: 0, y: 10 },
+                  visible: { opacity: 1, y: 0 },
+                }}
+                initial="hidden"
+                animate="visible"
                 whileHover={{ scale: 1.05 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
               >
                 <Trophy className="h-8 w-8 text-primary" />
               </motion.div>
-              <p className="mb-4 max-w-xs text-center text-base text-foreground">
+              <motion.p
+                variants={{
+                  hidden: { opacity: 0, y: 10 },
+                  visible: { opacity: 1, y: 0 },
+                }}
+                initial="hidden"
+                animate="visible"
+                transition={{
+                  type: "spring",
+                  stiffness: 100,
+                  damping: 20,
+                  delay: 0.4,
+                  duration: 0.2,
+                }}
+                className="mb-4 max-w-xs text-center text-base text-foreground"
+              >
                 Enable this skill to track your progress and receive
                 personalized feedback.
-              </p>
+              </motion.p>
             </motion.div>
           )}
 
           {/* Footer */}
           {isEnabled ? (
             <motion.div
-              className="mt-auto flex h-16 items-center justify-between pb-4"
+              className="relative -mx-6 mt-auto flex h-16 items-center justify-between pb-4"
               variants={{
                 hidden: { opacity: 0, y: 20 },
                 visible: {
@@ -525,9 +491,12 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
                 },
               }}
             >
-              <div>
+              {/* Gradient overlay for better text visibility */}
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background/80 to-transparent" />
+
+              <div className="z-10 pl-6">
                 <p className="text-xs font-medium uppercase leading-none tracking-widest opacity-80">
-                  LATEST REPORT
+                  {latestAssessment ? "LATEST REPORT" : "NEXT REPORT"}
                 </p>
                 <p className="mt-1.5 text-lg font-semibold leading-none tracking-tight">
                   {latestAssessment ? (
@@ -536,13 +505,13 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
                       {dayjs(latestAssessment.end_date).format("MMM D")}
                     </>
                   ) : (
-                    "No assessment yet"
+                    <span className="text-primary">{getNextReportDate()}</span>
                   )}
                 </p>
               </div>
               <Button
                 variant="ghost"
-                className="group flex items-center gap-2 rounded-full bg-background/50 backdrop-blur-3xl transition-all duration-300 hover:scale-105 hover:bg-background/70 hover:shadow-lg"
+                className="group z-10 mr-6 flex items-center gap-2 rounded-full bg-background/50 backdrop-blur-3xl transition-all duration-300 hover:scale-105 hover:bg-background/70 hover:shadow-lg"
                 disabled={isLoading || !hasAssessments}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -621,6 +590,13 @@ function ToggleSwitch({
           disabled && "cursor-not-allowed opacity-50",
         )}
         onClick={() => !disabled && onCheckedChange?.(!checked)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            if (disabled) return;
+            onCheckedChange?.(!checked);
+          }
+        }}
       >
         {/* Glow effect */}
         <motion.div
@@ -703,9 +679,12 @@ function SimplifiedGauge({
       <motion.div
         className={cn("relative", sizeClasses[size])}
         variants={gaugeVariants}
+        initial="hidden"
+        animate="visible"
       >
         {/* SVG gauge */}
         <svg viewBox="0 0 200 200" className="h-full w-full">
+          <title>Skill progress gauge</title>
           {/* Background arc with gradient */}
           <defs>
             <linearGradient
@@ -794,4 +773,51 @@ function SimplifiedGauge({
       </motion.div>
     </div>
   );
+}
+
+export function calculateSkillScore(
+  skill: Tables<"skills"> & {
+    scales: Tables<"skill_scales">[];
+  },
+  reportMoments: (Tables<"report_moments"> & {
+    moment: Tables<"moments"> & {
+      subtags: Tables<"moment_subtags">[];
+    };
+  })[],
+) {
+  const filteredReportMoments = reportMoments.filter(
+    (rm) =>
+      (!rm.moment._internal_thumbs_down ||
+        rm.moment._internal_thumbs_down <= 0) &&
+      rm.is_visible &&
+      !rm.omission_reason,
+  );
+  const positiveTagCounts = _.sumBy(
+    filteredReportMoments,
+    (rm) =>
+      rm.moment.subtags.filter((s) =>
+        skill.scales.some((scale) =>
+          scale.positive_tag_title.split(",").includes(s.tag ?? ""),
+        ),
+      ).length,
+  );
+  const negativeTagCounts = _.sumBy(
+    filteredReportMoments,
+    (rm) =>
+      rm.moment.subtags.filter((s) =>
+        skill.scales.some((scale) =>
+          scale.negative_tag_title.split(",").includes(s.tag ?? ""),
+        ),
+      ).length,
+  );
+  const totalTagCounts = positiveTagCounts + negativeTagCounts;
+  const score =
+    totalTagCounts > 0 ? 0.5 + (0.5 * positiveTagCounts) / totalTagCounts : 0;
+
+  return {
+    positiveTagCounts,
+    negativeTagCounts,
+    totalTagCounts,
+    score,
+  };
 }
