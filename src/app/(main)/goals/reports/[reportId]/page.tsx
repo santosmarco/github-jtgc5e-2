@@ -390,9 +390,9 @@ export default function ReportPage({
   }
 
   return (
-    <div className="-mx-8 min-h-screen">
+    <div className="-mx-8 -mt-3 min-h-screen">
       {/* Date Range Navigation */}
-      <div className="sticky top-12 z-40 -mx-4 mb-6 flex items-center justify-between border-b border-border bg-background/60 px-2 py-2 backdrop-blur-xl">
+      <div className="sticky top-0 z-40 -mx-4 mb-6 flex items-center justify-between border-b border-border bg-background/60 px-2 py-2 backdrop-blur-xl">
         <motion.div whileHover={{ x: -5 }} whileTap={{ scale: 0.95 }}>
           <Button
             variant="ghost"

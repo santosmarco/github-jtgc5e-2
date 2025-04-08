@@ -14,7 +14,7 @@ export default async function GoalsLayout({
 
   return (
     <HydrateClient>
-      <div className="-mt-12">
+      <div>
         {/* <NavigationBar /> */}
         {children}
       </div>
