@@ -8,11 +8,15 @@ import {
   GoalIcon,
   LogOut,
   MessageSquare,
+  Play,
   Puzzle,
+  SquarePlay,
+  TextQuote,
   TrendingUpIcon,
   User,
   UsersIcon,
   Video,
+  Youtube,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -34,11 +38,12 @@ import { useProfile } from "~/hooks/use-profile";
 import { checkUserFlags, Flag } from "~/lib/flags/flags";
 import { createClient } from "~/lib/supabase/client";
 import type { Tables } from "~/lib/supabase/database.types";
-import { cn } from "~/lib/utils";
+import { cn, isTruthy } from "~/lib/utils";
 import { api, type RouterOutputs } from "~/trpc/react";
 
 import { CoachBadge } from "../coach-badge";
-import { TaskList } from "../onboarding-task-list";
+import type { MenuItem } from "./menu-types";
+import { SidebarGroup } from "./sidebar-group";
 
 export type SidebarContentProps = {
   user: RouterOutputs["auth"]["getUser"];
@@ -114,58 +119,111 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
     setSelectedProfile(profile);
   };
 
-  const menuItems = [
-    {
-      href: "/goals",
-      icon: <GoalIcon className="h-5 w-5" />,
-      label: "Skills",
-      isActive: pathname.startsWith("/goals"),
-    },
-    {
-      href: "/insights",
-      icon: <Brain className="h-5 w-5" />,
-      label: "Explore",
-      isActive: pathname.startsWith("/insights"),
-    },
-    {
-      href: "/",
-      icon: <Video className="h-5 w-5" />,
-      label: "Meetings",
-      isActive: pathname === "/" || pathname.startsWith("/videos"),
-    },
-    {
-      href: "/calendar",
-      icon: <Calendar className="h-5 w-5" />,
-      label: "Calendar",
-      isActive: pathname.startsWith("/calendar"),
-    },
-    {
-      href: "/moments",
-      icon: <TrendingUpIcon />,
-      label: "Moments",
-      isActive: pathname.startsWith("/moments"),
-    },
-    // Add Integrations to main menu with subtle indicator
-    !hasConnectedZoom && {
-      href: "/integrations",
-      icon: (
-        <div className="relative">
-          <Puzzle className="h-5 w-5" />
-          {showZoomPromo && !hasConnectedZoom && (
-            <div className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-primary" />
-          )}
-        </div>
-      ),
-      label: "Integrations",
-      isActive: pathname.startsWith("/integrations"),
-    },
-    {
-      href: "/settings",
-      icon: <CogIcon className="h-5 w-5" />,
-      label: "Settings",
-      isActive: pathname.startsWith("/settings"),
-    },
-  ].filter((x): x is Exclude<typeof x, false | undefined> => !!x);
+  const handleItemClick =
+    (href: string, isIntegrations?: boolean) => (e: React.MouseEvent) => {
+      // Prevent navigation if we're already on the page
+      if (
+        pathname === href ||
+        (href === "/" && pathname.startsWith("/videos")) ||
+        (pathname.startsWith(href) && href !== "/")
+      ) {
+        e.preventDefault();
+        return;
+      }
+
+      // Only call onNavClick after we've decided not to prevent navigation
+      onNavClick?.();
+      if (isIntegrations) {
+        setShowZoomPromo(false);
+      }
+    };
+
+  const menuItems = (
+    [
+      {
+        type: "group",
+        label: "Growth",
+        icon: <TrendingUpIcon className="h-5 w-5" />,
+        isActive:
+          pathname.startsWith("/goals") || pathname.startsWith("/insights"),
+        defaultHref: "/goals",
+        children: [
+          {
+            type: "item",
+            href: "/goals",
+            icon: <GoalIcon className="h-5 w-5" />,
+            label: "Skills",
+            isActive: pathname.startsWith("/goals"),
+          },
+          {
+            type: "item",
+            href: "/insights",
+            icon: <Brain className="h-5 w-5" />,
+            label: "Explore",
+            isActive: pathname.startsWith("/insights"),
+          },
+        ],
+      },
+      {
+        type: "group",
+        label: "Meetings",
+        icon: <Video className="h-5 w-5" />,
+        isActive:
+          pathname === "/" ||
+          pathname.startsWith("/videos") ||
+          pathname.startsWith("/calendar") ||
+          pathname.startsWith("/moments"),
+        defaultHref: "/",
+        children: [
+          {
+            type: "item",
+            href: "/",
+            icon: <SquarePlay className="h-5 w-5" />,
+            label: "Recordings",
+            isActive: pathname === "/" || pathname.startsWith("/videos"),
+          },
+          {
+            type: "item",
+            href: "/calendar",
+            icon: <Calendar className="h-5 w-5" />,
+            label: "Calendar",
+            isActive: pathname.startsWith("/calendar"),
+          },
+          {
+            type: "item",
+            href: "/moments",
+            icon: <TextQuote className="h-5 w-5" />,
+            label: "Moments",
+            isActive: pathname.startsWith("/moments"),
+          },
+        ],
+      },
+      // Standalone items
+      !hasConnectedZoom
+        ? {
+            type: "item",
+            href: "/integrations",
+            icon: (
+              <div className="relative">
+                <Puzzle className="h-5 w-5" />
+                {showZoomPromo && !hasConnectedZoom && (
+                  <div className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-primary" />
+                )}
+              </div>
+            ),
+            label: "Integrations",
+            isActive: pathname.startsWith("/integrations"),
+          }
+        : null,
+      {
+        type: "item",
+        href: "/settings",
+        icon: <CogIcon className="h-5 w-5" />,
+        label: "Settings",
+        isActive: pathname.startsWith("/settings"),
+      },
+    ] as const satisfies (MenuItem | null)[]
+  ).filter(isTruthy);
 
   return (
     <>
@@ -187,40 +245,46 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
         <AnimatePresence>
           {menuItems.map((item, index) => (
             <motion.div
-              key={item.href}
+              key={item.type === "item" ? item.href : item.label}
               initial={{ opacity: 0, x: -50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.1 }}
             >
-              <Link
-                href={item.href}
-                onClick={() => {
-                  onNavClick?.();
-                  if (item.href === "/integrations") {
-                    setShowZoomPromo(false);
-                  }
-                }}
-              >
-                <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={cn(
-                    "group relative flex items-center gap-6 rounded-sm px-8 py-4 text-muted-foreground transition-all hover:bg-primary/10",
-                    item.isActive
-                      ? "text-primary before:absolute before:bottom-1.5 before:left-0 before:top-1.5 before:w-1.5 before:rounded-r before:bg-primary"
-                      : "hover:text-foreground",
+              {item.type === "item" ? (
+                <Link
+                  href={item.href}
+                  onClick={handleItemClick(
+                    item.href,
+                    item.href === "/integrations",
                   )}
                 >
-                  <span>{item.icon}</span>
-                  <motion.span
-                    initial={{ x: -5, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    className="text-sm"
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={cn(
+                      "group relative flex items-center gap-6 rounded-sm px-8 py-4 text-muted-foreground transition-all hover:bg-primary/10",
+                      item.isActive
+                        ? "text-primary before:absolute before:bottom-1.5 before:left-0 before:top-1.5 before:w-1.5 before:rounded-r before:bg-primary"
+                        : "hover:text-foreground",
+                    )}
                   >
-                    {item.label}
-                  </motion.span>
-                </motion.div>
-              </Link>
+                    <span>{item.icon}</span>
+                    <motion.span
+                      initial={{ x: -5, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      className="text-sm"
+                    >
+                      {item.label}
+                    </motion.span>
+                  </motion.div>
+                </Link>
+              ) : (
+                <SidebarGroup
+                  group={item}
+                  onNavClick={onNavClick}
+                  pathname={pathname}
+                />
+              )}
             </motion.div>
           ))}
         </AnimatePresence>
@@ -370,10 +434,7 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
                 )}
                 <Link
                   href="/integrations"
-                  onClick={() => {
-                    onNavClick?.();
-                    setShowZoomPromo(false);
-                  }}
+                  onClick={handleItemClick("/integrations")}
                 >
                   <DropdownMenuItem className="cursor-pointer gap-2">
                     <Puzzle className="h-4 w-4" />

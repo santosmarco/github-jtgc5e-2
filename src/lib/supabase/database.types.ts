@@ -155,6 +155,13 @@ export type Database = {
             foreignKeyName: "calendar_events_v2_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "calendar_events_v2_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
             referencedRelation: "meetings_with_profile"
             referencedColumns: ["profile_id"]
           },
@@ -210,6 +217,13 @@ export type Database = {
             foreignKeyName: "calendar_integrations_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "calendar_integrations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "meetings_with_profile"
             referencedColumns: ["profile_id"]
           },
@@ -255,6 +269,13 @@ export type Database = {
             foreignKeyName: "chats_user_id_fkey1"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "chats_user_id_fkey1"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "meetings_with_profile"
             referencedColumns: ["profile_id"]
           },
@@ -296,6 +317,13 @@ export type Database = {
           video_api_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "chunks_video_api_id_fkey"
+            columns: ["video_api_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["meeting_video_api_id"]
+          },
           {
             foreignKeyName: "chunks_video_api_id_fkey"
             columns: ["video_api_id"]
@@ -477,6 +505,13 @@ export type Database = {
             foreignKeyName: "entities_master_profile_id_fkey"
             columns: ["master_profile_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "entities_master_profile_id_fkey"
+            columns: ["master_profile_id"]
+            isOneToOne: false
             referencedRelation: "meetings_with_profile"
             referencedColumns: ["profile_id"]
           },
@@ -521,6 +556,13 @@ export type Database = {
           start_time?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "entity_events_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["meeting_video_api_id"]
+          },
           {
             foreignKeyName: "entity_events_meeting_id_fkey"
             columns: ["meeting_id"]
@@ -646,6 +688,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "feedbacks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
           {
             foreignKeyName: "feedbacks_user_id_fkey"
             columns: ["user_id"]
@@ -862,6 +911,13 @@ export type Database = {
             foreignKeyName: "goals_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "goals_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
             referencedRelation: "meetings_with_profile"
             referencedColumns: ["profile_id"]
           },
@@ -907,6 +963,13 @@ export type Database = {
           status?: Database["public"]["Enums"]["processing_status"] | null
         }
         Relationships: [
+          {
+            foreignKeyName: "group_report_processing_status_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
           {
             foreignKeyName: "group_report_processing_status_profile_id_fkey"
             columns: ["profile_id"]
@@ -971,6 +1034,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "integration_credentials_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
           {
             foreignKeyName: "integration_credentials_user_id_fkey"
             columns: ["user_id"]
@@ -1083,6 +1153,13 @@ export type Database = {
             foreignKeyName: "meeting_action_items_api_video_id_fkey"
             columns: ["api_video_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["meeting_video_api_id"]
+          },
+          {
+            foreignKeyName: "meeting_action_items_api_video_id_fkey"
+            columns: ["api_video_id"]
+            isOneToOne: false
             referencedRelation: "meetings"
             referencedColumns: ["video_api_id"]
           },
@@ -1160,6 +1237,13 @@ export type Database = {
           title?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "meeting_bots_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
           {
             foreignKeyName: "meeting_bots_profile_id_fkey"
             columns: ["profile_id"]
@@ -1266,6 +1350,13 @@ export type Database = {
             foreignKeyName: "meeting_bots_v2_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "meeting_bots_v2_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
             referencedRelation: "meetings_with_profile"
             referencedColumns: ["profile_id"]
           },
@@ -1324,6 +1415,13 @@ export type Database = {
             foreignKeyName: "meeting_entities_v2_api_video_id_fkey"
             columns: ["api_video_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["meeting_video_api_id"]
+          },
+          {
+            foreignKeyName: "meeting_entities_v2_api_video_id_fkey"
+            columns: ["api_video_id"]
+            isOneToOne: false
             referencedRelation: "meetings"
             referencedColumns: ["video_api_id"]
           },
@@ -1340,6 +1438,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "meeting_topics_v2"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_entities_v2_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "meeting_entities_v2_profile_id_fkey"
@@ -1393,6 +1498,13 @@ export type Database = {
             foreignKeyName: "meeting_entity_observations_v2_api_video_id_fkey"
             columns: ["api_video_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["meeting_video_api_id"]
+          },
+          {
+            foreignKeyName: "meeting_entity_observations_v2_api_video_id_fkey"
+            columns: ["api_video_id"]
+            isOneToOne: false
             referencedRelation: "meetings"
             referencedColumns: ["video_api_id"]
           },
@@ -1416,6 +1528,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "meeting_topics_v2"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_entity_observations_v2_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "meeting_entity_observations_v2_profile_id_fkey"
@@ -1476,6 +1595,13 @@ export type Database = {
             foreignKeyName: "meeting_relationship_observations_v2_api_video_id_fkey"
             columns: ["api_video_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["meeting_video_api_id"]
+          },
+          {
+            foreignKeyName: "meeting_relationship_observations_v2_api_video_id_fkey"
+            columns: ["api_video_id"]
+            isOneToOne: false
             referencedRelation: "meetings"
             referencedColumns: ["video_api_id"]
           },
@@ -1492,6 +1618,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "meeting_topics_v2"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_relationship_observations_v2_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "meeting_relationship_observations_v2_profile_id_fkey"
@@ -1548,6 +1681,13 @@ export type Database = {
             foreignKeyName: "meeting_entity_relationships_api_video_id_fkey"
             columns: ["api_video_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["meeting_video_api_id"]
+          },
+          {
+            foreignKeyName: "meeting_entity_relationships_api_video_id_fkey"
+            columns: ["api_video_id"]
+            isOneToOne: false
             referencedRelation: "meetings"
             referencedColumns: ["video_api_id"]
           },
@@ -1564,6 +1704,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "meeting_topics_v2"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_entity_relationships_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "meeting_entity_relationships_profile_id_fkey"
@@ -1641,6 +1788,13 @@ export type Database = {
             foreignKeyName: "meeting_observations_v2_api_video_id_fkey"
             columns: ["api_video_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["meeting_video_api_id"]
+          },
+          {
+            foreignKeyName: "meeting_observations_v2_api_video_id_fkey"
+            columns: ["api_video_id"]
+            isOneToOne: false
             referencedRelation: "meetings"
             referencedColumns: ["video_api_id"]
           },
@@ -1657,6 +1811,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "meeting_topics_v2"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_observations_v2_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "meeting_observations_v2_profile_id_fkey"
@@ -1817,6 +1978,13 @@ export type Database = {
             foreignKeyName: "meeting_topic_events_v2_api_video_id_fkey"
             columns: ["api_video_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["meeting_video_api_id"]
+          },
+          {
+            foreignKeyName: "meeting_topic_events_v2_api_video_id_fkey"
+            columns: ["api_video_id"]
+            isOneToOne: false
             referencedRelation: "meetings"
             referencedColumns: ["video_api_id"]
           },
@@ -1833,6 +2001,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "meeting_topics_v2"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_topic_events_v2_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "meeting_topic_events_v2_profile_id_fkey"
@@ -1879,6 +2054,13 @@ export type Database = {
           vtt_start_segment_id?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "meeting_topics_api_video_id_fkey"
+            columns: ["api_video_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["meeting_video_api_id"]
+          },
           {
             foreignKeyName: "meeting_topics_api_video_id_fkey"
             columns: ["api_video_id"]
@@ -1937,6 +2119,13 @@ export type Database = {
             foreignKeyName: "meeting_topics_v2_api_video_id_fkey"
             columns: ["api_video_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["meeting_video_api_id"]
+          },
+          {
+            foreignKeyName: "meeting_topics_v2_api_video_id_fkey"
+            columns: ["api_video_id"]
+            isOneToOne: false
             referencedRelation: "meetings"
             referencedColumns: ["video_api_id"]
           },
@@ -1946,6 +2135,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "meetings_with_profile"
             referencedColumns: ["video_api_id"]
+          },
+          {
+            foreignKeyName: "meeting_topics_v2_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "meeting_topics_v2_profile_id_fkey"
@@ -2041,6 +2237,13 @@ export type Database = {
             foreignKeyName: "meetings_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "meetings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
             referencedRelation: "meetings_with_profile"
             referencedColumns: ["profile_id"]
           },
@@ -2097,6 +2300,13 @@ export type Database = {
             foreignKeyName: "moment_comments_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "moment_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "meetings_with_profile"
             referencedColumns: ["profile_id"]
           },
@@ -2145,6 +2355,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "moments_with_score"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moment_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "moment_reactions_user_id_fkey"
@@ -2204,6 +2421,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "moments_with_score"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moment_subtags_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "moment_subtags_profile_id_fkey"
@@ -2410,6 +2634,13 @@ export type Database = {
             foreignKeyName: "moments_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "moments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
             referencedRelation: "meetings_with_profile"
             referencedColumns: ["profile_id"]
           },
@@ -2426,6 +2657,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "meeting_topics_v2"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moments_video_api_id_fkey"
+            columns: ["video_api_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["meeting_video_api_id"]
           },
           {
             foreignKeyName: "moments_video_api_id_fkey"
@@ -2620,6 +2858,13 @@ export type Database = {
             foreignKeyName: "observation_prompts_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "observation_prompts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
             referencedRelation: "meetings_with_profile"
             referencedColumns: ["profile_id"]
           },
@@ -2652,6 +2897,13 @@ export type Database = {
           task_name?: Database["public"]["Enums"]["onboarding_task_name_enum"]
         }
         Relationships: [
+          {
+            foreignKeyName: "onboarding_task_completions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
           {
             foreignKeyName: "onboarding_task_completions_profile_id_fkey"
             columns: ["profile_id"]
@@ -2691,6 +2943,13 @@ export type Database = {
           profile_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "profile_enhancements_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
           {
             foreignKeyName: "profile_enhancements_profile_id_fkey"
             columns: ["profile_id"]
@@ -2764,6 +3023,13 @@ export type Database = {
             foreignKeyName: "profiles_coach_id_fkey"
             columns: ["coach_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "profiles_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
             referencedRelation: "meetings_with_profile"
             referencedColumns: ["profile_id"]
           },
@@ -2806,6 +3072,13 @@ export type Database = {
             foreignKeyName: "qna_chunks_video_api_id_fkey"
             columns: ["video_api_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["meeting_video_api_id"]
+          },
+          {
+            foreignKeyName: "qna_chunks_video_api_id_fkey"
+            columns: ["video_api_id"]
+            isOneToOne: false
             referencedRelation: "meetings"
             referencedColumns: ["video_api_id"]
           },
@@ -2838,6 +3111,13 @@ export type Database = {
           profile_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "recall_calendars_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
           {
             foreignKeyName: "recall_calendars_profile_id_fkey"
             columns: ["profile_id"]
@@ -2877,6 +3157,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "recall_calendars_v2_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
           {
             foreignKeyName: "recall_calendars_v2_profile_id_fkey"
             columns: ["profile_id"]
@@ -2945,6 +3232,13 @@ export type Database = {
           report_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "report_comments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
           {
             foreignKeyName: "report_comments_profile_id_fkey"
             columns: ["profile_id"]
@@ -3300,6 +3594,13 @@ export type Database = {
             foreignKeyName: "reports_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "reports_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
             referencedRelation: "meetings_with_profile"
             referencedColumns: ["profile_id"]
           },
@@ -3480,6 +3781,13 @@ export type Database = {
             foreignKeyName: "session_notes_author_id_fkey"
             columns: ["author_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "session_notes_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
             referencedRelation: "meetings_with_profile"
             referencedColumns: ["profile_id"]
           },
@@ -3538,6 +3846,13 @@ export type Database = {
             foreignKeyName: "coach_sessions_coach_id_fkey"
             columns: ["coach_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "coach_sessions_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
             referencedRelation: "meetings_with_profile"
             referencedColumns: ["profile_id"]
           },
@@ -3552,6 +3867,13 @@ export type Database = {
             foreignKeyName: "coach_sessions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "coach_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "meetings_with_profile"
             referencedColumns: ["profile_id"]
           },
@@ -3561,6 +3883,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_api_video_id_fkey"
+            columns: ["api_video_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["meeting_video_api_id"]
           },
           {
             foreignKeyName: "sessions_api_video_id_fkey"
@@ -3861,6 +4190,13 @@ export type Database = {
             foreignKeyName: "user_invites_invited_by_fkey"
             columns: ["invited_by"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "user_invites_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
             referencedRelation: "meetings_with_profile"
             referencedColumns: ["profile_id"]
           },
@@ -3905,6 +4241,13 @@ export type Database = {
           should_not_join_pending_meetings?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "user_settings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
           {
             foreignKeyName: "user_settings_profile_id_fkey"
             columns: ["profile_id"]
@@ -3960,6 +4303,13 @@ export type Database = {
             foreignKeyName: "calendar_events_v2_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "calendar_events_v2_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
             referencedRelation: "meetings_with_profile"
             referencedColumns: ["profile_id"]
           },
@@ -3985,6 +4335,60 @@ export type Database = {
           transcripts: Json[] | null
         }
         Relationships: []
+      }
+      meeting_processing_status_view: {
+        Row: {
+          action_items_status: string | null
+          backend_call_status:
+            | Database["public"]["Enums"]["processing_status"]
+            | null
+          created_at: string | null
+          email: string | null
+          embed_meeting_status: string | null
+          embed_moments_status: string | null
+          entity_extraction_status:
+            | Database["public"]["Enums"]["processing_status"]
+            | null
+          id: string | null
+          interestingness_status: string | null
+          internal: boolean | null
+          meeting_bot_id: string | null
+          meeting_created_at: string | null
+          meeting_name: string | null
+          meeting_summary: string | null
+          meeting_video_api_id: string | null
+          meetings_status: string | null
+          moments_status: string | null
+          nickname: string | null
+          observation_status: string | null
+          origin: string | null
+          profile_id: string | null
+          segments_status: string | null
+          supabase_video_upload_status:
+            | Database["public"]["Enums"]["processing_status"]
+            | null
+          topic_segmentation_status:
+            | Database["public"]["Enums"]["processing_status"]
+            | null
+          topics_status: string | null
+          transcript_slice_words_status:
+            | Database["public"]["Enums"]["processing_status"]
+            | null
+          updated_at: string | null
+          video_api_upload_status:
+            | Database["public"]["Enums"]["processing_status"]
+            | null
+          video_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_processing_status_meeting_bot_id_fkey"
+            columns: ["meeting_bot_id"]
+            isOneToOne: true
+            referencedRelation: "meeting_bots_v2"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       meetings_with_profile: {
         Row: {
@@ -4041,6 +4445,13 @@ export type Database = {
             foreignKeyName: "moments_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "moments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
             referencedRelation: "meetings_with_profile"
             referencedColumns: ["profile_id"]
           },
@@ -4050,6 +4461,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moments_video_api_id_fkey"
+            columns: ["video_api_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["meeting_video_api_id"]
           },
           {
             foreignKeyName: "moments_video_api_id_fkey"
@@ -4073,150 +4491,84 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
-      binary_quantize:
-        | {
-            Args: {
-              "": string
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
+      binary_quantize: {
+        Args: { "": string } | { "": unknown }
+        Returns: unknown
+      }
       check_user_permissions: {
-        Args: {
-          user_id: string
-        }
+        Args: { user_id: string }
         Returns: boolean
       }
       get_moments_with_metadata: {
-        Args: {
-          p_limit: number
-          p_cursor?: string
-        }
+        Args: { p_limit: number; p_cursor?: string }
         Returns: {
-          moment_data: unknown
+          moment_data: Database["public"]["Tables"]["moments"]["Row"]
           reactions: Database["public"]["CompositeTypes"]["moment_reaction_with_user"][]
           comments: Database["public"]["CompositeTypes"]["moment_comment_with_user"][]
         }[]
       }
       halfvec_avg: {
-        Args: {
-          "": number[]
-        }
+        Args: { "": number[] }
         Returns: unknown
       }
       halfvec_out: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       halfvec_send: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: string
       }
       halfvec_typmod_in: {
-        Args: {
-          "": unknown[]
-        }
+        Args: { "": unknown[] }
         Returns: number
       }
       hnsw_bit_support: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       hnsw_halfvec_support: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       hnsw_sparsevec_support: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       hnswhandler: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       is_admin_user: {
-        Args: {
-          user_id: string
-        }
+        Args: { user_id: string }
         Returns: boolean
       }
       ivfflat_bit_support: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       ivfflat_halfvec_support: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       ivfflathandler: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
-      l2_norm:
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: number
-          }
-      l2_normalize:
-        | {
-            Args: {
-              "": string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: unknown
-          }
+      l2_norm: {
+        Args: { "": unknown } | { "": unknown }
+        Returns: number
+      }
+      l2_normalize: {
+        Args: { "": string } | { "": unknown } | { "": unknown }
+        Returns: string
+      }
       parse_search_query: {
-        Args: {
-          search_input: string
-        }
+        Args: { search_input: string }
         Returns: string
       }
       search_meetings: {
-        Args: {
-          search_input: string
-        }
+        Args: { search_input: string }
         Returns: {
           clean_vtt_file: string | null
           created_at: string
@@ -4243,30 +4595,22 @@ export type Database = {
         }[]
       }
       search_moments: {
-        Args: {
-          search_query: string
-        }
+        Args: { search_query: string }
         Returns: {
           id: string
           rank: number
         }[]
       }
       sparsevec_out: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: unknown
       }
       sparsevec_send: {
-        Args: {
-          "": unknown
-        }
+        Args: { "": unknown }
         Returns: string
       }
       sparsevec_typmod_in: {
-        Args: {
-          "": unknown[]
-        }
+        Args: { "": unknown[] }
         Returns: number
       }
       update_profile_id_on_moments: {
@@ -4274,46 +4618,27 @@ export type Database = {
         Returns: undefined
       }
       vector_avg: {
-        Args: {
-          "": number[]
-        }
+        Args: { "": number[] }
         Returns: string
       }
-      vector_dims:
-        | {
-            Args: {
-              "": string
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              "": unknown
-            }
-            Returns: number
-          }
+      vector_dims: {
+        Args: { "": string } | { "": unknown }
+        Returns: number
+      }
       vector_norm: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: number
       }
       vector_out: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: unknown
       }
       vector_send: {
-        Args: {
-          "": string
-        }
+        Args: { "": string }
         Returns: string
       }
       vector_typmod_in: {
-        Args: {
-          "": unknown[]
-        }
+        Args: { "": unknown[] }
         Returns: number
       }
     }
@@ -4412,27 +4737,29 @@ export type Database = {
   }
 }
 
-type PublicSchema = Database[Extract<keyof Database, "public">]
+type DefaultSchema = Database[Extract<keyof Database, "public">]
 
 export type Tables<
-  PublicTableNameOrOptions extends
-    | keyof (PublicSchema["Tables"] & PublicSchema["Views"])
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-        Database[PublicTableNameOrOptions["schema"]]["Views"])
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-      Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : PublicTableNameOrOptions extends keyof (PublicSchema["Tables"] &
-        PublicSchema["Views"])
-    ? (PublicSchema["Tables"] &
-        PublicSchema["Views"])[PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -4440,20 +4767,22 @@ export type Tables<
     : never
 
 export type TablesInsert<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -4461,20 +4790,22 @@ export type TablesInsert<
     : never
 
 export type TablesUpdate<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -4482,21 +4813,23 @@ export type TablesUpdate<
     : never
 
 export type Enums<
-  PublicEnumNameOrOptions extends
-    | keyof PublicSchema["Enums"]
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
     | { schema: keyof Database },
-  EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = PublicEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
-    ? PublicSchema["Enums"][PublicEnumNameOrOptions]
+> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof PublicSchema["CompositeTypes"]
+    | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof Database },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof Database
@@ -4505,6 +4838,86 @@ export type CompositeTypes<
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
   ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
-    ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      event_type: ["meeting", "coaching_session"],
+      goal_signal_direction_type: ["positive", "negative"],
+      icon_enum: [
+        "Brain",
+        "GitCommitHorizontal",
+        "Heart",
+        "MessageSquare",
+        "Goal",
+        "Users",
+        "UserCheck",
+        "MessageCircle",
+        "Scissors",
+        "Activity",
+        "SendToBack",
+      ],
+      meeting_bot_error_code_type: [
+        "CannotJoinMeeting",
+        "TimeoutWaitingToStart",
+        "BotNotAccepted",
+        "InternalError",
+        "InvalidMeetingUrl",
+      ],
+      meeting_bot_status_type: [
+        "joining_call",
+        "in_waiting_room",
+        "in_call_not_recording",
+        "in_call_recording",
+        "call_ended",
+        "ready",
+        "recording_permission_allowed",
+        "recording_permission_denied",
+        "done",
+        "fatal",
+        "analysis_done",
+        "analysis_failed",
+        "media_expired",
+        "recording_done",
+        "in_waiting_for_host",
+      ],
+      meeting_bots_provider_enum: ["meeting_baas", "recall"],
+      meeting_platform_enum: [
+        "zoom",
+        "google_meet",
+        "goto_meeting",
+        "microsoft_teams",
+        "microsoft_teams_live",
+        "webex",
+        "chime_sdk",
+        "webrtc",
+        "slack_huddle_observer",
+      ],
+      moment_reaction_type: ["thumbs_up", "thumbs_down"],
+      note_color: ["yellow", "blue", "green", "pink", "purple"],
+      onboarding_task_name_enum: [
+        "explore_team_conflict_chat",
+        "explore_feedback_chat",
+        "explore_discovery_chat",
+        "ask_follow_up",
+        "watch_moment",
+        "use_moments_command",
+        "reset_chat",
+      ],
+      processing_status: [
+        "pending",
+        "completed",
+        "failed",
+        "partial",
+        "skipped",
+      ],
+      profile_status_enum: ["active", "pending", "inactive"],
+      recall_calendar_platform_type: ["google_calendar", "microsoft_outlook"],
+      report_processing_status_type: ["pending", "completed", "failed"],
+      user_role_enum: ["user", "coach", "admin"],
+    },
+  },
+} as const

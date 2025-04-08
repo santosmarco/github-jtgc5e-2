@@ -424,6 +424,28 @@ export function createBotStatusChangeService(
             "🎥 Cannot upload video - Missing video URL",
           ),
         });
+
+        const { error: meetingProcessingStatusUpdateError } = await supabase
+          .from("meeting_processing_status")
+          .update({
+            api_video_upload_status: "skipped",
+            supabase_video_upload_status: "skipped",
+          })
+          .eq("id", meetingProcessingStatusId);
+
+        if (meetingProcessingStatusUpdateError) {
+          logger.error("❌ Failed to update meeting processing status", {
+            error: meetingProcessingStatusUpdateError,
+            bot_id: bot.id,
+            profile_id: bot.profile_id,
+            user_email: bot.profile?.email,
+          });
+          void slack.error({
+            text: `❌ Failed to update meeting processing status ${bot.id}: ${meetingProcessingStatusUpdateError.message}`,
+          });
+        }
+
+        return { storageUrl: undefined, apiVideoId: undefined, speakers: [] };
       }
 
       logger.info("🚀 Initiating parallel video uploads", {
