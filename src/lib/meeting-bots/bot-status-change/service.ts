@@ -670,19 +670,7 @@ export function createBotStatusChangeService(
         };
       }
 
-      const tags = [...participants, bot.profile_id].filter(
-        (tag): tag is NonNullable<typeof tag> => tag !== null,
-      );
-
-      logger.info("👥 Detected meeting participants", {
-        bot_id: bot.id,
-        speakers: tags,
-        speakers_count: tags.length,
-        profile_id: bot.profile_id,
-        user_email: bot.profile?.email,
-      });
-
-      if (tags.length === 0) {
+      if (participants.length === 0) {
         logger.warn("⚠️ No speakers detected for video upload", {
           bot_id: bot.id,
           profile_id: bot.profile_id,
@@ -718,6 +706,18 @@ export function createBotStatusChangeService(
 
         return { apiVideoId: undefined, speakers: [] };
       }
+
+      const tags = [...participants, bot.profile_id].filter(
+        (tag): tag is NonNullable<typeof tag> => tag !== null,
+      );
+
+      logger.info("👥 Detected meeting participants", {
+        bot_id: bot.id,
+        speakers: tags,
+        speakers_count: tags.length,
+        profile_id: bot.profile_id,
+        user_email: bot.profile?.email,
+      });
 
       const [metadata, title, description] = await Promise.all([
         getApiVideoMetadata(bot),
