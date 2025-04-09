@@ -175,8 +175,25 @@ export function getBotStatusInfo(
     timeout_exceeded_noone_joined: statusInfoFactories.warning(
       "No one joined the meeting",
     ),
+    timeout_exceeded_max_duration: statusInfoFactories.warning(
+      "Recording stopped: Maximum duration reached",
+    ),
+    timeout_exceeded_in_call_not_recording: statusInfoFactories.warning(
+      "Bot timed out in call",
+    ),
+    timeout_exceeded_recording_permission_denied: statusInfoFactories.warning(
+      "Recording permissions not granted",
+    ),
+    timeout_exceeded_only_bots_detected_using_participant_events:
+      statusInfoFactories.warning("Only bots detected in the meeting"),
+    timeout_exceeded_silence_detected: statusInfoFactories.warning(
+      "Recording stopped: Silence detected",
+    ),
     call_ended_by_platform_waiting_room_timeout: statusInfoFactories.warning(
       "Bot timed out in waiting room",
+    ),
+    call_ended_by_platform_max_length: statusInfoFactories.warning(
+      "Call ended: Maximum length reached",
     ),
 
     // Warning states - bot removal

@@ -474,6 +474,7 @@ export function MeetingEntry({ event, isNow = false }: MeetingEntryProps) {
                                 className={cn(
                                   "h-3 w-3",
                                   botStatusDetails.styles.text,
+                                  botStatusDetails.styles.icon,
                                 )}
                               />
                               {botStatusDetails.badge}
