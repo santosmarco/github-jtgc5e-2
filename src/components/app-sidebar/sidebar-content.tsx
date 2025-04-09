@@ -10,13 +10,11 @@ import {
   MessageSquare,
   Play,
   Puzzle,
-  SquarePlay,
   TextQuote,
   TrendingUpIcon,
   User,
   UsersIcon,
   Video,
-  Youtube,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -177,7 +175,7 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
           {
             type: "item",
             href: "/",
-            icon: <SquarePlay className="h-5 w-5" />,
+            icon: <Play className="h-5 w-5" />,
             label: "Recordings",
             isActive: pathname === "/" || pathname.startsWith("/videos"),
           },
