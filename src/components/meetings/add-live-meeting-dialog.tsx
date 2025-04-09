@@ -154,7 +154,7 @@ export function AddLiveMeetingDialog({
                     <Loader2 className="h-4 w-4 animate-spin" />
                   </motion.div>
                 )}
-                Launch Bot
+                Launch {user.bot_name ?? "Notetaker"}
               </Button>
             </DialogFooter>
           </form>

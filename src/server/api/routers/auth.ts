@@ -74,7 +74,7 @@ export const authRouter = createTRPCRouter({
         });
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("*")
+        .select("*, settings:user_settings(*)")
         .eq("id", session.user.id)
         .single();
       if (profileError)
@@ -89,11 +89,13 @@ export const authRouter = createTRPCRouter({
           message: "Profile not found",
         });
       const user = _.omit(session.user, ["role"]);
+      const userSettings = profile.settings[0];
       return {
         ...session,
         user: {
           ...user,
           nickname: profile.nickname,
+          bot_name: userSettings?.bot_name,
           did_complete_onboarding: profile.did_complete_onboarding,
           did_complete_post_ten_meeting_onboarding:
             profile.did_complete_post_ten_meeting_onboarding,
@@ -131,7 +133,7 @@ export const authRouter = createTRPCRouter({
         });
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("*")
+        .select("*, settings:user_settings(*)")
         .eq("id", user.id)
         .single();
       if (profileError)
@@ -145,9 +147,11 @@ export const authRouter = createTRPCRouter({
           code: "NOT_FOUND",
           message: "Profile not found",
         });
+      const userSettings = profile.settings[0];
       return {
         ..._.omit(user, ["role"]),
         nickname: profile.nickname,
+        bot_name: userSettings?.bot_name,
         did_complete_onboarding: profile.did_complete_onboarding,
         did_complete_post_ten_meeting_onboarding:
           profile.did_complete_post_ten_meeting_onboarding,
