@@ -358,6 +358,7 @@ export function createBotStatusChangeService(
         );
 
         if (apiVideoId && !meetingBotUpdateError) {
+          /*
           await handleVideoPreprocessing(
             {
               ...meetingBot,
@@ -366,6 +367,7 @@ export function createBotStatusChangeService(
             },
             meetingProcessingStatus.id,
           );
+          */
 
           await handleVideoProcessing(
             {
@@ -1104,7 +1106,7 @@ export function createBotStatusChangeService(
         user_email: bot.profile?.email,
       });
 
-      await processVideo({
+      void processVideo({
         meetingBotId: bot.id,
         processingId: meetingProcessingStatusId,
         steps: ["all"],
