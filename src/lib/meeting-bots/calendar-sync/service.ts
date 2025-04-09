@@ -1,4 +1,5 @@
 import type { logger } from "@trigger.dev/sdk/v3";
+import dayjs from "dayjs";
 import _ from "lodash";
 
 import { GoogleCalendarEvent } from "~/lib/google-calendar/schemas";
@@ -131,7 +132,9 @@ export function createCalendarSyncService(
               queries: {
                 calendar_id: event.data.calendar_id,
                 ...(options.full === "true"
-                  ? { start_time__gte: new Date().toISOString() }
+                  ? {
+                      start_time__gte: dayjs().subtract(1, "day").toISOString(),
+                    }
                   : { updated_at__gte: event.data.last_updated_ts }),
                 ...(nextCursor && { cursor: nextCursor }),
               },

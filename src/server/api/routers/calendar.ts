@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import dayjs from "dayjs";
 import { z } from "zod";
 
+import { syncCalendars } from "~/jobs/sync-calendars";
 import { logger } from "~/lib/logging/server";
 import { meetingBaas } from "~/lib/meeting-baas/client";
 import { createLiveMeetingService } from "~/lib/meeting-bots/live-meeting/service";
@@ -153,7 +154,7 @@ export const calendarRouter = createTRPCRouter({
       // First find the calendar_event record to update
       const { data: eventData, error: findError } = await supabase
         .from("calendar_events_v2")
-        .select("id")
+        .select("id, calendar:recall_calendars_v2(id)")
         .eq("id", input.eventId)
         .eq("profile_id", input.profileId)
         .single();
@@ -193,6 +194,15 @@ export const calendarRouter = createTRPCRouter({
           message: "Failed to update meeting join preference",
         });
       }
+
+      void syncCalendars.trigger({
+        event: "calendar.sync_events",
+        data: {
+          calendar_id: eventData.calendar.id,
+          last_updated_ts: dayjs().subtract(1, "day").toISOString(),
+        },
+        full: "true",
+      });
 
       return { success: true };
     }),
