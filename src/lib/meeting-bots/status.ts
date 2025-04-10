@@ -160,7 +160,6 @@ export function getBotStatusInfo(
   // Map of sub_codes to their corresponding status information
   const subCodeMap: Record<string, BotStatusInfo> = {
     // Error states
-    meeting_not_found: statusInfoFactories.error("Meeting not found"),
     zoom_sdk_app_not_published: statusInfoFactories.error(
       "Zoom SDK error, please reach out",
     ),
@@ -208,6 +207,11 @@ export function getBotStatusInfo(
     ),
     call_ended_by_host: statusInfoFactories.warning(
       "Call was ended by the host",
+    ),
+
+    // Warning states - meeting not found
+    meeting_not_found: statusInfoFactories.warning(
+      "Meeting link was unaccessible",
     ),
   };
 
