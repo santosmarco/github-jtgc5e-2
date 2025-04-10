@@ -1,13 +1,13 @@
 "use client";
 
+import { useChat } from "@ai-sdk/react";
 import type { Editor } from "@tiptap/react";
-import type { CoreMessage } from "ai";
-import { useChat } from "ai/react";
+import type { CoreMessage, UIMessage } from "ai";
 import { AnimatePresence, motion } from "framer-motion";
 import _ from "lodash";
 import { AlertCircle, MessageCircleIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, memo } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import type { ChatRequestBody } from "~/app/api/chat/route";
@@ -517,7 +517,7 @@ export function ChatInterface({
           })()}
 
           {/* Chat Messages */}
-          <ChatMessages messages={messages}>
+          <ChatMessages messages={messages as UIMessage[]}>
             {error && (
               <Alert variant="destructive" className="mb-4">
                 <AlertCircle className="h-4 w-4" />
@@ -525,7 +525,10 @@ export function ChatInterface({
                 <AlertDescription>{error.message}</AlertDescription>
               </Alert>
             )}
-            <MessageList messages={messages} isTyping={isTyping && !error} />
+            <MessageList
+              messages={messages as UIMessage[]}
+              isTyping={isTyping && !error}
+            />
           </ChatMessages>
 
           <AnimatePresence>

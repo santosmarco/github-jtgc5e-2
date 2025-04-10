@@ -1,8 +1,8 @@
 "use client";
 
-import type { Message } from "ai";
+import type { UIMessage } from "ai";
 import { ArrowDown, ThumbsDown, ThumbsUp } from "lucide-react";
-import { forwardRef, type ReactElement, useState } from "react";
+import { type ReactElement, forwardRef, useState } from "react";
 
 import { Button } from "~/components/ui/button";
 import { CopyButton } from "~/components/ui/copy-button";
@@ -17,7 +17,7 @@ interface ChatPropsBase {
     event?: { preventDefault?: () => void },
     options?: { experimental_attachments?: FileList },
   ) => void;
-  messages: Array<Message>;
+  messages: Array<UIMessage>;
   input: string;
   className?: string;
   handleInputChange: React.ChangeEventHandler<HTMLTextAreaElement>;
@@ -135,7 +135,7 @@ export function ChatMessages({
   messages,
   children,
 }: React.PropsWithChildren<{
-  messages: Message[];
+  messages: UIMessage[];
 }>) {
   const { containerRef, scrollToBottom, handleScroll, shouldAutoScroll } =
     useAutoScroll([messages]);

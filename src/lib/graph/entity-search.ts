@@ -1,5 +1,10 @@
 import type { EntityVectorMetadata } from "../processing/entity-embeddings";
-import { searchEntityVectors } from "../processing/entity-embeddings";
+import { SearchService, type SearchOptions } from "../core/searchService";
+import { getEntitiesIndex } from "../pinecone/client";
+import { embedText } from "../pinecone/embeddings";
+
+// Initialize the service as a singleton
+const searchService = new SearchService();
 
 /**
  * Search result from entity vector search
@@ -160,92 +165,32 @@ export type SearchCriterion = {
  * @param options - Search options for filtering and configuration
  * @returns Categorized search results
  */
-/**
- * Helper function to retry a function with exponential backoff
- * @param fn The function to retry
- * @param retries Number of retries
- * @param baseDelay Base delay in ms
- * @param timeout Timeout in ms
- * @returns Promise that resolves with the function result or rejects after all retries
- */
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  retries = 3,
-  baseDelay = 300,
-  timeout = 5000,
-): Promise<T> {
-  let lastError: Error | null = null;
-
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      // Create a timeout promise
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error(`Operation timed out after ${timeout}ms`));
-        }, timeout);
-      });
-
-      // Race between the function and the timeout
-      return await Promise.race([fn(), timeoutPromise]);
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-
-      // Don't wait on the last attempt
-      if (attempt < retries) {
-        // Exponential backoff with jitter
-        const delay = baseDelay * 2 ** attempt * (0.5 + Math.random() * 0.5);
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
-    }
-  }
-
-  throw lastError || new Error("Operation failed after retries");
-}
-
 export async function searchEntities(
   query: string,
   options?: EntitySearchOptions,
 ): Promise<EntitySearchResult> {
-  const filter: Record<string, unknown> = options?.filter || {};
+  // Convert EntitySearchOptions to SearchOptions
+  const searchOptions: SearchOptions = {
+    meetingIds: options?.meetingIds,
+    topicIds: options?.topicIds,
+    profileIds: options?.profileIds,
+    entityTypes: options?.entityTypes,
+    entityNames: options?.entityNames,
+    relationshipTypes: options?.relationshipTypes,
+    filter: options?.filter,
+    topK: options?.topK,
+    minScore: options?.minScore,
+    includeTopicContext: options?.includeTopicContext,
+    namespace: options?.namespace,
+    retryConfig: {
+      retries: 2,
+      baseDelay: 300,
+      timeout: 10000,
+    },
+  };
 
-  // Add filters based on options
-  if (options?.meetingIds) {
-    filter.meeting_id = { $in: options.meetingIds };
-  }
-
-  if (options?.topicIds) {
-    filter.topic_id = { $in: options.topicIds };
-  }
-
-  if (options?.profileIds) {
-    filter.profile_id = { $in: options.profileIds };
-  }
-
-  if (options?.entityTypes) {
-    filter.entity_type = { $in: options.entityTypes };
-  }
-
-  if (options?.entityNames) {
-    filter.entity_name = { $in: options.entityNames };
-  }
-
-  if (options?.relationshipTypes) {
-    filter.relationship_type = { $in: options.relationshipTypes };
-  }
-
-  // Use retry logic with timeout for the search
-  return await withRetry(
-    async () =>
-      searchEntityVectors(query, {
-        filter,
-        topK: options?.topK,
-        minScore: options?.minScore,
-        namespace: "relationships",
-      }),
-    2, // 2 retries (3 attempts total)
-    300, // 300ms base delay
-    10000, // 10 second timeout
-  );
+  // Use the SearchService to perform the search
+  return await searchService.search(query, searchOptions);
 }
 
 /**
@@ -340,117 +285,81 @@ export async function getEntityByName(
     title: string;
   }>;
 }> {
-  // Find the entity first
-  const entityResults = await searchEntities(entityName, {
-    ...options,
-    entityNames: [entityName],
-    topK: 1,
-    minScore: 0.2,
-  });
-
-  const entity = entityResults.entities[0]?.metadata;
-
-  if (!entity) {
-    return {
-      entity: null,
-      observations: [],
-      relationships: [],
-      relatedTopics: [],
-    };
-  }
-
-  // Find observations about this entity
-  const observationResults = await searchEntities(
-    `observations about ${entityName}`,
-    {
-      ...options,
-      entityNames: [entityName],
-      topK: 20,
-    },
+  // Use specialized function from search service for better results
+  const searchResults = await searchService.searchByEntityName(
+    entityName,
+    options,
   );
-
-  // Find relationships where this entity is involved
-  const asSubjectResults = await searchEntities("", {
-    ...options,
-    topK: 20,
-    filter: {
-      subject_entity: { $eq: entityName },
-    },
-  });
-
-  const asObjectResults = await searchEntities("", {
-    ...options,
-    topK: 20,
-    filter: {
-      object_entity: { $eq: entityName },
-    },
-  });
 
   // Collect unique topic IDs
   const topicIds = new Set<string>();
 
+  // Get the entity from search results
+  const entityResult = searchResults.entities[0]?.metadata;
+
   // Add the topic from the entity itself
-  if (entity.topic_id) {
-    topicIds.add(entity.topic_id);
+  if (entityResult?.topic_id) {
+    topicIds.add(entityResult.topic_id);
   }
 
   // Add topics from observations
-  for (const obs of observationResults.observations) {
+  for (const obs of searchResults.observations) {
     if (obs.metadata.topic_id) {
       topicIds.add(obs.metadata.topic_id);
     }
   }
 
   // Add topics from relationships
-  for (const rel of asSubjectResults.relationships) {
+  for (const rel of searchResults.relationships) {
     if (rel.metadata.topic_id) {
       topicIds.add(rel.metadata.topic_id);
     }
   }
 
-  for (const rel of asObjectResults.relationships) {
-    if (rel.metadata.topic_id) {
-      topicIds.add(rel.metadata.topic_id);
-    }
+  // Process relationships to determine subject/object relationships
+  const relationships: Array<{
+    relationship: string;
+    otherEntity: string;
+    isSubject: boolean;
+  }> = [];
+
+  for (const rel of searchResults.relationships) {
+    const metadata = rel.metadata;
+    const isSubject = metadata.subject_entity === entityName;
+
+    relationships.push({
+      relationship: metadata.relationship_type || "",
+      otherEntity: isSubject
+        ? metadata.object_entity || ""
+        : metadata.subject_entity || "",
+      isSubject,
+    });
   }
 
   // Format the response
   return {
-    entity: entity.entity_name
+    entity: entityResult?.entity_name
       ? {
-          name: entity.entity_name,
-          type: entity.entity_type || "",
-          description: entity.content || "",
+          name: entityResult.entity_name,
+          type: entityResult.entity_type || "",
+          description: entityResult.content || "",
         }
       : null,
 
-    observations: observationResults.observations.map(
+    observations: searchResults.observations.map(
       (obs) => obs.metadata.content || "",
     ),
 
-    relationships: [
-      ...asSubjectResults.relationships.map((rel) => ({
-        relationship: rel.metadata.relationship_type || "",
-        otherEntity: rel.metadata.object_entity || "",
-        isSubject: true,
-      })),
-      ...asObjectResults.relationships.map((rel) => ({
-        relationship: rel.metadata.relationship_type || "",
-        otherEntity: rel.metadata.subject_entity || "",
-        isSubject: false,
-      })),
-    ],
+    relationships,
 
     relatedTopics: Array.from(topicIds).map((id) => ({
       topicId: id,
       title:
-        asSubjectResults.relationships.find((r) => r.metadata.topic_id === id)
+        searchResults.relationships.find((r) => r.metadata.topic_id === id)
           ?.metadata.topic_title ||
-        asObjectResults.relationships.find((r) => r.metadata.topic_id === id)
+        searchResults.observations.find((o) => o.metadata.topic_id === id)
           ?.metadata.topic_title ||
-        observationResults.observations.find((o) => o.metadata.topic_id === id)
-          ?.metadata.topic_title ||
-        (entity.topic_id === id ? entity.topic_title : ""),
+        (entityResult?.topic_id === id ? entityResult.topic_title : ""),
     })),
   };
 }
@@ -586,7 +495,7 @@ export async function findSimilarEntities(
       ...options,
       entityTypes: entityType ? [entityType] : undefined,
       topK: 20,
-      minScore: 0.6,
+      minScore: 0.4,
     },
   );
 
@@ -815,8 +724,8 @@ async function getPathObservations(
     const results = await searchEntities(query, {
       ...searchOptions,
       entityNames: [sourceEntity, targetEntity].filter((e): e is string => !!e),
-      topK: 3,
-      minScore: 0.6,
+      topK: 5,
+      minScore: 0.4,
     });
 
     for (const obs of results.observations) {
@@ -1021,7 +930,7 @@ function generateTimestampFromTopicId(topicId: string): string {
 }
 
 /**
- * Performs a multi-criteria search, allowing users to weight different search criteria
+ * Performs multi-criteria search, allowing users to weight different search criteria
  * for highly customized entity discovery
  *
  * @param criteria - Array of search criteria with weights
@@ -1047,27 +956,13 @@ export async function multiCriteriaEntitySearch(
 > {
   const resultLimit = options?.resultLimit ?? 20;
 
-  // Normalize weights to sum to 1.0
-  const totalWeight = criteria.reduce(
-    (sum, criterion) => sum + criterion.weight,
-    0,
-  );
-  const normalizedCriteria = criteria.map((c) => ({
-    ...c,
-    weight: c.weight / totalWeight,
-  }));
+  // Use the multiCriteriaSearch method from SearchService
+  const results = await searchService.multiCriteriaSearch(criteria, {
+    ...options,
+    topK: resultLimit * 2, // Get more results than needed for better coverage
+  });
 
-  // Execute each search query
-  const searchResults = await Promise.all(
-    normalizedCriteria.map((criterion) =>
-      searchEntities(criterion.query, {
-        ...options,
-        topK: resultLimit * 2, // Get more results than needed for better coverage
-      }),
-    ),
-  );
-
-  // Combine and score results
+  // Process results similarly to the original implementation
   const entityScores = new Map<
     string,
     {
@@ -1078,11 +973,8 @@ export async function multiCriteriaEntitySearch(
     }
   >();
 
-  // Process each criterion's results
-  normalizedCriteria.forEach((criterion, index) => {
-    const results = searchResults[index];
-    if (!results) return;
-
+  // Track which criterion each result came from
+  criteria.forEach((criterion, criterionIndex) => {
     // Process entities
     for (const result of results.entities) {
       const entityName = result.metadata.entity_name;
@@ -1134,3 +1026,23 @@ export async function multiCriteriaEntitySearch(
     .sort((a, b) => b.totalScore - a.totalScore)
     .slice(0, resultLimit);
 }
+
+// get info about the index
+const a = async () => {
+  const indexInfo = await (await getEntitiesIndex())
+    .namespace("relationships")
+    .query({
+      vector: await embedText("Kimberly Shenk"),
+      topK: 100,
+      includeValues: true,
+      includeMetadata: true,
+      filter: {
+        profile_id: {
+          $eq: "5071bb6c-ffb3-4ff7-b662-4c72837ac021",
+        },
+      },
+    });
+  console.log(indexInfo.matches.map((m) => m.metadata));
+};
+
+a();

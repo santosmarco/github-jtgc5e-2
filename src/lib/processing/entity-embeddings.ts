@@ -1,12 +1,20 @@
 import { v4 as uuidv4 } from "uuid";
-import { getEntitiesIndex } from "../pinecone/client";
-import { embedText, embedTexts } from "../pinecone/embeddings";
-import type { Tables } from "../supabase/database.types";
+
 import type {
   Entity,
   EntityExtractionOutput,
   EntityRelation,
 } from "~/lib/backend/services/entity-extraction/entity-extraction.schemas";
+
+import { getEntitiesIndex } from "../pinecone/client";
+import { embedText, embedTexts } from "../pinecone/embeddings";
+import type { Tables } from "../supabase/database.types";
+import { EmbeddingService } from "../core/embeddingService";
+import { SearchService } from "../core/searchService";
+
+// Initialize the services as singletons
+const embeddingService = new EmbeddingService();
+const searchService = new SearchService();
 
 /**
  * Metadata for entity vectors in Pinecone
@@ -105,6 +113,7 @@ async function processBatchedObservations<T extends { observations: string[] }>(
 
 /**
  * Embeds a single entity and inserts it into Pinecone
+ * @deprecated Use embeddingService.embedEntity instead
  */
 export async function embedEntity(
   entity: Entity,
@@ -113,60 +122,15 @@ export async function embedEntity(
   topicTitle: string,
   options?: EntityEmbeddingOptions,
 ): Promise<void> {
-  const namespace = options?.namespace || "entities";
-  let index = await getEntitiesIndex();
-  index = index.namespace(namespace);
-
-  // Create a comprehensive text representation of the entity
-  const entityText = `Entity: ${entity.name}\nType: ${entity.type}\nDescription: ${entity.description}`;
-
-  // Generate a prefixed ID for the entity
-  const entityPrefix = `${meeting.video_api_id}#${topicId}#entity`;
-  const entitySubType = `${entity.type}#${entity.name.replace(/[^a-zA-Z0-9]/g, "_")}`;
-  const entityId = generatePrefixedId(entityPrefix, entitySubType);
-
-  // Get the embedding
-  const embedding = await embedText(entityText);
-
-  // Prepare metadata
-  const metadata: EntityVectorMetadata = {
-    id: entityId,
-    meeting_id: meeting.video_api_id,
-    topic_id: topicId,
-    profile_id: meeting.profile_id || "",
-    video_api_id: meeting.video_api_id,
-    entity_type: entity.type,
-    entity_name: entity.name,
-    entity_id: entityId,
-    content_type: "entity",
-    content: entityText,
-    topic_title: topicTitle,
-    topic_summary: meeting.summary || undefined,
-  };
-
-  // Upsert the vector
-  await index.upsert([
-    {
-      id: entityId,
-      values: embedding,
-      metadata,
-    },
-  ]);
-
-  // Embed each observation separately
-  if (entity.observations && entity.observations.length > 0) {
-    await processBatchedObservations(
-      entity,
-      metadata,
-      (obs) => `Observation about ${entity.type} "${entity.name}": ${obs}`,
-      namespace,
-      options?.batchSize,
-    );
-  }
+  await embeddingService.embedEntity(entity, meeting, topicId, topicTitle, {
+    namespace: options?.namespace,
+    batchSize: options?.batchSize,
+  });
 }
 
 /**
  * Embeds a relationship between entities
+ * @deprecated Use embeddingService.embedRelationship instead
  */
 export async function embedRelationship(
   relationship: EntityRelation,
@@ -175,62 +139,21 @@ export async function embedRelationship(
   topicTitle: string,
   options?: EntityEmbeddingOptions,
 ): Promise<void> {
-  const namespace = options?.namespace || "relationships";
-  let index = await getEntitiesIndex();
-  index = index.namespace(namespace);
-
-  // Create a comprehensive text representation of the relationship
-  const relationshipText = `Relationship: ${relationship.entity1} ${relationship.relationship} ${relationship.entity2}`;
-
-  // Generate a prefixed ID for the relationship
-  const relationPrefix = `${meeting.video_api_id}#${topicId}#relation`;
-  const relationSubType = `${relationship.entity1.replace(/[^a-zA-Z0-9]/g, "_")}#${relationship.relationship.replace(/[^a-zA-Z0-9]/g, "_")}#${relationship.entity2.replace(/[^a-zA-Z0-9]/g, "_")}`;
-  const relationshipId = generatePrefixedId(relationPrefix, relationSubType);
-
-  // Get the embedding
-  const embedding = await embedText(relationshipText);
-
-  // Prepare metadata
-  const metadata: EntityVectorMetadata = {
-    id: relationshipId,
-    meeting_id: meeting.video_api_id,
-    topic_id: topicId,
-    profile_id: meeting.profile_id || "",
-    video_api_id: meeting.video_api_id,
-    relationship_type: relationship.relationship,
-    subject_entity: relationship.entity1,
-    object_entity: relationship.entity2,
-    relationship_id: relationshipId,
-    content_type: "relationship",
-    content: relationshipText,
-    topic_title: topicTitle,
-    topic_summary: meeting.summary || undefined,
-  };
-
-  // Upsert the vector
-  await index.upsert([
+  await embeddingService.embedRelationship(
+    relationship,
+    meeting,
+    topicId,
+    topicTitle,
     {
-      id: relationshipId,
-      values: embedding,
-      metadata,
+      namespace: options?.namespace,
+      batchSize: options?.batchSize,
     },
-  ]);
-
-  // Embed each observation separately
-  if (relationship.observations && relationship.observations.length > 0) {
-    await processBatchedObservations(
-      relationship,
-      metadata,
-      (obs) =>
-        `Observation about relationship "${relationship.entity1} ${relationship.relationship} ${relationship.entity2}": ${obs}`,
-      namespace,
-      options?.batchSize,
-    );
-  }
+  );
 }
 
 /**
  * Embeds general observations
+ * @deprecated Use embeddingService.embedObservations instead
  */
 export async function embedObservations(
   observations: string[],
@@ -239,54 +162,21 @@ export async function embedObservations(
   topicTitle: string,
   options?: EntityEmbeddingOptions,
 ): Promise<void> {
-  const namespace = options?.namespace || "observations";
-  let index = await getEntitiesIndex();
-  index = index.namespace(namespace);
-
-  // Process observations in batches
-  const batchSize = options?.batchSize || DEFAULT_BATCH_SIZE;
-  const observationPrefix = `${meeting.video_api_id}#${topicId}#observation`;
-
-  for (let i = 0; i < observations.length; i += batchSize) {
-    const batch = observations.slice(i, i + batchSize);
-
-    // Enhance each observation with context
-    const enhancedObservations = batch.map(
-      (obs) => `General observation about topic "${topicTitle}": ${obs}`,
-    );
-
-    // Get embeddings for the batch
-    const embeddings = await embedTexts(enhancedObservations);
-
-    // Prepare vectors for batch insertion
-    const vectors = batch.map((observation, index) => {
-      const observationId = generatePrefixedId(observationPrefix);
-      const metadata: EntityVectorMetadata = {
-        id: observationId,
-        meeting_id: meeting.video_api_id,
-        topic_id: topicId,
-        profile_id: meeting.profile_id || "",
-        video_api_id: meeting.video_api_id,
-        content_type: "observation",
-        content: observation,
-        topic_title: topicTitle,
-        topic_summary: meeting.summary || undefined,
-      };
-
-      return {
-        id: observationId,
-        values: embeddings[index] ?? [],
-        metadata,
-      };
-    });
-
-    // Upsert the vectors
-    await index.upsert(vectors);
-  }
+  await embeddingService.embedObservations(
+    observations,
+    meeting,
+    topicId,
+    topicTitle,
+    {
+      namespace: options?.namespace,
+      batchSize: options?.batchSize,
+    },
+  );
 }
 
 /**
  * Embeds all entities, relationships, and observations from a topic
+ * @deprecated Use embeddingService.embedTopicEntities instead
  */
 export async function embedTopicEntities(
   extractionOutput: EntityExtractionOutput,
@@ -295,38 +185,25 @@ export async function embedTopicEntities(
   topicTitle: string,
   options?: EntityEmbeddingOptions,
 ): Promise<void> {
-  // Embed entities
-  await Promise.all(
-    extractionOutput.entities.map((entity) =>
-      embedEntity(entity, meeting, topicId, topicTitle, options),
-    ),
+  await embeddingService.embedTopicEntities(
+    extractionOutput,
+    meeting,
+    topicId,
+    topicTitle,
+    {
+      namespace: options?.namespace,
+      batchSize: options?.batchSize,
+    },
   );
-
-  // Embed relationships
-  await Promise.all(
-    extractionOutput.relationships.map((relationship) =>
-      embedRelationship(relationship, meeting, topicId, topicTitle, options),
-    ),
-  );
-
-  // Embed general observations
-  if (
-    extractionOutput.observations &&
-    Array.isArray(extractionOutput.observations) &&
-    extractionOutput.observations.length > 0
-  ) {
-    await embedObservations(
-      extractionOutput.observations,
-      meeting,
-      topicId,
-      topicTitle,
-      options,
-    );
-  }
 }
 
 /**
  * Advanced semantic search for entity-related vectors
+ *
+ * @param query - The natural language search query
+ * @param options - Search configuration options
+ * @returns Structured search results organized by content type with detailed metadata
+ * @deprecated Use SearchService.search instead
  */
 export async function searchEntityVectors(
   query: string,
@@ -334,81 +211,53 @@ export async function searchEntityVectors(
     filter?: Record<string, unknown>;
     topK?: number;
     minScore?: number;
-    namespace?: string;
   },
-): Promise<{
-  entities: Array<{ score: number; metadata: EntityVectorMetadata }>;
-  relationships: Array<{ score: number; metadata: EntityVectorMetadata }>;
-  observations: Array<{ score: number; metadata: EntityVectorMetadata }>;
-}> {
-  const {
-    filter = {},
-    topK = 10,
-    minScore = 0.2,
-    namespace = undefined,
-  } = options || {};
-
-  const queryEmbedding = await embedText(query);
-  const baseIndex = await getEntitiesIndex();
-
-  // Query entities
-  const entitiesIndex = namespace ? baseIndex.namespace("entities") : baseIndex;
-  const entityResults = await entitiesIndex.query({
-    vector: queryEmbedding,
-    topK: topK,
-    filter: { ...filter, content_type: { $eq: "entity" } },
-    includeMetadata: true,
+) {
+  const results = await searchService.search(query, {
+    filter: options?.filter,
+    topK: options?.topK,
+    minScore: options?.minScore,
+    retryConfig: {
+      retries: 2,
+      baseDelay: 300,
+      timeout: 10000,
+    },
   });
 
-  // Query relationships
-  const relationshipsIndex = namespace
-    ? baseIndex.namespace("relationships")
-    : baseIndex;
-  const relationshipResults = await relationshipsIndex.query({
-    vector: queryEmbedding,
-    topK: topK,
-    filter: { ...filter, content_type: { $eq: "relationship" } },
-    includeMetadata: true,
-  });
-
-  // Query observations
-  const observationsIndex = namespace
-    ? baseIndex.namespace("observations")
-    : baseIndex;
-  const observationResults = await observationsIndex.query({
-    vector: queryEmbedding,
-    topK: topK,
-    filter: { ...filter, content_type: { $eq: "observation" } },
-    includeMetadata: true,
-  });
-
-  // Process entity results
-  const entities = entityResults.matches
-    .filter((match) => (match.score || 0) >= minScore)
-    .map((match) => ({
-      score: match.score || 0,
-      metadata: match.metadata as EntityVectorMetadata,
-    }));
-
-  // Process relationship results
-  const relationships = relationshipResults.matches
-    .filter((match) => (match.score || 0) >= minScore)
-    .map((match) => ({
-      score: match.score || 0,
-      metadata: match.metadata as EntityVectorMetadata,
-    }));
-
-  // Process observation results
-  const observations = observationResults.matches
-    .filter((match) => (match.score || 0) >= minScore)
-    .map((match) => ({
-      score: match.score || 0,
-      metadata: match.metadata as EntityVectorMetadata,
-    }));
-
+  // Add the summary field to match the previous implementation's format
   return {
-    entities,
-    relationships,
-    observations,
+    entities: results.entities.map((item) => ({
+      ...item,
+      summary: {
+        name: item.metadata.entity_name || "",
+        type: item.metadata.entity_type || "",
+        description: item.metadata.content || "",
+        topicTitle: item.metadata.topic_title,
+        topicId: item.metadata.topic_id,
+        meetingId: item.metadata.meeting_id,
+      },
+    })),
+    relationships: results.relationships.map((item) => ({
+      ...item,
+      summary: {
+        subject: item.metadata.subject_entity || "",
+        relationship: item.metadata.relationship_type || "",
+        object: item.metadata.object_entity || "",
+        topicTitle: item.metadata.topic_title,
+        topicId: item.metadata.topic_id,
+        meetingId: item.metadata.meeting_id,
+      },
+    })),
+    observations: results.observations.map((item) => ({
+      ...item,
+      summary: {
+        content: item.metadata.content || "",
+        topicTitle: item.metadata.topic_title,
+        topicId: item.metadata.topic_id,
+        meetingId: item.metadata.meeting_id,
+        entityName: item.metadata.entity_name,
+        entityType: item.metadata.entity_type,
+      },
+    })),
   };
 }

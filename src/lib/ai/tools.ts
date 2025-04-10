@@ -1,118 +1,31 @@
-import type { CoreMessage } from "ai";
-import { tool as coreTool } from "ai";
-import _ from "lodash";
+import { tool } from "ai";
 import { z } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
 
 import { api } from "~/trpc/server";
 
-import { IndexMetadata } from "../pinecone/client";
 import { searchSimilar } from "../pinecone/search";
 import { VideoMoment } from "../schemas/video-moment";
-import { meetingsRowSchema } from "../supabase/schemas";
 import { createClient } from "../supabase/server";
-
-export function tool<TParameters extends z.ZodTypeAny, TResult>(tool: {
-  description: string;
-  parameters: TParameters;
-  output: z.ZodType<TResult>;
-  execute: (
-    args: z.infer<TParameters>,
-    options: {
-      messages: CoreMessage[];
-      abortSignal?: AbortSignal;
-    },
-  ) => PromiseLike<TResult>;
-}) {
-  return Object.assign(coreTool(tool), {
-    _def: {
-      description: tool.description,
-      parameters: tool.parameters,
-      output: tool.output,
-    },
-  });
-}
-
-export type Tool<
-  TParameters extends z.ZodTypeAny = z.ZodTypeAny,
-  TResult = any,
-> = ReturnType<typeof tool<TParameters, TResult>>;
-
-export type ToolOutput<T extends Tool> = z.output<T["_def"]["output"]>;
-
-export function explainTools<T extends Record<string, Tool>>(
-  tools: T,
-  includeExplain = true,
-) {
-  return _({ ...tools, ...(includeExplain && { explain: explainTool(tools) }) })
-    .toPairs()
-    .map(
-      ([name, tool]) =>
-        `- \`${name}\`: ${tool._def.description}\n${JSON.stringify({
-          parameters: zodToJsonSchema(tool._def.parameters),
-          ...(tool._def.output && {
-            output: zodToJsonSchema(tool._def.output),
-          }),
-        })}`,
-    )
-    .join("\n\n")
-    .valueOf();
-}
-
-export const explainTool = <T extends Record<string, Tool>>(tools: T) =>
-  tool({
-    description: "Useful for explaining a tool.",
-    parameters: z.object({
-      toolName: z
-        .enum(Object.keys(tools) as [string, ...string[]])
-        .describe("The name of the tool to explain."),
-    }),
-    output: z.object({
-      error: z
-        .string()
-        .optional()
-        .describe("A description of an error, if applicable."),
-      description: z
-        .string()
-        .optional()
-        .describe("The description of the tool."),
-      parameters: z
-        .unknown()
-        .optional()
-        .describe("The parameters of the tool."),
-      output: z.unknown().optional().describe("The output of the tool."),
-    }),
-    execute: async ({ toolName }) => {
-      const tool = tools[toolName];
-
-      if (!tool) {
-        return { error: `Tool ${toolName} not found.` };
-      }
-
-      return {
-        description: tool._def.description,
-        parameters: tool._def.parameters,
-        output: tool._def.output,
-      };
-    },
-  });
 
 export const displayMomentTool = tool({
   description:
-    "Useful for displaying a moment in the chat. Pass the moment ID and the reasoning for displaying it.",
+    "Displays a specific video moment in the chat interface with contextual reasoning. Use this when you want to highlight a particular moment from a meeting that directly addresses the user's question or provides valuable insights.",
   parameters: z
     .object({
-      id: z.string().describe("(Required) The ID of the moment to display."),
+      id: z
+        .string()
+        .describe(
+          "(Required) The unique identifier of the moment you want to display.",
+        ),
       reasoning: z
         .string()
-        .describe("(Required) The reasoning for displaying the moment."),
+        .describe(
+          "(Required) A clear explanation of why this moment is relevant to the current conversation or question.",
+        ),
     })
-    .describe("The arguments for the displayMoment tool."),
-  output: z.object({
-    id: z.string(),
-    reasoning: z.string(),
-    moment: VideoMoment.nullable(),
-  }),
+    .describe(
+      "Parameters needed to display a specific video moment with context.",
+    ),
   execute: async ({ id, reasoning }) => {
     try {
       const moment = await api.moments.getOneById({ momentId: id });
@@ -127,7 +40,7 @@ export const displayMomentTool = tool({
 export const listMeetingsTool = (profileId: string, apiVideoIds?: string[]) =>
   tool({
     description:
-      "Useful when you need to get data about one or more meetings from the database.",
+      "Retrieves a paginated list of meetings with optional filtering capabilities. Use this when you need to find specific meetings by date range, speaker, or meeting ID, or when you need to provide an overview of recent meetings.",
     parameters: z
       .object({
         filters: z
@@ -136,55 +49,44 @@ export const listMeetingsTool = (profileId: string, apiVideoIds?: string[]) =>
               .string()
               .optional()
               .describe(
-                "(Optional) The ID, aka `video_api_id`, of the meeting.",
+                "(Optional) The unique identifier (video_api_id) of a specific meeting you want to retrieve.",
               ),
             speaker: z
               .string()
               .optional()
               .describe(
-                "(Optional) The speaker, aka `target_person`, to filter the meetings by. Generally, this is the person you are coaching.",
+                "(Optional) Filter meetings by the primary speaker or target person. Particularly useful when looking for coaching sessions with a specific individual.",
               ),
             startDate: z
               .string()
               .optional()
-              .describe("(Optional) The start date to filter the meetings by."),
+              .describe(
+                "(Optional) ISO format date string to filter meetings that occurred on or after this date.",
+              ),
             endDate: z
               .string()
               .optional()
-              .describe("(Optional) The end date to filter the meetings by."),
+              .describe(
+                "(Optional) ISO format date string to filter meetings that occurred on or before this date.",
+              ),
           })
-          .describe("(Optional) The filters to apply to the meetings."),
+          .describe(
+            "(Optional) Criteria to narrow down the meetings returned.",
+          ),
         page: z
           .number()
           .optional()
-          .describe("(Optional) The page number to fetch (starts at 1)."),
+          .describe(
+            "(Optional) The page number for pagination, starting at 1. Defaults to first page if not specified.",
+          ),
         pageSize: z
           .number()
           .optional()
-          .describe("(Optional) Number of items per page. Defaults to 10."),
+          .describe(
+            "(Optional) Number of meetings to return per page. Defaults to 10 if not specified.",
+          ),
       })
-      .describe("The arguments for the listMeetings tool."),
-    output: z.object({
-      data: z
-        .array(
-          meetingsRowSchema
-            .pick({
-              name: true,
-              summary: true,
-              date: true,
-              speaker: true,
-            })
-            .extend({
-              id: z.string(),
-              momentIds: z.array(z.string()),
-            }),
-        )
-        .nullable(),
-      error: z.string().nullable(),
-      page: z.number(),
-      pageSize: z.number(),
-      hasMore: z.boolean().nullable(),
-    }),
+      .describe("Parameters for retrieving and filtering meeting records."),
     execute: async ({
       filters: { meetingId, speaker, startDate, endDate },
       page,
@@ -244,36 +146,33 @@ export const listMeetingsTool = (profileId: string, apiVideoIds?: string[]) =>
     },
   });
 
-export type ListMeetingsToolOutput = ToolOutput<
-  ReturnType<typeof listMeetingsTool>
+export type ListMeetingsToolOutput = Awaited<
+  ReturnType<ReturnType<typeof listMeetingsTool>["execute"]>
 >;
 
 export const searchMomentsTool = (profileId: string, apiVideoIds?: string[]) =>
   tool({
-    description: "Useful for searching for moments in the database.",
+    description:
+      "Performs semantic search across meeting moments to find relevant content. Use this when you need to locate specific discussions, topics, or insights mentioned during meetings without knowing exact timestamps or meeting details.",
     parameters: z
       .object({
-        query: z.string().describe("(Required) The query to search for."),
+        query: z
+          .string()
+          .describe(
+            "(Required) The natural language search query describing what you're looking for in the meeting moments.",
+          ),
         topK: z
           .number()
           .optional()
           .describe(
-            "(Optional) The number of results to return. Defaults to 10.",
+            "(Optional) Maximum number of most relevant results to return. Higher values provide more comprehensive results but may include less relevant matches. Defaults to 10.",
           ),
       })
-      .describe("The arguments for the searchMoments tool."),
-    output: z.object({
-      results: z.array(
-        z.object({
-          moment: VideoMoment,
-          metadata: IndexMetadata.optional(),
-        }),
-      ),
-    }),
+      .describe("Parameters for semantic search across meeting moments."),
     execute: async ({ query, topK }) => {
       const results = await searchSimilar(query, {
         topK: topK ?? 10,
-        minScore: 0.2,
+        minScore: 0.4,
         filter: {
           $and: [
             { profile_id: { $eq: profileId } },
@@ -310,6 +209,6 @@ export const searchMomentsTool = (profileId: string, apiVideoIds?: string[]) =>
     },
   });
 
-export type SearchMomentsToolOutput = ToolOutput<
-  ReturnType<typeof searchMomentsTool>
+export type SearchMomentsToolOutput = Awaited<
+  ReturnType<ReturnType<typeof searchMomentsTool>["execute"]>
 >;

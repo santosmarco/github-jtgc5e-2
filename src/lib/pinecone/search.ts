@@ -9,7 +9,7 @@ export async function searchSimilar(
     filter?: Record<string, unknown>;
   },
 ) {
-  const { topK = 5, minScore = 0.7, filter } = options ?? {};
+  const { topK = 5, minScore = 0.4, filter } = options ?? {};
 
   const queryEmbedding = await embedText(query);
   const index = await getIndex();
