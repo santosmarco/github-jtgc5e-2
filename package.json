@@ -106,7 +106,7 @@
     "@voctrolabs/node-webvtt": "^1.1.0",
     "@zodios/core": "^10.9.6",
     "@zodios/express": "^10.6.1",
-    "ai": "^4.0.2",
+    "ai": "^4.3.4",
     "axios": "^1.7.7",
     "axios-retry": "^4.5.0",
     "canvas-confetti": "^1.9.3",
