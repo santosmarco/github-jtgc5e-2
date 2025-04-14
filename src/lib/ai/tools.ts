@@ -100,10 +100,21 @@ export const listMeetingsTool = (profileId: string, apiVideoIds?: string[]) =>
       const start = (page - 1) * pageSize;
       const end = start + pageSize - 1;
 
+      // Get all session video IDs first
+      const { data: sessionVideoIds } = await supabase
+        .from("sessions")
+        .select("api_video_id")
+        .not("api_video_id", "is", null);
+
+      const sessionVideoIdSet = new Set(
+        sessionVideoIds?.map((s) => s.api_video_id) ?? [],
+      );
+
       const query = supabase
         .from("meetings")
         .select("*, moments(*)")
         .eq("profile_id", profileId)
+        .not("video_api_id", "in", Array.from(sessionVideoIdSet))
         .order("created_at", { ascending: false, nullsFirst: false })
         .range(start, end);
 
