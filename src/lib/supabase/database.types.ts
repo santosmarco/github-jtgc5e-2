@@ -3744,7 +3744,8 @@ export type Database = {
           created_at: string
           id: string
           session_id: string
-          source: string | null
+          source_id: string | null
+          source_type: Database["public"]["Enums"]["source_type"] | null
           title: string | null
           type: string | null
         }
@@ -3752,7 +3753,8 @@ export type Database = {
           created_at?: string
           id?: string
           session_id: string
-          source?: string | null
+          source_id?: string | null
+          source_type?: Database["public"]["Enums"]["source_type"] | null
           title?: string | null
           type?: string | null
         }
@@ -3760,7 +3762,8 @@ export type Database = {
           created_at?: string
           id?: string
           session_id?: string
-          source?: string | null
+          source_id?: string | null
+          source_type?: Database["public"]["Enums"]["source_type"] | null
           title?: string | null
           type?: string | null
         }
@@ -4750,6 +4753,7 @@ export type Database = {
       profile_status_enum: "active" | "pending" | "inactive"
       recall_calendar_platform_type: "google_calendar" | "microsoft_outlook"
       report_processing_status_type: "pending" | "completed" | "failed"
+      source_type: "moment"
       user_role_enum: "user" | "coach" | "admin"
     }
     CompositeTypes: {
@@ -4958,6 +4962,7 @@ export const Constants = {
       profile_status_enum: ["active", "pending", "inactive"],
       recall_calendar_platform_type: ["google_calendar", "microsoft_outlook"],
       report_processing_status_type: ["pending", "completed", "failed"],
+      source_type: ["moment"],
       user_role_enum: ["user", "coach", "admin"],
     },
   },
