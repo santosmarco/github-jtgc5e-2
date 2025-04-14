@@ -6,6 +6,7 @@ import _ from "lodash";
 import { Calendar, CalendarIcon, ChevronDown, Filter, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+
 import { SessionList } from "~/components/sessions/session-list";
 import { Button } from "~/components/ui/button";
 import {
@@ -43,22 +44,17 @@ export default function SessionsPage() {
     );
 
   // Filter sessions based on search and filters
-  const filteredSessions = (sessionsData ?? [])
-    .map((session) => ({
-      ...session,
-      insights: [{ id: "1", content: "Insight 1", isStarred: false }],
-    }))
-    .filter((session) => {
-      // Apply search filter
-      if (
-        searchQuery &&
-        !session.title?.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !session.summary?.toLowerCase().includes(searchQuery.toLowerCase())
-      ) {
-        return false;
-      }
+  const filteredSessions = (sessionsData ?? []).filter((session) => {
+    // Apply search filter
+    if (
+      searchQuery &&
+      !session.title?.toLowerCase().includes(searchQuery.toLowerCase()) &&
+      !session.summary?.toLowerCase().includes(searchQuery.toLowerCase())
+    ) {
+      return false;
+    }
 
-      /*
+    /*
     // Apply time filter
     if (selectedTimeFilter !== "all" && session.status !== selectedTimeFilter) {
       return false;
@@ -70,8 +66,8 @@ export default function SessionsPage() {
     }
     */
 
-      return true;
-    });
+    return true;
+  });
 
   // Sort sessions by date in descending order using lodash
   const sortedSessions = _.orderBy(
