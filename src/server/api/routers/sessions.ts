@@ -1,8 +1,8 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+
 import { logger } from "~/lib/logging/server";
 import type { TablesInsert, TablesUpdate } from "~/lib/supabase/database.types";
-
 import { createClient } from "~/lib/supabase/server";
 import { isTruthy } from "~/lib/utils";
 import {
@@ -104,7 +104,7 @@ export const sessionsRouter = createTRPCRouter({
       const { data: existingSessions, error: sessionsError } = await supabase
         .from("sessions")
         .select(
-          "*, user:profiles!user_id(*), coach:profiles!coach_id(*), event:calendar_events_v2!event_id(*, meeting_bots:meeting_bots_v2(*)), meeting:meetings!api_video_id(*, action_items:meeting_action_items(*))",
+          "*, user:profiles!user_id(*), coach:profiles!coach_id(*), event:calendar_events_v2!event_id(*, meeting_bots:meeting_bots_v2(*)), meeting:meetings!api_video_id(*, action_items:meeting_action_items(*), insights:meeting_topics(*))",
         )
         .eq("user_id", profileId);
 
@@ -147,7 +147,7 @@ export const sessionsRouter = createTRPCRouter({
         .from("sessions")
         .insert(newSessions)
         .select(
-          "*, user:profiles!user_id(*), coach:profiles!coach_id(*), event:calendar_events_v2!event_id(*, meeting_bots:meeting_bots_v2(*)), meeting:meetings!api_video_id(*, action_items:meeting_action_items(*))",
+          "*, user:profiles!user_id(*), coach:profiles!coach_id(*), event:calendar_events_v2!event_id(*, meeting_bots:meeting_bots_v2(*)), meeting:meetings!api_video_id(*, action_items:meeting_action_items(*), insights:meeting_topics(*))",
         );
 
       if (insertError) {
@@ -205,7 +205,7 @@ export const sessionsRouter = createTRPCRouter({
                 .update({ api_video_id: apiVideoId })
                 .eq("event_id", matchingEvent.id)
                 .select(
-                  "*, user:profiles!user_id(*), coach:profiles!coach_id(*), event:calendar_events_v2!event_id(*, meeting_bots:meeting_bots_v2(*)), meeting:meetings!api_video_id(*, action_items:meeting_action_items(*))",
+                  "*, user:profiles!user_id(*), coach:profiles!coach_id(*), event:calendar_events_v2!event_id(*, meeting_bots:meeting_bots_v2(*)), meeting:meetings!api_video_id(*, action_items:meeting_action_items(*), insights:meeting_topics(*))",
                 )
                 .maybeSingle();
 

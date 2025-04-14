@@ -1,7 +1,7 @@
 "use client";
 
 import dayjs from "dayjs";
-import { AnimatePresence, type Variants, motion } from "framer-motion";
+import { AnimatePresence, motion, type Variants } from "framer-motion";
 import {
   Calendar,
   CheckCircle2,
@@ -10,6 +10,7 @@ import {
   Video,
 } from "lucide-react";
 import { useState } from "react";
+
 import { PlayerProvider } from "~/components/player/provider";
 import { VideoPlayer } from "~/components/player/video";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
@@ -24,6 +25,7 @@ import { useIsMobile } from "~/hooks/use-mobile";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import type { RouterOutputs } from "~/trpc/shared";
+
 import { ActionsList } from "./actions-list";
 import { InsightsList } from "./insights-list";
 import PostItContainer from "./post-it-container";
@@ -622,29 +624,6 @@ export default function SessionCard({
                       onAddInsight={onAddInsight}
                       onToggleStar={onToggleStar}
                     />
-                  </motion.div>
-                )}
-
-                {/* Empty state if no insights or actions */}
-                {!hasInsights && !hasActions && (
-                  <motion.div
-                    variants={itemVariants}
-                    className="col-span-12 py-4"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    <div className="flex flex-col items-center justify-center text-center">
-                      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted/30">
-                        <Lightbulb className="h-6 w-6 text-muted-foreground/60" />
-                      </div>
-                      <h3 className="mb-1 text-sm font-medium">
-                        No insights or action items yet
-                      </h3>
-                      <p className="max-w-md text-xs text-muted-foreground">
-                        They will appear here once available
-                      </p>
-                    </div>
                   </motion.div>
                 )}
 
