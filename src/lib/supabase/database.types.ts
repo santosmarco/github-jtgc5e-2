@@ -1122,6 +1122,7 @@ export type Database = {
           deleted_at: string | null
           due_date: string | null
           id: string
+          server_deleted_at: string | null
           text: string
           vtt_end_segment_id: number | null
           vtt_start_segment_id: number | null
@@ -1133,6 +1134,7 @@ export type Database = {
           deleted_at?: string | null
           due_date?: string | null
           id?: string
+          server_deleted_at?: string | null
           text: string
           vtt_end_segment_id?: number | null
           vtt_start_segment_id?: number | null
@@ -1144,6 +1146,7 @@ export type Database = {
           deleted_at?: string | null
           due_date?: string | null
           id?: string
+          server_deleted_at?: string | null
           text?: string
           vtt_end_segment_id?: number | null
           vtt_start_segment_id?: number | null
@@ -2030,6 +2033,7 @@ export type Database = {
           api_video_id: string
           created_at: string
           id: string
+          server_deleted_at: string | null
           summary: string
           title: string
           vtt_end_segment_id: number | null
@@ -2039,6 +2043,7 @@ export type Database = {
           api_video_id: string
           created_at?: string
           id?: string
+          server_deleted_at?: string | null
           summary: string
           title: string
           vtt_end_segment_id?: number | null
@@ -2048,6 +2053,7 @@ export type Database = {
           api_video_id?: string
           created_at?: string
           id?: string
+          server_deleted_at?: string | null
           summary?: string
           title?: string
           vtt_end_segment_id?: number | null

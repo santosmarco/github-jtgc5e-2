@@ -3,6 +3,7 @@
 import { AnimatePresence, motion, useInView } from "framer-motion";
 import { Check, Copy, Lightbulb, Sparkles, Star } from "lucide-react";
 import { useRef, useState } from "react";
+
 import {
   Tooltip,
   TooltipContent,
@@ -190,7 +191,7 @@ export default function InsightCard({
                 }}
                 aria-expanded={isExpanded}
               >
-                <p className="text-sm leading-relaxed tracking-normal">
+                <p className="text-left text-sm leading-relaxed tracking-normal">
                   {insight}
                 </p>
               </button>

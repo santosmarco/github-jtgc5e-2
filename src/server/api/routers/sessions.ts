@@ -222,12 +222,37 @@ export const sessionsRouter = createTRPCRouter({
           (event) => event.id === session.event_id,
         );
 
-        if (!updatedEvent) return session;
+        if (!updatedEvent)
+          return {
+            ...session,
+            meeting: session.meeting
+              ? {
+                  ...session.meeting,
+                  insights: session.meeting.insights.filter(
+                    (insight) => !insight.server_deleted_at,
+                  ),
+                  action_items: session.meeting.action_items.filter(
+                    (actionItem) => !actionItem.server_deleted_at,
+                  ),
+                }
+              : null,
+          };
 
         // Create a new session object with updated event data
         return {
           ...session,
           event: { ...session.event, ...updatedEvent },
+          meeting: session.meeting
+            ? {
+                ...session.meeting,
+                insights: session.meeting.insights.filter(
+                  (insight) => !insight.server_deleted_at,
+                ),
+                action_items: session.meeting.action_items.filter(
+                  (actionItem) => !actionItem.server_deleted_at,
+                ),
+              }
+            : null,
         };
       });
 
