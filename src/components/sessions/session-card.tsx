@@ -30,13 +30,8 @@ import { ActionsList } from "./actions-list";
 import { InsightsList } from "./insights-list";
 import PostItContainer from "./post-it-container";
 
-type SessionType =
-  RouterOutputs["sessions"]["getAllSessionsForUser"][number] & {
-    insights?: string[];
-  };
-
 export interface SessionCardProps {
-  session: SessionType;
+  session: RouterOutputs["sessions"]["getAllSessionsForUser"][number];
   isLoading?: boolean;
   isNextSession?: boolean;
   isCollapsed?: boolean;
@@ -265,7 +260,7 @@ export default function SessionCard({
   };
 
   // Determine if we should show tabs or both sections
-  const hasInsights = Boolean(session.insights?.length);
+  const hasInsights = Boolean(session.meeting?.insights?.length);
   const hasActions = Boolean(session.meeting?.action_items?.length);
   const shouldShowTabs = isMobile && hasInsights && hasActions;
 
@@ -619,7 +614,7 @@ export default function SessionCard({
                       Insights
                     </h4>
                     <InsightsList
-                      insights={session.insights || []}
+                      insights={session.meeting?.insights || []}
                       isLoading={isLoading}
                       onAddInsight={onAddInsight}
                       onToggleStar={onToggleStar}

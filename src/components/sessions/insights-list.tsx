@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Filter, PlusCircle, Sparkles, X } from "lucide-react";
 import { useState } from "react";
 import { z } from "zod";
+
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
@@ -31,6 +32,8 @@ import {
 import { Skeleton } from "~/components/ui/skeleton";
 import { Textarea } from "~/components/ui/textarea";
 import { useValidatedForm } from "~/hooks/use-validated-form";
+import type { RouterOutputs } from "~/trpc/shared";
+
 import InsightCard from "./insight-card";
 
 export type Insight = {
@@ -40,7 +43,9 @@ export type Insight = {
 };
 
 export type InsightsListProps = {
-  insights: readonly (string | Insight)[];
+  insights: NonNullable<
+    RouterOutputs["sessions"]["getAllSessionsForUser"][number]["meeting"]
+  >["insights"];
   isLoading?: boolean;
   onAddInsight?: (content: string) => void;
   onToggleStar?: (id: string, isStarred: boolean) => void;
@@ -71,27 +76,8 @@ export function InsightsList({
     },
   });
 
-  // Normalize insights to have a consistent format
-  const normalizedInsights: readonly Insight[] = insights.map(
-    (insight, index) => {
-      if (typeof insight === "string") {
-        const id = `insight-${index}-${insight.slice(0, 10).replace(/\s+/g, "-").toLowerCase()}`;
-        return {
-          id,
-          content: insight,
-          isStarred: starredInsights[id] || false,
-        };
-      }
-      return insight as Insight;
-    },
-  );
-
   // Apply filters
-  const filteredInsights = filterStarred
-    ? normalizedInsights.filter(
-        (insight) => insight.isStarred || starredInsights[insight.id],
-      )
-    : normalizedInsights;
+  const filteredInsights = insights;
 
   const handleAddInsight = async (values: InsightFormValues): Promise<void> => {
     if (onAddInsight) {
@@ -158,7 +144,7 @@ export function InsightsList({
       className="space-y-2"
     >
       {/* Header with filter options */}
-      {normalizedInsights.length > 0 && (
+      {insights.length > 0 && (
         <motion.div
           variants={itemVariants}
           className="mb-2 flex h-full items-center justify-between"
@@ -228,11 +214,9 @@ export function InsightsList({
             <InsightCard
               key={insight.id}
               id={insight.id}
-              insight={insight.content}
+              insight={insight.title}
               index={index}
-              isStarred={
-                insight.isStarred || starredInsights[insight.id] || false
-              }
+              isStarred={false}
               onToggleStar={handleToggleStar}
             />
           ))
