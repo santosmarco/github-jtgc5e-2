@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useInView } from "framer-motion";
 import { CalendarClock, CheckCircle2, Circle, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
+
 import {
   Tooltip,
   TooltipContent,
@@ -287,13 +288,17 @@ export default function ActionCard({
             )}
             onClick={(e) => {
               e.stopPropagation();
-              hasMoreText && setIsExpanded((curr) => !curr);
+              if (hasMoreText) {
+                setIsExpanded((curr) => !curr);
+              }
             }}
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
-                hasMoreText && setIsExpanded(!isExpanded);
+                if (hasMoreText) {
+                  setIsExpanded((curr) => !curr);
+                }
               }
             }}
             aria-expanded={isExpanded}

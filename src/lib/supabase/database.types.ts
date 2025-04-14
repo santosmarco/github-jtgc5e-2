@@ -3739,6 +3739,41 @@ export type Database = {
         }
         Relationships: []
       }
+      session_annotations: {
+        Row: {
+          created_at: string
+          id: string
+          session_id: string
+          source: string | null
+          title: string | null
+          type: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          session_id: string
+          source?: string | null
+          title?: string | null
+          type?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          session_id?: string
+          source?: string | null
+          title?: string | null
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_annotations_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_notes: {
         Row: {
           attachment_url: string | null

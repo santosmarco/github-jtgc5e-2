@@ -104,7 +104,7 @@ export const sessionsRouter = createTRPCRouter({
       const { data: existingSessions, error: sessionsError } = await supabase
         .from("sessions")
         .select(
-          "*, user:profiles!user_id(*), coach:profiles!coach_id(*), event:calendar_events_v2!event_id(*, meeting_bots:meeting_bots_v2(*)), meeting:meetings!api_video_id(*, action_items:meeting_action_items(*), insights:meeting_topics(*))",
+          "*, user:profiles!user_id(*), coach:profiles!coach_id(*), event:calendar_events_v2!event_id(*, meeting_bots:meeting_bots_v2(*)), meeting:meetings!api_video_id(*, action_items:meeting_action_items(*), insights:meeting_topics(*)), annotations:session_annotations(*)",
         )
         .eq("user_id", profileId);
 
@@ -127,7 +127,20 @@ export const sessionsRouter = createTRPCRouter({
 
       // If no new sessions need to be created, return existing sessions
       if (eventsWithoutSessions.length === 0) {
-        return existingSessions;
+        return existingSessions.map((session) => ({
+          ...session,
+          meeting: session.meeting
+            ? {
+                ...session.meeting,
+                insights: session.meeting.insights.filter(
+                  (insight) => !insight.server_deleted_at,
+                ),
+                action_items: session.meeting.action_items.filter(
+                  (actionItem) => !actionItem.server_deleted_at,
+                ),
+              }
+            : null,
+        }));
       }
 
       // Prepare new session records
@@ -147,7 +160,7 @@ export const sessionsRouter = createTRPCRouter({
         .from("sessions")
         .insert(newSessions)
         .select(
-          "*, user:profiles!user_id(*), coach:profiles!coach_id(*), event:calendar_events_v2!event_id(*, meeting_bots:meeting_bots_v2(*)), meeting:meetings!api_video_id(*, action_items:meeting_action_items(*), insights:meeting_topics(*))",
+          "*, user:profiles!user_id(*), coach:profiles!coach_id(*), event:calendar_events_v2!event_id(*, meeting_bots:meeting_bots_v2(*)), meeting:meetings!api_video_id(*, action_items:meeting_action_items(*), insights:meeting_topics(*)), annotations:session_annotations(*)",
         );
 
       if (insertError) {
@@ -156,7 +169,20 @@ export const sessionsRouter = createTRPCRouter({
           error: insertError,
         });
         // Return existing sessions if we failed to create new ones
-        return existingSessions;
+        return existingSessions.map((session) => ({
+          ...session,
+          meeting: session.meeting
+            ? {
+                ...session.meeting,
+                insights: session.meeting.insights.filter(
+                  (insight) => !insight.server_deleted_at,
+                ),
+                action_items: session.meeting.action_items.filter(
+                  (actionItem) => !actionItem.server_deleted_at,
+                ),
+              }
+            : null,
+        }));
       }
 
       // Update the events with type coaching_session
@@ -166,7 +192,22 @@ export const sessionsRouter = createTRPCRouter({
 
       if (eventIds.length === 0) {
         // Combine existing and created sessions if we have any
-        return [...existingSessions, ...(createdSessions || [])];
+        return [...existingSessions, ...(createdSessions || [])].map(
+          (session) => ({
+            ...session,
+            meeting: session.meeting
+              ? {
+                  ...session.meeting,
+                  insights: session.meeting.insights.filter(
+                    (insight) => !insight.server_deleted_at,
+                  ),
+                  action_items: session.meeting.action_items.filter(
+                    (actionItem) => !actionItem.server_deleted_at,
+                  ),
+                }
+              : null,
+          }),
+        );
       }
 
       // Update events to coaching_session type
@@ -205,7 +246,7 @@ export const sessionsRouter = createTRPCRouter({
                 .update({ api_video_id: apiVideoId })
                 .eq("event_id", matchingEvent.id)
                 .select(
-                  "*, user:profiles!user_id(*), coach:profiles!coach_id(*), event:calendar_events_v2!event_id(*, meeting_bots:meeting_bots_v2(*)), meeting:meetings!api_video_id(*, action_items:meeting_action_items(*), insights:meeting_topics(*))",
+                  "*, user:profiles!user_id(*), coach:profiles!coach_id(*), event:calendar_events_v2!event_id(*, meeting_bots:meeting_bots_v2(*)), meeting:meetings!api_video_id(*, action_items:meeting_action_items(*), insights:meeting_topics(*)), annotations:session_annotations(*)",
                 )
                 .maybeSingle();
 

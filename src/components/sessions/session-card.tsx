@@ -29,6 +29,7 @@ import type { RouterOutputs } from "~/trpc/shared";
 import { ActionsList } from "./actions-list";
 import { InsightsList } from "./insights-list";
 import PostItContainer from "./post-it-container";
+import SessionAnnotation from "./session-annotation";
 
 export interface SessionCardProps {
   session: RouterOutputs["sessions"]["getAllSessionsForUser"][number];
@@ -438,235 +439,244 @@ export default function SessionCard({
           </CardHeader>
 
           {/* Card Content - Only shown if not collapsed */}
-          {!isCollapsed && (
-            <CardContent className="p-0">
-              {/* Video Player Section */}
-              {hasVideoRecording && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.3 }}
-                  className="mb-2 bg-gradient-to-r from-muted/5 to-muted/10 px-4 py-4"
-                >
-                  <div className="grid grid-cols-12 items-start gap-6">
-                    {/* Summary Section */}
-                    <div className="col-span-6 flex flex-col justify-center">
-                      <div className="space-y-4">
+          {!isCollapsed &&
+            (isNextSession ? (
+              <CardContent className="p-0">
+                <SessionAnnotation annotations={session.annotations} />
+              </CardContent>
+            ) : (
+              <CardContent className="p-0">
+                {/* Video Player Section */}
+                {hasVideoRecording && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                    className="mb-2 bg-gradient-to-r from-muted/5 to-muted/10 px-4 py-4"
+                  >
+                    <div className="grid grid-cols-12 items-start gap-6">
+                      {/* Summary Section */}
+                      <div className="col-span-6 flex flex-col justify-center">
+                        <div className="space-y-4">
+                          <div className="space-y-1.5">
+                            <h4 className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                              <FileText className="h-4 w-4 text-primary/70" />
+                              Summary
+                            </h4>
+                          </div>
+                          {(session.summary ?? session.meeting?.summary) ? (
+                            <p className="border-l-2 border-border pl-2 text-sm leading-relaxed text-muted-foreground">
+                              {session.summary ?? session.meeting?.summary}
+                            </p>
+                          ) : (
+                            <div className="rounded-md border border-dashed border-muted-foreground/20 bg-muted/30 px-3 py-2">
+                              <p className="text-sm italic text-muted-foreground">
+                                No summary available for this session yet.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Video Player */}
+                      <motion.div
+                        variants={videoPlayerVariants}
+                        className="col-span-6 space-y-4 rounded-lg shadow-lg"
+                      >
                         <div className="space-y-1.5">
                           <h4 className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                            <FileText className="h-4 w-4 text-primary/70" />
-                            Summary
+                            <Video className="h-4 w-4 text-primary/70" />
+                            Recording
                           </h4>
                         </div>
-                        {(session.summary ?? session.meeting?.summary) ? (
-                          <p className="border-l-2 border-border pl-2 text-sm leading-relaxed text-muted-foreground">
-                            {session.summary ?? session.meeting?.summary}
-                          </p>
+                        {videoData ? (
+                          <PlayerProvider>
+                            <div className="mt-4 overflow-hidden rounded-lg ring-2 ring-primary/10">
+                              <VideoPlayer
+                                video={videoData}
+                                startAt={0}
+                                playPauseButtonSize="sm"
+                                hideHeader={true}
+                              />
+                            </div>
+                          </PlayerProvider>
                         ) : (
-                          <div className="rounded-md border border-dashed border-muted-foreground/20 bg-muted/30 px-3 py-2">
-                            <p className="text-sm italic text-muted-foreground">
-                              No summary available for this session yet.
-                            </p>
+                          <div className="aspect-video w-full rounded-lg bg-muted/50">
+                            <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
+                              <span className="animate-pulse text-sm">
+                                Loading recording...
+                              </span>
+                            </div>
                           </div>
                         )}
-                      </div>
+                      </motion.div>
                     </div>
+                  </motion.div>
+                )}
 
-                    {/* Video Player */}
+                {/* Show summary in original location only if no video */}
+                {!hasVideoRecording && session.summary && (
+                  <motion.div
+                    variants={contentVariants}
+                    className="mb-2 bg-muted/20 px-4 py-3"
+                  >
+                    <motion.p
+                      variants={itemVariants}
+                      className="text-sm leading-relaxed text-foreground"
+                    >
+                      {session.summary}
+                    </motion.p>
+                  </motion.div>
+                )}
+
+                {/* Tabs for mobile view */}
+                {shouldShowTabs && (
+                  <motion.div
+                    variants={contentVariants}
+                    className="mb-2 px-4 py-2"
+                  >
+                    <div className="flex items-center justify-center gap-4">
+                      <motion.button
+                        variants={tabVariants}
+                        initial="inactive"
+                        animate={
+                          activeSection === "insights" ||
+                          activeSection === "both"
+                            ? "active"
+                            : "inactive"
+                        }
+                        whileHover="hover"
+                        whileTap={{ scale: 0.95 }}
+                        className={cn(
+                          "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium leading-none",
+                          activeSection === "insights" ||
+                            activeSection === "both"
+                            ? "bg-amber-50 text-amber-700 dark:bg-amber-900/10 dark:text-amber-400"
+                            : "text-muted-foreground",
+                        )}
+                        onClick={() =>
+                          setActiveSection(
+                            activeSection === "actions" ? "both" : "insights",
+                          )
+                        }
+                      >
+                        <Lightbulb className="h-3.5 w-3.5" />
+                        Insights
+                      </motion.button>
+
+                      <motion.button
+                        variants={tabVariants}
+                        initial="inactive"
+                        animate={
+                          activeSection === "actions" ||
+                          activeSection === "both"
+                            ? "active"
+                            : "inactive"
+                        }
+                        whileHover="hover"
+                        whileTap={{ scale: 0.95 }}
+                        className={cn(
+                          "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium leading-none",
+                          activeSection === "actions" ||
+                            activeSection === "both"
+                            ? "bg-blue-50 text-blue-700 dark:bg-blue-900/10 dark:text-blue-400"
+                            : "text-muted-foreground",
+                        )}
+                        onClick={() =>
+                          setActiveSection(
+                            activeSection === "insights" ? "both" : "actions",
+                          )
+                        }
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Actions
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Main Content Area - Side-by-Side for desktop, stacked for mobile */}
+                <motion.div
+                  variants={contentVariants}
+                  className={cn(
+                    "px-4 py-3",
+                    "grid gap-6",
+                    !isMobile ? "grid-cols-12" : "grid-cols-1",
+                  )}
+                >
+                  {/* Insights Column */}
+                  {(!isMobile ||
+                    activeSection === "insights" ||
+                    activeSection === "both") && (
                     <motion.div
-                      variants={videoPlayerVariants}
-                      className="col-span-6 space-y-4 rounded-lg shadow-lg"
-                    >
-                      <div className="space-y-1.5">
-                        <h4 className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          <Video className="h-4 w-4 text-primary/70" />
-                          Recording
-                        </h4>
-                      </div>
-                      {videoData ? (
-                        <PlayerProvider>
-                          <div className="mt-4 overflow-hidden rounded-lg ring-2 ring-primary/10">
-                            <VideoPlayer
-                              video={videoData}
-                              startAt={0}
-                              playPauseButtonSize="sm"
-                              hideHeader={true}
-                            />
-                          </div>
-                        </PlayerProvider>
-                      ) : (
-                        <div className="aspect-video w-full rounded-lg bg-muted/50">
-                          <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
-                            <span className="animate-pulse text-sm">
-                              Loading recording...
-                            </span>
-                          </div>
-                        </div>
+                      variants={itemVariants}
+                      className={cn(
+                        "space-y-2",
+                        !isMobile ? "col-span-6" : "col-span-10 col-start-2",
                       )}
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <h4 className="mb-3 flex items-center gap-1.5 text-xs font-medium uppercase leading-none text-muted-foreground">
+                        <Lightbulb className="h-4 w-4 text-amber-500" />
+                        Insights
+                      </h4>
+                      <InsightsList
+                        insights={session.meeting?.insights || []}
+                        isLoading={isLoading}
+                        onAddInsight={onAddInsight}
+                        onToggleStar={onToggleStar}
+                      />
                     </motion.div>
-                  </div>
-                </motion.div>
-              )}
+                  )}
 
-              {/* Show summary in original location only if no video */}
-              {!hasVideoRecording && session.summary && (
-                <motion.div
-                  variants={contentVariants}
-                  className="mb-2 bg-muted/20 px-4 py-3"
-                >
-                  <motion.p
-                    variants={itemVariants}
-                    className="text-sm leading-relaxed text-foreground"
-                  >
-                    {session.summary}
-                  </motion.p>
-                </motion.div>
-              )}
-
-              {/* Tabs for mobile view */}
-              {shouldShowTabs && (
-                <motion.div
-                  variants={contentVariants}
-                  className="mb-2 px-4 py-2"
-                >
-                  <div className="flex items-center justify-center gap-4">
-                    <motion.button
-                      variants={tabVariants}
-                      initial="inactive"
-                      animate={
-                        activeSection === "insights" || activeSection === "both"
-                          ? "active"
-                          : "inactive"
-                      }
-                      whileHover="hover"
-                      whileTap={{ scale: 0.95 }}
+                  {/* Action Items Column */}
+                  {(activeSection === "actions" ||
+                    activeSection === "both" ||
+                    !shouldShowTabs) && (
+                    <motion.div
+                      variants={itemVariants}
                       className={cn(
-                        "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium leading-none",
-                        activeSection === "insights" || activeSection === "both"
-                          ? "bg-amber-50 text-amber-700 dark:bg-amber-900/10 dark:text-amber-400"
-                          : "text-muted-foreground",
+                        "space-y-2",
+                        !isMobile ? "col-span-6" : "col-span-10 col-start-2",
                       )}
-                      onClick={() =>
-                        setActiveSection(
-                          activeSection === "actions" ? "both" : "insights",
-                        )
-                      }
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3 }}
                     >
-                      <Lightbulb className="h-3.5 w-3.5" />
-                      Insights
-                    </motion.button>
-
-                    <motion.button
-                      variants={tabVariants}
-                      initial="inactive"
-                      animate={
-                        activeSection === "actions" || activeSection === "both"
-                          ? "active"
-                          : "inactive"
-                      }
-                      whileHover="hover"
-                      whileTap={{ scale: 0.95 }}
-                      className={cn(
-                        "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium leading-none",
-                        activeSection === "actions" || activeSection === "both"
-                          ? "bg-blue-50 text-blue-700 dark:bg-blue-900/10 dark:text-blue-400"
-                          : "text-muted-foreground",
-                      )}
-                      onClick={() =>
-                        setActiveSection(
-                          activeSection === "insights" ? "both" : "actions",
-                        )
-                      }
-                    >
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      Actions
-                    </motion.button>
-                  </div>
+                      <h4 className="mb-3 flex items-center gap-1.5 text-xs font-medium uppercase leading-none text-muted-foreground">
+                        <CheckCircle2 className="h-4 w-4 text-blue-500" />
+                        Action Items
+                      </h4>
+                      <ActionsList
+                        actions={session.meeting?.action_items ?? []}
+                        isLoading={isLoading}
+                        videoId={videoId}
+                      />
+                    </motion.div>
+                  )}
                 </motion.div>
-              )}
 
-              {/* Main Content Area - Side-by-Side for desktop, stacked for mobile */}
-              <motion.div
-                variants={contentVariants}
-                className={cn(
-                  "px-4 py-3",
-                  "grid gap-6",
-                  !isMobile ? "grid-cols-12" : "grid-cols-1",
-                )}
-              >
-                {/* Insights Column */}
-                {(!isMobile ||
-                  activeSection === "insights" ||
-                  activeSection === "both") && (
+                {/* Notes Section */}
+                <AnimatePresence mode="wait">
                   <motion.div
-                    variants={itemVariants}
-                    className={cn(
-                      "space-y-2",
-                      !isMobile ? "col-span-6" : "col-span-10 col-start-2",
-                    )}
+                    key={`notes-${isNotesOpen}`}
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <h4 className="mb-3 flex items-center gap-1.5 text-xs font-medium uppercase leading-none text-muted-foreground">
-                      <Lightbulb className="h-4 w-4 text-amber-500" />
-                      Insights
-                    </h4>
-                    <InsightsList
-                      insights={session.meeting?.insights || []}
-                      isLoading={isLoading}
-                      onAddInsight={onAddInsight}
-                      onToggleStar={onToggleStar}
+                    <PostItContainer
+                      sessionId={session.id}
+                      className="min-h-[300px]"
                     />
                   </motion.div>
-                )}
-
-                {/* Action Items Column */}
-                {(activeSection === "actions" ||
-                  activeSection === "both" ||
-                  !shouldShowTabs) && (
-                  <motion.div
-                    variants={itemVariants}
-                    className={cn(
-                      "space-y-2",
-                      !isMobile ? "col-span-6" : "col-span-10 col-start-2",
-                    )}
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <h4 className="mb-3 flex items-center gap-1.5 text-xs font-medium uppercase leading-none text-muted-foreground">
-                      <CheckCircle2 className="h-4 w-4 text-blue-500" />
-                      Action Items
-                    </h4>
-                    <ActionsList
-                      actions={session.meeting?.action_items ?? []}
-                      isLoading={isLoading}
-                      videoId={videoId}
-                    />
-                  </motion.div>
-                )}
-              </motion.div>
-
-              {/* Notes Section */}
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={`notes-${isNotesOpen}`}
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <PostItContainer
-                    sessionId={session.id}
-                    className="min-h-[300px]"
-                  />
-                </motion.div>
-              </AnimatePresence>
-            </CardContent>
-          )}
+                </AnimatePresence>
+              </CardContent>
+            ))}
         </Card>
       </motion.div>
     </article>

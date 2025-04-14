@@ -14,6 +14,7 @@ import { cn } from "~/lib/utils";
 
 export type InsightCardProps = {
   insight: string;
+  insightText: string;
   id: string;
   index: number;
   onToggleStar?: (id: string, isStarred: boolean) => void;
@@ -23,6 +24,7 @@ export type InsightCardProps = {
 
 export default function InsightCard({
   insight,
+  insightText,
   id,
   index,
   onToggleStar,
@@ -194,6 +196,11 @@ export default function InsightCard({
                 <p className="text-left text-sm leading-relaxed tracking-normal">
                   {insight}
                 </p>
+                {isExpanded && (
+                  <p className="mt-1 text-left text-xs text-muted-foreground">
+                    {insightText}
+                  </p>
+                )}
               </button>
             </div>
 

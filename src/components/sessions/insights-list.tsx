@@ -215,6 +215,7 @@ export function InsightsList({
               key={insight.id}
               id={insight.id}
               insight={insight.title}
+              insightText={insight.summary}
               index={index}
               isStarred={false}
               onToggleStar={handleToggleStar}
