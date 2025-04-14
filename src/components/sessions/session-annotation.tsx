@@ -5,17 +5,11 @@ import _ from "lodash";
 import { FileText } from "lucide-react";
 
 import { Badge } from "~/components/ui/badge";
+import type { Tables } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
 
 export interface SessionAnnotationProps {
-  annotations: Array<{
-    created_at: string;
-    id: string;
-    session_id: string;
-    source: string | null;
-    title: string | null;
-    type: string | null;
-  }>;
+  annotations: Tables<"session_annotations">[];
   className?: string;
 }
 
@@ -118,9 +112,9 @@ export default function SessionAnnotation({
                   <div className="flex-1 truncate text-sm font-medium">
                     {annotation.title || "Untitled"}
                   </div>
-                  {annotation.source && (
+                  {annotation.source_type && (
                     <div className="truncate text-sm text-muted-foreground">
-                      {annotation.source}
+                      {annotation.source_type}
                     </div>
                   )}
                 </div>
