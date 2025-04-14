@@ -7,7 +7,9 @@ import {
   BookOpen,
   Database,
   Eye,
+  FileText,
   Link,
+  List,
   Tag,
   TagIcon,
   Users,
@@ -24,12 +26,25 @@ import { MomentDisplay } from "~/components/chat/moment-display";
 import { ChatMomentList } from "~/components/chat/moment-list";
 import { ObservationList } from "~/components/chat/observation-list";
 import { RelationshipList } from "~/components/chat/relationship-list";
+import { ReportList } from "~/components/chat/report-list";
+import { SimpleList } from "~/components/chat/simple-list";
 import { TopicList } from "~/components/chat/topic-list";
 import { MarkdownRenderer } from "~/components/ui/markdown-renderer";
 import type {
   ListMeetingsToolOutput,
+  ListReportsToolOutput,
   SearchMomentsToolOutput,
 } from "~/lib/ai/tools";
+import type {
+  DiscoverKeyEntitiesToolOutput,
+  EntityLookupToolOutput,
+  EntitySemanticSearchToolOutput,
+  FindEntityRelationshipsToolOutput,
+  FindRelatedTopicsToolOutput,
+  ListEntityNamesToolOutput,
+  ListEntityTypesToolOutput,
+  ListRelationshipTypesToolOutput,
+} from "~/lib/processing/ai-search-tools";
 import type { VideoMoment } from "~/lib/schemas/video-moment";
 import { cn } from "~/lib/utils";
 
@@ -211,7 +226,19 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                                         : toolInvocation.toolName ===
                                             "entitySemanticSearch"
                                           ? "Searching for relevant entities..."
-                                          : "Processing..."
+                                          : toolInvocation.toolName ===
+                                              "listEntityNames"
+                                            ? "Listing entity names..."
+                                            : toolInvocation.toolName ===
+                                                "listRelationshipTypes"
+                                              ? "Listing relationship types..."
+                                              : toolInvocation.toolName ===
+                                                  "listEntityTypes"
+                                                ? "Listing entity types..."
+                                                : toolInvocation.toolName ===
+                                                    "listReports"
+                                                  ? "Finding reports..."
+                                                  : "Processing..."
                         }
                       />
                     );
@@ -276,24 +303,14 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
 
                   if (toolInvocation.toolName === "discoverKeyEntities") {
                     const { entities, totalEntitiesFound } =
-                      toolInvocation.result as {
-                        success: boolean;
-                        totalEntitiesFound?: number;
-                        entities?: Array<{
-                          name: string;
-                          type: string;
-                          description: string;
-                          score: number;
-                          mentionCount: number;
-                        }>;
-                      };
+                      toolInvocation.result as DiscoverKeyEntitiesToolOutput;
 
                     return (
                       <CollapsibleSection
                         key={toolInvocation.toolCallId}
                         title="Key Entities"
                         icon={Database}
-                        count={totalEntitiesFound ?? entities?.length ?? 0}
+                        count={totalEntitiesFound ?? 0}
                         args={toolInvocation.args}
                       >
                         <EntityList entities={entities || []} />
@@ -303,30 +320,36 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
 
                   if (toolInvocation.toolName === "findEntityRelationships") {
                     const { entityName, relationships, totalRelationships } =
-                      toolInvocation.result as {
-                        success: boolean;
-                        entityName: string;
-                        totalRelationships?: number;
-                        relationships?: Array<{
-                          relationship: string;
-                          otherEntity: string;
-                          isSubject: boolean;
-                          topicId: string;
-                          topicTitle: string;
-                          score: number;
-                        }>;
-                      };
+                      toolInvocation.result as FindEntityRelationshipsToolOutput;
+
+                    const formattedRelationships =
+                      relationships?.map((rel) => ({
+                        relationship: rel.relationshipType,
+                        subject:
+                          rel.direction === "outgoing"
+                            ? entityName
+                            : rel.otherEntity,
+                        object:
+                          rel.direction === "outgoing"
+                            ? rel.otherEntity
+                            : entityName,
+                        otherEntity: rel.otherEntity,
+                        isSubject: rel.direction === "outgoing",
+                        topicTitle: rel.topicTitle,
+                        topicId: rel.topicId,
+                        confidence: rel.confidence,
+                      })) || [];
 
                     return (
                       <CollapsibleSection
                         key={toolInvocation.toolCallId}
                         title={`Relationships for "${entityName}"`}
                         icon={Link}
-                        count={totalRelationships ?? relationships?.length ?? 0}
+                        count={totalRelationships ?? 0}
                         args={toolInvocation.args}
                       >
                         <RelationshipList
-                          relationships={relationships || []}
+                          relationships={formattedRelationships}
                           entityName={entityName}
                         />
                       </CollapsibleSection>
@@ -335,22 +358,14 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
 
                   if (toolInvocation.toolName === "findRelatedTopics") {
                     const { topics, totalTopicsFound } =
-                      toolInvocation.result as {
-                        success: boolean;
-                        totalTopicsFound?: number;
-                        topics?: Array<{
-                          topicId: string;
-                          title: string;
-                          score: number;
-                        }>;
-                      };
+                      toolInvocation.result as FindRelatedTopicsToolOutput;
 
                     return (
                       <CollapsibleSection
                         key={toolInvocation.toolCallId}
                         title="Related Topics"
                         icon={BookOpen}
-                        count={totalTopicsFound ?? topics?.length ?? 0}
+                        count={totalTopicsFound ?? 0}
                         args={toolInvocation.args}
                       >
                         <TopicList topics={topics || []} />
@@ -360,21 +375,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
 
                   if (toolInvocation.toolName === "entityLookup") {
                     const { entityName, entity, observations, relationships } =
-                      toolInvocation.result as {
-                        success: boolean;
-                        entityName: string;
-                        entity?: {
-                          name: string;
-                          type: string;
-                          description: string;
-                        };
-                        observations?: string[];
-                        relationships?: Array<{
-                          relationship: string;
-                          isSubject: boolean;
-                          otherEntity: string;
-                        }>;
-                      };
+                      toolInvocation.result as EntityLookupToolOutput;
 
                     if (!entity) {
                       return null;
@@ -392,7 +393,9 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                             entities={[
                               {
                                 ...entity,
-                                observations,
+                                observations: observations?.map(
+                                  (obs) => obs.text,
+                                ),
                               },
                             ]}
                           />
@@ -414,46 +417,14 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                   }
 
                   if (toolInvocation.toolName === "entitySemanticSearch") {
-                    const { results, totalResults } = toolInvocation.result as {
-                      success: boolean;
-                      query: string;
-                      totalResults?: {
-                        entities: number;
-                        relationships: number;
-                        observations: number;
-                      };
-                      results?: {
-                        entities: Array<{
-                          name: string;
-                          type: string;
-                          description: string;
-                          observations: string[];
-                          topicTitle: string;
-                          confidence: number;
-                        }>;
-                        relationships: Array<{
-                          subject: string;
-                          relationship: string;
-                          object: string;
-                          observations: string[];
-                          topicTitle: string;
-                          confidence: number;
-                        }>;
-                        observations: Array<{
-                          observation: string;
-                          topicTitle: string;
-                          confidence: number;
-                        }>;
-                      };
-                    };
+                    const { results, totalResults } =
+                      toolInvocation.result as EntitySemanticSearchToolOutput;
 
                     const totalCount = totalResults
                       ? totalResults.entities +
                         totalResults.relationships +
                         totalResults.observations
-                      : (results?.entities.length || 0) +
-                        (results?.relationships.length || 0) +
-                        (results?.observations.length || 0);
+                      : 0;
 
                     return (
                       <CollapsibleSection
@@ -503,6 +474,75 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                               </div>
                             )}
                         </div>
+                      </CollapsibleSection>
+                    );
+                  }
+
+                  if (
+                    [
+                      "listEntityNames",
+                      "listRelationshipTypes",
+                      "listEntityTypes",
+                    ].includes(toolInvocation.toolName)
+                  ) {
+                    const result = toolInvocation.result as
+                      | ListEntityNamesToolOutput
+                      | ListRelationshipTypesToolOutput
+                      | ListEntityTypesToolOutput;
+
+                    let items: Array<{ name: string }> = [];
+
+                    if (result?.success) {
+                      if ("entities" in result) {
+                        items =
+                          result.entities?.map((entity) => ({
+                            name: entity.name,
+                          })) || [];
+                      } else if ("relationshipTypes" in result) {
+                        items = result.relationshipTypes.map((type) => ({
+                          name: type,
+                        }));
+                      } else if ("entityTypes" in result) {
+                        items =
+                          result.entityTypes?.map((type) => ({
+                            name: type,
+                          })) || [];
+                      }
+                    }
+
+                    return (
+                      <CollapsibleSection
+                        key={toolInvocation.toolCallId}
+                        title={
+                          toolInvocation.toolName === "listEntityNames"
+                            ? "Entity Names"
+                            : toolInvocation.toolName ===
+                                "listRelationshipTypes"
+                              ? "Relationship Types"
+                              : "Entity Types"
+                        }
+                        icon={List}
+                        count={items.length}
+                        args={toolInvocation.args}
+                      >
+                        <SimpleList icon={List} items={items} />
+                      </CollapsibleSection>
+                    );
+                  }
+
+                  if (toolInvocation.toolName === "listReports") {
+                    const result =
+                      toolInvocation.result as ListReportsToolOutput;
+
+                    return (
+                      <CollapsibleSection
+                        key={toolInvocation.toolCallId}
+                        title="Reports"
+                        icon={FileText}
+                        count={result?.flatMap((r) => r.reports).length ?? 0}
+                        args={toolInvocation.args}
+                      >
+                        <ReportList reports={result || []} />
                       </CollapsibleSection>
                     );
                   }

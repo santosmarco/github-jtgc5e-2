@@ -7,6 +7,7 @@ import { z } from "zod";
 
 import {
   listMeetingsTool as createListMeetingsTool,
+  listReportsTool as createListReportsTool,
   searchMomentsTool as createSearchMomentsTool,
 } from "~/lib/ai/tools";
 import { SlashCommand } from "~/lib/commands/schemas";
@@ -120,6 +121,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       listEntityNames: createListEntityNamesTool(userId),
       listRelationshipTypes: createListRelationshipTypesTool(userId),
       listEntityTypes: createListEntityTypesTool(userId),
+      listReports: createListReportsTool(userId),
     };
 
     const observationPrompt = observationPrompts?.[0];
@@ -148,12 +150,13 @@ export async function POST(request: NextRequest): Promise<Response> {
          • findRelatedTopics - Expand context by identifying relevant discussion areas
          • entityLookup - Get precise details about specific entities
          • entitySemanticSearch - Uncover nuanced insights across conversations
+         • listReports - Find relevant reports for the user's question
 
       3. REFERENCE: Ground your coaching in specific evidence using:
          • listMeetings - Identify relevant conversation sessions
          • searchMoments - Find specific instances that illustrate patterns or insights
 
-      For each client question, employ a minimum of 3-5 tools in sequence, using the output of each tool to inform your next query. This methodical approach ensures your coaching is data-driven, personalized, and transformative.
+      For each client question, employ a minimum of 3-10 tools in sequence, using the output of each tool to inform your next query. This methodical approach ensures your coaching is data-driven, personalized, and transformative.
     `;
 
     if (profile?.nickname) {
@@ -386,14 +389,8 @@ function buildEnhancedUserMessage({
       - Use the \`<moment id={moment_id} reasoning={optional_reasoning_for_why_this_moment_is_relevant} />\` tag to reference specific moments **inline** (in the message). Important: Treat <moment /> tags like paragraphs; they occupy a full block in the document and cannot be nested.
       
     TOOL USAGE REQUIREMENTS:
-      - You MUST use discoverKeyEntities to identify important concepts in the user's message
-      - You MUST use findEntityRelationships to understand connections between entities
-      - You MUST use findRelatedTopics to broaden the context of the conversation
-      - You MUST use entityLookup and entitySemanticSearch for deeper insights
-      - You MUST use listMeetings to find relevant meetings
-      - You MUST use searchMoments to find relevant moments
-      - You MUST use the results from one tool to inform your use of subsequent tools
-      - You MUST provide a comprehensive analysis using ALL available tools
+      - You MUST use the results from one tool to inform your use of subsequent tools.
+      - You MUST provide a comprehensive analysis using AS MANY TOOLS AS POSSIBLE.
   `;
 
   if (userCommands.includes("/meetings")) {

@@ -1,13 +1,13 @@
+import { tool } from "ai";
+import dedent from "ts-dedent";
 import { z } from "zod";
 
-import { tool } from "ai";
 import { createClient as createSupabaseClient } from "~/lib/supabase/server";
 
-import dedent from "ts-dedent";
 import { type SearchOptions, SearchService } from "../core/searchService";
 import { searchEntities } from "../graph/entity-search";
-import type { EntityVectorMetadata } from "./entity-embeddings";
 import { logger } from "../logging/server";
+import type { EntityVectorMetadata } from "./entity-embeddings";
 
 // Initialize search service as a singleton for all tools to use
 const searchService = new SearchService();
@@ -1857,3 +1857,35 @@ export const aiSearchTools = {
   listRelationshipTypesTool,
   listEntityTypesTool,
 };
+
+export type EntitySemanticSearchToolOutput = Awaited<
+  ReturnType<Awaited<ReturnType<typeof entitySemanticSearchTool>["execute"]>>
+>;
+
+export type EntityLookupToolOutput = Awaited<
+  ReturnType<Awaited<ReturnType<typeof entityLookupTool>["execute"]>>
+>;
+
+export type FindRelatedTopicsToolOutput = Awaited<
+  ReturnType<Awaited<ReturnType<typeof findRelatedTopicsTool>["execute"]>>
+>;
+
+export type FindEntityRelationshipsToolOutput = Awaited<
+  ReturnType<Awaited<ReturnType<typeof findEntityRelationshipsTool>["execute"]>>
+>;
+
+export type DiscoverKeyEntitiesToolOutput = Awaited<
+  ReturnType<Awaited<ReturnType<typeof discoverKeyEntitiesTool>["execute"]>>
+>;
+
+export type ListEntityNamesToolOutput = Awaited<
+  ReturnType<Awaited<ReturnType<typeof listEntityNamesTool>["execute"]>>
+>;
+
+export type ListRelationshipTypesToolOutput = Awaited<
+  ReturnType<Awaited<ReturnType<typeof listRelationshipTypesTool>["execute"]>>
+>;
+
+export type ListEntityTypesToolOutput = Awaited<
+  ReturnType<Awaited<ReturnType<typeof listEntityTypesTool>["execute"]>>
+>;

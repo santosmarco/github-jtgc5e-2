@@ -3,6 +3,7 @@ import dayjs from "dayjs";
 import { z } from "zod";
 
 import { syncCalendars } from "~/jobs/sync-calendars";
+import type { GoogleCalendarEvent } from "~/lib/google-calendar/schemas";
 import { logger } from "~/lib/logging/server";
 import { meetingBaas } from "~/lib/meeting-baas/client";
 import { createLiveMeetingService } from "~/lib/meeting-bots/live-meeting/service";
@@ -57,7 +58,7 @@ export const calendarRouter = createTRPCRouter({
       const now = new Date();
 
       const { data, error } = await supabase
-        .from("calendar_event_details_v2")
+        .from("calendar_events_v2")
         .select("*, meeting_bots:meeting_bots_v2(*)")
         .eq("is_deleted", false)
         .eq("profile_id", input.profileId)
@@ -83,11 +84,22 @@ export const calendarRouter = createTRPCRouter({
             ),
           ]);
 
+          const eventDetails = event.raw as z.infer<typeof GoogleCalendarEvent>;
+
           return {
             ...event,
+            event_id: eventDetails.id,
+            start_date_time: eventDetails.start?.dateTime,
+            end_date_time: eventDetails.end?.dateTime,
+            summary: eventDetails.summary,
+            status: eventDetails.status,
+            created: eventDetails.created,
+            creator_email: eventDetails.creator?.email,
+            html_link: eventDetails.htmlLink,
+            attendees: eventDetails.attendees?.map((a) => a.email),
             should_join_calculated: shouldJoin,
             should_join_calculated_reason: reason,
-            meeting_bot: event.meeting_bots?.filter((mb) => !!mb.status)[0],
+            meeting_bot: event.meeting_bots?.find((mb) => !!mb.status),
           };
         }),
       );
@@ -104,7 +116,7 @@ export const calendarRouter = createTRPCRouter({
       const now = new Date();
 
       const { data, error } = await supabase
-        .from("calendar_event_details_v2")
+        .from("calendar_events_v2")
         .select("*, meeting_bots:meeting_bots_v2(*)")
         .eq("is_deleted", false)
         .eq("profile_id", input.profileId)
@@ -130,11 +142,22 @@ export const calendarRouter = createTRPCRouter({
             ),
           ]);
 
+          const eventDetails = event.raw as z.infer<typeof GoogleCalendarEvent>;
+
           return {
             ...event,
+            event_id: eventDetails.id,
+            start_date_time: eventDetails.start?.dateTime,
+            end_date_time: eventDetails.end?.dateTime,
+            summary: eventDetails.summary,
+            status: eventDetails.status,
+            created: eventDetails.created,
+            creator_email: eventDetails.creator?.email,
+            html_link: eventDetails.htmlLink,
+            attendees: eventDetails.attendees?.map((a) => a.email),
             should_join_calculated: shouldJoin,
             should_join_calculated_reason: reason,
-            meeting_bot: event.meeting_bots?.filter((mb) => !!mb.status)[0],
+            meeting_bot: event.meeting_bots?.find((mb) => !!mb.status),
           };
         }),
       );

@@ -123,7 +123,9 @@ export function RelationshipList({
                     {rel.observations
                       .slice(0, 2)
                       .map((observation, obsIndex) => (
-                        <li key={`${index}-obs-${obsIndex}`}>{observation}</li>
+                        <li key={`${index}-obs-${obsIndex}-${observation}`}>
+                          {observation}
+                        </li>
                       ))}
                     {rel.observations.length > 2 && (
                       <li className="italic">

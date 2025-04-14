@@ -4,6 +4,7 @@ import { z } from "zod";
 import { api } from "~/trpc/server";
 
 import { searchSimilar } from "../pinecone/search";
+import { formatReportToMarkdown } from "../reports/formatting";
 import { VideoMoment } from "../schemas/video-moment";
 import { createClient } from "../supabase/server";
 
@@ -222,4 +223,49 @@ export const searchMomentsTool = (profileId: string, apiVideoIds?: string[]) =>
 
 export type SearchMomentsToolOutput = Awaited<
   ReturnType<ReturnType<typeof searchMomentsTool>["execute"]>
+>;
+
+export const listReportsTool = (profileId: string) =>
+  tool({
+    description: "Retrieves a paginated list of reports for a given profile.",
+    parameters: z.object({}).describe("Parameters for retrieving reports."),
+    execute: async () => {
+      const supabase = await createClient();
+
+      const { data: groupReportProcessingStatuses } = await supabase
+        .from("group_report_processing_status")
+        .select("*")
+        .eq("profile_id", profileId)
+        .eq("status", "completed")
+        .order("created_at", { ascending: false, nullsFirst: false });
+
+      const data = await Promise.all(
+        (groupReportProcessingStatuses ?? []).map((r) =>
+          api.reports.getGroupReports({
+            groupId: r.id,
+          }),
+        ),
+      );
+
+      return data.map((datum) => ({
+        ...datum,
+        reports: datum.reports.map((r) => ({
+          id: r.id,
+          summary: r.summary,
+          skill: r.skill
+            ? {
+                title: r.skill.title,
+                description: r.skill.description,
+              }
+            : null,
+          start_date: r.start_date,
+          end_date: r.end_date,
+          markdown: formatReportToMarkdown(r),
+        })),
+      }));
+    },
+  });
+
+export type ListReportsToolOutput = Awaited<
+  ReturnType<ReturnType<typeof listReportsTool>["execute"]>
 >;
