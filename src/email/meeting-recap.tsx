@@ -2,6 +2,7 @@ import { Button, Hr, Section, Text } from "@react-email/components";
 
 import type { Tables } from "~/lib/supabase/database.types";
 import type { RouterOutputs } from "~/trpc/react";
+
 import { ActionItemsSection } from "./_components/action-items-section";
 import { BASE_URL, COMPANY_NAME } from "./_components/constants";
 import { EmailContainer } from "./_components/email-container";
@@ -108,6 +109,7 @@ const previewProps: MeetingRecapEmailProps = {
             },
           },
         ],
+        server_deleted_at: null,
       },
     ],
   },
