@@ -1,5 +1,5 @@
 import { openai } from "@ai-sdk/openai";
-import { type CoreMessage, convertToCoreMessages, streamText } from "ai";
+import { convertToCoreMessages, type CoreMessage, streamText } from "ai";
 import _ from "lodash";
 import { type NextRequest, NextResponse } from "next/server";
 import dedent from "ts-dedent";
@@ -19,8 +19,8 @@ import {
   findEntityRelationshipsTool as createFindEntityRelationshipsTool,
   findRelatedTopicsTool as createFindRelatedTopicsTool,
   listEntityNamesTool as createListEntityNamesTool,
-  listRelationshipTypesTool as createListRelationshipTypesTool,
   listEntityTypesTool as createListEntityTypesTool,
+  listRelationshipTypesTool as createListRelationshipTypesTool,
 } from "~/lib/processing/ai-search-tools";
 import { UIMessage } from "~/lib/schemas/ai";
 import { Video } from "~/lib/schemas/video";
@@ -244,6 +244,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       tools,
       maxSteps: userCommands.length > 0 ? 30 : 25,
       maxTokens: 16384,
+      temperature: 0.5,
       experimental_continueSteps: true,
       messages: [
         ...initialMessages,
