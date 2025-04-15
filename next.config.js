@@ -32,7 +32,7 @@ const cspHeader = [
   "frame-ancestors 'self' https://withtitan.retool.com/",
 
   // API and service connections
-  "connect-src 'self' https://withtitan.retool.com/ https://*.posthog.com https://*.i.posthog.com https://va.vercel-scripts.com https://db.withtitan.com https://vitals.vercel-insights.com",
+  "connect-src 'self' https://withtitan.retool.com/ https://*.posthog.com https://*.i.posthog.com https://va.vercel-scripts.com https://db.withtitan.com https://vitals.vercel-insights.com https://vod.api.video",
 
   // Protocol upgrade
   "upgrade-insecure-requests",
