@@ -231,8 +231,6 @@ export function ActionItemDashboard() {
         <motion.div variants={itemVariants} className="lg:col-span-1">
           <SpecialViews
             actionItems={filteredItems ?? []}
-            meetings={data?.meetings ?? []}
-            people={data?.people ?? []}
             today={today}
             loading={isLoading}
           />
