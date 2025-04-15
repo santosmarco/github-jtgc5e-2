@@ -29,6 +29,8 @@ import { useValidatedForm } from "~/hooks/use-validated-form";
 import { api } from "~/trpc/react";
 import type { RouterOutputs } from "~/trpc/shared";
 
+import { Textarea } from "./ui/textarea";
+
 type Person = RouterOutputs["actionItems"]["getByProfileId"]["people"][number];
 type Meeting =
   RouterOutputs["actionItems"]["getByProfileId"]["meetings"][number];
@@ -206,9 +208,13 @@ export function ActionItemForm({
               name="text"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Title *</FormLabel>
+                  <FormLabel>Description *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter action item title" {...field} />
+                    <Textarea
+                      placeholder="Enter action item description..."
+                      rows={3}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

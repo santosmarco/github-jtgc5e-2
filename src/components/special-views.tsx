@@ -1,8 +1,10 @@
 import { CalendarIcon } from "@radix-ui/react-icons";
 import dayjs from "dayjs";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
-import { CheckCircle2, ChevronRight, Clock } from "lucide-react";
+import _ from "lodash";
+import { CheckCircle2, Clock } from "lucide-react";
 import type { ReactNode } from "react";
+import { useState } from "react";
 
 import { Badge } from "~/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
@@ -13,12 +15,8 @@ import { cn, formatDate } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import type { RouterOutputs } from "~/trpc/shared";
 
-import { Link } from "./ui/link";
-
 interface SpecialViewsProps {
   actionItems: RouterOutputs["actionItems"]["getByProfileId"]["actionItems"];
-  meetings: RouterOutputs["actionItems"]["getByProfileId"]["meetings"];
-  people: RouterOutputs["actionItems"]["getByProfileId"]["people"];
   today: string;
   loading: boolean;
 }
@@ -139,6 +137,10 @@ function SpecialViewList<T extends { id: string }>({
   emptyMessage = "No items to display.",
   maxItems,
 }: SpecialViewListProps<T>) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const displayItems =
+    isExpanded || !maxItems ? items : items.slice(0, maxItems);
+
   return (
     <AnimatePresence>
       {items.length > 0 ? (
@@ -148,11 +150,20 @@ function SpecialViewList<T extends { id: string }>({
           animate="visible"
           className="space-y-4"
         >
-          {items.map((item) => (
+          {displayItems.map((item) => (
             <motion.li key={item.id} variants={ANIMATION_CONFIG.item}>
               {renderItem(item)}
             </motion.li>
           ))}
+          {maxItems && items.length > maxItems && !isExpanded && (
+            <motion.li
+              variants={ANIMATION_CONFIG.item}
+              className="cursor-pointer pt-1 text-xs font-medium text-primary/80 transition-colors hover:text-primary"
+              onClick={() => setIsExpanded(true)}
+            >
+              +{items.length - maxItems} more items
+            </motion.li>
+          )}
         </motion.ul>
       ) : (
         <p className="py-3 text-center text-sm text-muted-foreground/70">
@@ -217,7 +228,7 @@ function NextMeetingView({
 }) {
   return (
     <SpecialViewCard
-      title="For Your Next Meeting"
+      title="Meeting Prep"
       subtitle={
         meeting
           ? `${meeting.summary}${meeting.start_date_time ? ` - ${formatDate(meeting.start_date_time)}` : ""}`
@@ -228,7 +239,12 @@ function NextMeetingView({
       }
     >
       <SpecialViewList
-        items={items}
+        items={_.orderBy(
+          items,
+          [(x) => dayjs(x.created_at).valueOf()],
+          ["desc"],
+        )}
+        maxItems={5}
         emptyMessage="No action items for your next meeting."
         renderItem={(item) => (
           <div className="flex items-start gap-3 rounded-md p-2 transition-colors hover:bg-primary/5">
@@ -285,7 +301,11 @@ function DayRecapView({
       accentColor="emerald-500"
     >
       <SpecialViewList
-        items={items}
+        items={_.orderBy(
+          items,
+          [(x) => dayjs(x.completed_at).valueOf()],
+          ["desc"],
+        )}
         emptyMessage="No items completed today."
         renderItem={(item) => (
           <div className="flex items-start gap-3 rounded-md p-2 transition-colors hover:bg-emerald-500/5">
@@ -384,8 +404,6 @@ function MorningPrepView({
 // Main Special Views Component
 export function SpecialViews({
   actionItems,
-  meetings,
-  people,
   today,
   loading,
 }: SpecialViewsProps) {
@@ -401,7 +419,13 @@ export function SpecialViews({
     },
   );
 
-  const nextMeeting = calendarEvents?.[0];
+  const nextMeeting = calendarEvents
+    ?.filter((event) => event.meeting_bots.length > 0)
+    .sort(
+      (a, b) =>
+        dayjs(a.start_date_time).valueOf() - dayjs(b.start_date_time).valueOf(),
+    )
+    .find((event) => dayjs(event.start_date_time).isAfter(dayjs()));
 
   // Get participants for next meeting from raw calendar event data
   const nextMeetingParticipants = (() => {
@@ -451,9 +475,9 @@ export function SpecialViews({
       animate="visible"
       className="space-y-6"
     >
-      <MorningPrepView items={todayDueItems} />
-      <NextMeetingView items={nextMeetingItems} meeting={nextMeeting} />
       <DayRecapView items={todayCompletedItems} />
+      <NextMeetingView items={nextMeetingItems} meeting={nextMeeting} />
+      <MorningPrepView items={todayDueItems} />
     </motion.div>
   );
 }

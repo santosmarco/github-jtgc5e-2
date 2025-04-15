@@ -49,6 +49,7 @@ import { api } from "~/trpc/react";
 import type { RouterOutputs } from "~/trpc/shared";
 
 import { Link } from "./ui/link";
+import { Textarea } from "./ui/textarea";
 
 type ActionItem =
   RouterOutputs["actionItems"]["getByProfileId"]["actionItems"][number];
@@ -615,10 +616,11 @@ export function ActionItemList({ items, people }: ActionItemListProps) {
                 name="text"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Title</FormLabel>
+                    <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Enter action item title..."
+                      <Textarea
+                        placeholder="Enter action item description..."
+                        rows={3}
                         {...field}
                       />
                     </FormControl>
