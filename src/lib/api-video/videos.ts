@@ -4,9 +4,10 @@ import ApiVideoClient from "@api.video/nodejs-client";
 import axios from "axios";
 import { cache } from "react";
 import { z } from "zod";
-
 import { env } from "~/env";
 import { Video, VideoWithDetails } from "~/lib/schemas/video";
+import { fetchWithTimeout } from "~/lib/utils";
+import { createClient } from "~/lib/supabase/server";
 
 const apiVideo = new ApiVideoClient({
   apiKey: env.API_VIDEO_API_KEY,
@@ -94,4 +95,69 @@ export async function getVTT(
     ? await axios.get(caption.src, { responseType: "text" })
     : null;
   return { ...caption, content: z.string().parse(res?.data) };
+}
+
+export async function getVideoSourceUrl(videoId: string): Promise<string> {
+  const defaultUrl = `https://vod.api.video/vod/${videoId}/mp4/source.mp4`;
+
+  try {
+    try {
+      // First try the default API.video URL with HEAD request
+      // This avoids burning one-time tokens for private videos
+      const videoFetch = await fetchWithTimeout(defaultUrl, {
+        method: "HEAD",
+        timeout: 15000,
+        retries: 3,
+      });
+
+      if (videoFetch.status === 200) {
+        return defaultUrl;
+      }
+    } catch (fetchError) {
+      console.warn(`HEAD request failed for ${videoId}:`, fetchError);
+      // Continue to fallbacks if HEAD request fails
+    }
+
+    // Try to get appropriate source for private videos
+    // This comes before database checks to handle private videos properly
+    const appropriateSource = await getAppropriateVideoSource(videoId);
+    if (appropriateSource) {
+      return appropriateSource;
+    }
+
+    // If no appropriate source found, check database for stored URLs
+    const supabase = await createClient();
+
+    // First fallback: check meeting_bots table
+    const { data: meetingBots } = await supabase
+      .from("meeting_bots")
+      .select("mp4_source_url")
+      .eq("api_video_id", videoId)
+      .not("mp4_source_url", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (meetingBots?.[0]?.mp4_source_url) {
+      return meetingBots[0].mp4_source_url;
+    }
+
+    // Second fallback: check meeting_bots_v2 table
+    const { data: meetingBotsV2 } = await supabase
+      .from("meeting_bots_v2")
+      .select("mp4_source_url")
+      .eq("api_video_id", videoId)
+      .not("mp4_source_url", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (meetingBotsV2?.[0]?.mp4_source_url) {
+      return meetingBotsV2[0].mp4_source_url;
+    }
+
+    // Return default URL if no alternatives found
+    return defaultUrl;
+  } catch (error) {
+    console.error(`Error resolving video source for ${videoId}:`, error);
+    return defaultUrl; // Return default URL on error
+  }
 }
