@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import _ from "lodash";
 import { z } from "zod";
 
 import type { Tables, TablesInsert } from "~/lib/supabase/database.types";
@@ -12,6 +13,73 @@ type ActionItemWithAssignees = Tables<"meeting_action_items"> & {
 };
 
 export const actionItemsRouter = createTRPCRouter({
+  getByProfileId: protectedProcedure
+    .input(z.object({ profileId: z.string() }))
+    .query(async ({ input }) => {
+      const supabase = await createClient();
+
+      const { data: userMeetings, error: userMeetingsError } = await supabase
+        .from("meetings")
+        .select("video_api_id")
+        .eq("profile_id", input.profileId);
+
+      if (userMeetingsError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to fetch meetings: ${userMeetingsError.message}`,
+          cause: userMeetingsError,
+        });
+      }
+
+      const { data, error } = await supabase
+        .from("meeting_action_items")
+        .select(
+          "*, assignees:meeting_action_item_assignees(*, assignee:entities(*)), meeting:meetings(*)",
+        )
+        .in(
+          "api_video_id",
+          userMeetings.map((meeting) => meeting.video_api_id),
+        )
+        .is("deleted_at", null)
+        .order("due_date", { ascending: true, nullsFirst: false })
+        .order("text", { ascending: true })
+        .order("completed_at", { ascending: true, nullsFirst: true });
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to fetch action items: ${error.message}`,
+          cause: error,
+        });
+      }
+
+      const actionItems = data;
+      const meetings: Tables<"meetings">[] = [];
+      const people: Tables<"entities">[] = [];
+
+      for (const item of data) {
+        const meeting = item.meeting;
+        const assignees = item.assignees;
+
+        if (meeting) {
+          meetings.push(meeting);
+        }
+
+        for (const assignee of assignees) {
+          people.push(assignee.assignee);
+        }
+      }
+
+      return {
+        actionItems,
+        meetings: _.uniqBy(meetings, (x) => x.video_api_id),
+        people: _.sortBy(
+          _.uniqBy(people, (x) => x.id),
+          (x) => x.name,
+        ),
+      };
+    }),
+
   getByVideoId: protectedProcedure
     .input(
       z.object({
