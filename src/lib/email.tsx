@@ -56,8 +56,9 @@ export async function sendExploreUnlockedEmail({
 
 export async function sendMeetingRecapEmail({
   meeting,
+  sections,
 }: MeetingRecapEmailProps) {
-  const emailHtml = await render(MeetingRecapEmail({ meeting }));
+  const emailHtml = await render(MeetingRecapEmail({ meeting, sections }));
 
   // Format date if available
   const meetingDate = meeting.date

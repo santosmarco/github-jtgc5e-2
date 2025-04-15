@@ -21,6 +21,9 @@ const RequestBody = z.discriminatedUnion("templateId", [
     templateId: z.literal("meeting-recap"),
     variables: z.object({
       meeting_id: z.string().min(1, "Required"),
+      sections: z
+        .array(z.enum(["topics-discussed", "action-items"]))
+        .default(["topics-discussed", "action-items"]),
     }),
   }),
 ]);
@@ -90,6 +93,7 @@ async function handleExploreUnlockedEmail(
 async function handleMeetingRecapEmail(
   supabase: SupabaseServerClient,
   meetingId: string,
+  sections: ("topics-discussed" | "action-items")[],
 ): Promise<NextResponse<ResponseBody>> {
   const { data: meeting, error: meetingError } = await supabase
     .from("meetings")
@@ -119,6 +123,7 @@ async function handleMeetingRecapEmail(
       ...meeting,
       profile: meeting.profile,
     },
+    sections,
   });
 
   if (emailError) {
@@ -176,7 +181,11 @@ export async function POST(
     }
 
     if (parsedBody.templateId === "meeting-recap") {
-      return handleMeetingRecapEmail(supabase, parsedBody.variables.meeting_id);
+      return handleMeetingRecapEmail(
+        supabase,
+        parsedBody.variables.meeting_id,
+        parsedBody.variables.sections,
+      );
     }
 
     logger.warn("Invalid template ID received", {

@@ -17,9 +17,13 @@ export type MeetingRecapEmailProps = {
     topics: Pick<Tables<"meeting_topics">, "title" | "summary">[];
     actionItems: RouterOutputs["actionItems"]["getByVideoId"];
   };
+  sections: ("topics-discussed" | "action-items")[];
 };
 
-export function MeetingRecapEmail({ meeting }: MeetingRecapEmailProps) {
+export function MeetingRecapEmail({
+  meeting,
+  sections,
+}: MeetingRecapEmailProps) {
   const previewText = "Your meeting insights are ready";
   const meetingUrl = new URL(`/videos/${meeting.video_api_id}`, BASE_URL);
 
@@ -30,12 +34,30 @@ export function MeetingRecapEmail({ meeting }: MeetingRecapEmailProps) {
       </Text>
 
       <Text className="text-pretty text-sm leading-6 text-gray-800">
-        We've analyzed your meeting <strong>"{meeting.name}"</strong> and
-        prepared some valuable insights just for you. Here's what we discovered:
+        We&apos;ve analyzed your meeting{" "}
+        <strong>&quot;{meeting.name}&quot;</strong> and prepared some valuable
+        insights just for you. Here&apos;s what we discovered:
       </Text>
 
-      <MeetingSummarySection summary={meeting.summary} />
-      <ActionItemsSection actionItems={meeting.actionItems} />
+      {sections.map((section, index) => {
+        if (section === "topics-discussed") {
+          return (
+            <MeetingSummarySection
+              key={`${section}-${index}`}
+              summary={meeting.summary}
+            />
+          );
+        }
+
+        if (section === "action-items") {
+          return (
+            <ActionItemsSection
+              key={`${section}-${index}`}
+              actionItems={meeting.actionItems}
+            />
+          );
+        }
+      })}
 
       <Section className="my-8 text-center">
         <Button
@@ -110,9 +132,12 @@ const previewProps: MeetingRecapEmailProps = {
           },
         ],
         server_deleted_at: null,
+        completed: false,
+        completed_date: null,
       },
     ],
   },
+  sections: ["topics-discussed", "action-items"],
 };
 
 MeetingRecapEmail.PreviewProps = previewProps;
