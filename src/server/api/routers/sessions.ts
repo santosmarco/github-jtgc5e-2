@@ -104,7 +104,7 @@ export const sessionsRouter = createTRPCRouter({
       const { data: existingSessions, error: sessionsError } = await supabase
         .from("sessions")
         .select(
-          "*, user:profiles!user_id(*), coach:profiles!coach_id(*), event:calendar_events_v2!event_id(*, meeting_bots:meeting_bots_v2(*)), meeting:meetings!api_video_id(*, action_items:meeting_action_items(*), insights:meeting_topics(*)), annotations:session_annotations(*)",
+          "*, user:profiles!user_id(*), coach:profiles!coach_id(*), event:calendar_events_v2!event_id(*, meeting_bots:meeting_bots_v2(*)), meeting:meetings!api_video_id(*, action_items:meeting_action_items(*), insights:meeting_topics(*)), annotations:session_annotations(*, sources:session_annotation_sources(*))",
         )
         .eq("user_id", profileId);
 
