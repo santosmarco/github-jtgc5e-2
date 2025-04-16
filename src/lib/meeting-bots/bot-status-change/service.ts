@@ -1,4 +1,5 @@
 import { isAxiosError } from "axios";
+import dayjs from "dayjs";
 import _ from "lodash";
 import type { Except } from "type-fest";
 
@@ -11,6 +12,7 @@ import type { Tables, TablesInsert } from "~/lib/supabase/database.types";
 import { isTruthy } from "~/lib/utils";
 
 import { createBotService } from "../bot/service";
+import { BOT_AUTOMATIC_LEAVE } from "../constants";
 import {
   BotStatusChangeEventDataStatus,
   MeetingBaasCompleteEventData,
@@ -186,6 +188,86 @@ export function createBotStatusChangeService(
           user_email: meetingBot.profile?.email,
           has_video_url: !!recallBot.video_url,
         });
+
+        if (
+          meetingBot.profile_id &&
+          "event" in meetingBot &&
+          recallBot.google_meet &&
+          status?.sub_code === "timeout_exceeded_waiting_room"
+        ) {
+          const { data: userSettings } = await supabase
+            .from("user_settings")
+            .select("*")
+            .eq("profile_id", meetingBot.profile_id)
+            .single();
+
+          if (!userSettings) {
+            logger.error("❌ Failed to find user settings", {
+              bot_id: meetingBot.id,
+              profile_id: meetingBot.profile_id,
+            });
+            void slack.error({
+              text: `❌ Failed to find user settings for bot ${meetingBot.id}, using default \`botName\``,
+            });
+          }
+
+          const botName = userSettings?.bot_name ?? "Notetaker";
+          const botMetadata = {
+            user_id: meetingBot.profile_id,
+            event_id: meetingBot.event_id,
+          };
+
+          const minutesSinceEventStart = dayjs().diff(
+            dayjs(meetingBot.event?.start_time),
+            "minutes",
+          );
+          const newDeduplicationKey = `${meetingBot.deduplication_key}-${Math.floor(minutesSinceEventStart / 10)}`;
+
+          const newRecallBot = await recall.bot.bot_create({
+            deduplication_key: newDeduplicationKey,
+            meeting_url: recallBot.meeting_url,
+            bot_name: botName,
+            automatic_leave: {
+              waiting_room_timeout:
+                BOT_AUTOMATIC_LEAVE.WAITING_ROOM_TIMEOUT_IN_SECONDS,
+              noone_joined_timeout:
+                BOT_AUTOMATIC_LEAVE.NOONE_JOINED_TIMEOUT_IN_SECONDS,
+            },
+            transcription_options: {
+              provider: "gladia",
+            },
+            metadata: botMetadata,
+          });
+
+          const { error: newMeetingBotInsertionError } = await supabase
+            .from("meeting_bots_v2")
+            .insert({
+              id: newRecallBot.id,
+              provider: "recall",
+              profile_id: meetingBot.profile_id,
+              recall_calendar_id: meetingBot.recall_calendar_id,
+              event_id: meetingBot.event_id,
+              deduplication_key: newDeduplicationKey,
+            })
+            .select("*");
+
+          logger.info("✅ Successfully created new Recall bot", {
+            bot_id: newRecallBot.id,
+            profile_id: meetingBot.profile_id,
+            user_email: meetingBot.profile?.email,
+          });
+
+          if (newMeetingBotInsertionError) {
+            logger.error("❌ Failed to create new meeting bot", {
+              error: newMeetingBotInsertionError,
+            });
+            void slack.error({
+              text: `❌ Failed to create new meeting bot ${newRecallBot.id}: ${newMeetingBotInsertionError.message}`,
+            });
+          }
+
+          return;
+        }
       }
 
       if (status?.code === "done" || event.event === "complete") {

@@ -1321,7 +1321,7 @@ export type Database = {
           recall_calendar_id: string | null
           recording_id: string | null
           reporting_status:
-            | Database["public"]["Enums"]["report_processing_status_type"]
+            | Database["public"]["Enums"]["meeting_bot_reporting_status"]
             | null
           speakers: string[] | null
           status: string | null
@@ -1345,7 +1345,7 @@ export type Database = {
           recall_calendar_id?: string | null
           recording_id?: string | null
           reporting_status?:
-            | Database["public"]["Enums"]["report_processing_status_type"]
+            | Database["public"]["Enums"]["meeting_bot_reporting_status"]
             | null
           speakers?: string[] | null
           status?: string | null
@@ -1369,7 +1369,7 @@ export type Database = {
           recall_calendar_id?: string | null
           recording_id?: string | null
           reporting_status?:
-            | Database["public"]["Enums"]["report_processing_status_type"]
+            | Database["public"]["Enums"]["meeting_bot_reporting_status"]
             | null
           speakers?: string[] | null
           status?: string | null
@@ -3980,13 +3980,43 @@ export type Database = {
         }
         Relationships: []
       }
+      session_annotation_sources: {
+        Row: {
+          created_at: string
+          id: string
+          session_annotation_id: string
+          source_id: string
+          source_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          session_annotation_id: string
+          source_id: string
+          source_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          session_annotation_id?: string
+          source_id?: string
+          source_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_annotation_sources_session_annotation_id_fkey"
+            columns: ["session_annotation_id"]
+            isOneToOne: false
+            referencedRelation: "session_annotations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_annotations: {
         Row: {
           created_at: string
           id: string
           session_id: string
-          source_id: string | null
-          source_type: Database["public"]["Enums"]["source_type"] | null
           title: string | null
           type: string | null
         }
@@ -3994,8 +4024,6 @@ export type Database = {
           created_at?: string
           id?: string
           session_id: string
-          source_id?: string | null
-          source_type?: Database["public"]["Enums"]["source_type"] | null
           title?: string | null
           type?: string | null
         }
@@ -4003,8 +4031,6 @@ export type Database = {
           created_at?: string
           id?: string
           session_id?: string
-          source_id?: string | null
-          source_type?: Database["public"]["Enums"]["source_type"] | null
           title?: string | null
           type?: string | null
         }
