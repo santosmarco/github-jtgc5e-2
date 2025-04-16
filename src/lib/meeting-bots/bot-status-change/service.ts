@@ -192,9 +192,23 @@ export function createBotStatusChangeService(
         if (
           meetingBot.profile_id &&
           "event" in meetingBot &&
+          meetingBot.event &&
           recallBot.google_meet &&
           status?.sub_code === "call_ended_by_platform_waiting_room_timeout"
         ) {
+          await recall.calendarV2.calendar_events_bot_destroy(undefined, {
+            params: { id: meetingBot.event.id },
+          });
+
+          await supabase
+            .from(
+              meetingBotVersion === "v2" ? "meeting_bots_v2" : "meeting_bots",
+            )
+            .update({
+              is_removed: true,
+            })
+            .eq("event_id", meetingBot.event.id);
+
           const { data: userSettings } = await supabase
             .from("user_settings")
             .select("*")
@@ -223,48 +237,56 @@ export function createBotStatusChangeService(
           );
           const newDeduplicationKey = `${meetingBot.deduplication_key}-${Math.floor(minutesSinceEventStart / 10)}`;
 
-          const newRecallBot = await recall.bot.bot_create({
-            deduplication_key: newDeduplicationKey,
-            meeting_url: recallBot.meeting_url,
-            bot_name: botName,
-            automatic_leave: {
-              waiting_room_timeout:
-                BOT_AUTOMATIC_LEAVE.WAITING_ROOM_TIMEOUT_IN_SECONDS,
-              noone_joined_timeout:
-                BOT_AUTOMATIC_LEAVE.NOONE_JOINED_TIMEOUT_IN_SECONDS,
-            },
-            transcription_options: {
-              provider: "gladia",
-            },
-            metadata: botMetadata,
-          });
+          const calendarEventResult =
+            await recall.calendarV2.calendar_events_bot_create(
+              {
+                deduplication_key: newDeduplicationKey,
+                bot_config: {
+                  bot_name: botName,
+                  automatic_leave: {
+                    waiting_room_timeout:
+                      BOT_AUTOMATIC_LEAVE.WAITING_ROOM_TIMEOUT_IN_SECONDS,
+                    noone_joined_timeout:
+                      BOT_AUTOMATIC_LEAVE.NOONE_JOINED_TIMEOUT_IN_SECONDS,
+                  },
+                  transcription_options: {
+                    provider: "gladia",
+                  },
+                  metadata: botMetadata,
+                },
+              },
+              {
+                params: { id: meetingBot.event.id },
+              },
+            );
 
-          const { error: newMeetingBotInsertionError } = await supabase
-            .from("meeting_bots_v2")
-            .insert({
-              id: newRecallBot.id,
-              provider: "recall",
-              profile_id: meetingBot.profile_id,
-              recall_calendar_id: meetingBot.recall_calendar_id,
-              event_id: meetingBot.event_id,
-              deduplication_key: newDeduplicationKey,
-            })
-            .select("*");
-
-          logger.info("✅ Successfully created new Recall bot", {
-            bot_id: newRecallBot.id,
-            profile_id: meetingBot.profile_id,
-            user_email: meetingBot.profile?.email,
-          });
-
-          if (newMeetingBotInsertionError) {
-            logger.error("❌ Failed to create new meeting bot", {
-              error: newMeetingBotInsertionError,
+          for (const bot of calendarEventResult.bots) {
+            logger.info("✅ Successfully created Google Meet bot", {
+              bot_id: bot.bot_id,
+              event_id: event.id,
+              profile_id: meetingBot.profile?.id,
+              user_email: meetingBot.profile?.email,
+              deduplication_key: bot.deduplication_key,
             });
-            void slack.error({
-              text: `❌ Failed to create new meeting bot ${newRecallBot.id}: ${newMeetingBotInsertionError.message}`,
+
+            await slack.success({
+              text: `[${meetingBot.profile?.email}] Successfully created Google Meet bot: ${bot.bot_id}`,
             });
           }
+
+          await supabase.from("meeting_bots_v2").insert(
+            calendarEventResult.bots.map(
+              (bot) =>
+                ({
+                  id: bot.bot_id,
+                  provider: "recall",
+                  profile_id: meetingBot.profile_id,
+                  recall_calendar_id: meetingBot.recall_calendar_id,
+                  event_id: meetingBot.event_id,
+                  deduplication_key: newDeduplicationKey,
+                }) satisfies TablesInsert<"meeting_bots_v2">,
+            ),
+          );
 
           return;
         }
