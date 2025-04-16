@@ -193,7 +193,7 @@ export function createBotStatusChangeService(
           meetingBot.profile_id &&
           "event" in meetingBot &&
           recallBot.google_meet &&
-          status?.sub_code === "timeout_exceeded_waiting_room"
+          status?.sub_code === "call_ended_by_platform_waiting_room_timeout"
         ) {
           const { data: userSettings } = await supabase
             .from("user_settings")
