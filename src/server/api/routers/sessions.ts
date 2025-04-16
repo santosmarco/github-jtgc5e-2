@@ -160,7 +160,7 @@ export const sessionsRouter = createTRPCRouter({
         .from("sessions")
         .insert(newSessions)
         .select(
-          "*, user:profiles!user_id(*), coach:profiles!coach_id(*), event:calendar_events_v2!event_id(*, meeting_bots:meeting_bots_v2(*)), meeting:meetings!api_video_id(*, action_items:meeting_action_items(*), insights:meeting_topics(*)), annotations:session_annotations(*)",
+          "*, user:profiles!user_id(*), coach:profiles!coach_id(*), event:calendar_events_v2!event_id(*, meeting_bots:meeting_bots_v2(*)), meeting:meetings!api_video_id(*, action_items:meeting_action_items(*), insights:meeting_topics(*)), annotations:session_annotations(*, sources:session_annotation_sources(*))",
         );
 
       if (insertError) {
@@ -246,7 +246,7 @@ export const sessionsRouter = createTRPCRouter({
                 .update({ api_video_id: apiVideoId })
                 .eq("event_id", matchingEvent.id)
                 .select(
-                  "*, user:profiles!user_id(*), coach:profiles!coach_id(*), event:calendar_events_v2!event_id(*, meeting_bots:meeting_bots_v2(*)), meeting:meetings!api_video_id(*, action_items:meeting_action_items(*), insights:meeting_topics(*)), annotations:session_annotations(*)",
+                  "*, user:profiles!user_id(*), coach:profiles!coach_id(*), event:calendar_events_v2!event_id(*, meeting_bots:meeting_bots_v2(*)), meeting:meetings!api_video_id(*, action_items:meeting_action_items(*), insights:meeting_topics(*)), annotations:session_annotations(*, sources:session_annotation_sources(*))",
                 )
                 .maybeSingle();
 
