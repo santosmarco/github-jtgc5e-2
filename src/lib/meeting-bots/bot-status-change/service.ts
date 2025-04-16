@@ -8,11 +8,13 @@ import { topicSegmentation } from "~/jobs/preprocessing/steps/topic-segmentation
 import { uploadVideoToSupabaseStorage } from "~/jobs/upload-video-to-supabase-storage";
 import { processVideo } from "~/lib/api/meetings";
 import { Vtt } from "~/lib/backend/services/vtt/vtt.service";
+import { GoogleCalendarEvent } from "~/lib/google-calendar/schemas";
 import type { Tables, TablesInsert } from "~/lib/supabase/database.types";
 import { isTruthy } from "~/lib/utils";
 
 import { createBotService } from "../bot/service";
 import { BOT_AUTOMATIC_LEAVE } from "../constants";
+import { createLiveMeetingService } from "../live-meeting/service";
 import {
   BotStatusChangeEventDataStatus,
   MeetingBaasCompleteEventData,
@@ -196,97 +198,18 @@ export function createBotStatusChangeService(
           recallBot.google_meet &&
           status?.sub_code === "call_ended_by_platform_waiting_room_timeout"
         ) {
-          await recall.calendarV2.calendar_events_bot_destroy(undefined, {
-            params: { id: meetingBot.event.id },
+          const { launchLiveMeeting } = createLiveMeetingService(deps);
+
+          await launchLiveMeeting({
+            userId: meetingBot.profile_id,
+            meetingUrl: recallBot.meeting_url,
+            meetingTitle:
+              meetingBot.title ||
+              GoogleCalendarEvent.safeParse(meetingBot.event?.raw).data
+                ?.summary ||
+              `Untitled Meeting (${dayjs().format("MMMM D, YYYY [at] h:mm A")})`,
+            eventId: meetingBot.event?.id,
           });
-
-          await supabase
-            .from(
-              meetingBotVersion === "v2" ? "meeting_bots_v2" : "meeting_bots",
-            )
-            .update({
-              is_removed: true,
-            })
-            .eq("event_id", meetingBot.event.id);
-
-          const { data: userSettings } = await supabase
-            .from("user_settings")
-            .select("*")
-            .eq("profile_id", meetingBot.profile_id)
-            .single();
-
-          if (!userSettings) {
-            logger.error("❌ Failed to find user settings", {
-              bot_id: meetingBot.id,
-              profile_id: meetingBot.profile_id,
-            });
-            void slack.error({
-              text: `❌ Failed to find user settings for bot ${meetingBot.id}, using default \`botName\``,
-            });
-          }
-
-          const botName = userSettings?.bot_name ?? "Notetaker";
-          const botMetadata = {
-            user_id: meetingBot.profile_id,
-            event_id: meetingBot.event_id,
-          };
-
-          const minutesSinceEventStart = dayjs().diff(
-            dayjs(meetingBot.event?.start_time),
-            "minutes",
-          );
-          const newDeduplicationKey = `${meetingBot.deduplication_key}-${Math.floor(minutesSinceEventStart / 10)}`;
-
-          const calendarEventResult =
-            await recall.calendarV2.calendar_events_bot_create(
-              {
-                deduplication_key: newDeduplicationKey,
-                bot_config: {
-                  bot_name: botName,
-                  automatic_leave: {
-                    waiting_room_timeout:
-                      BOT_AUTOMATIC_LEAVE.WAITING_ROOM_TIMEOUT_IN_SECONDS,
-                    noone_joined_timeout:
-                      BOT_AUTOMATIC_LEAVE.NOONE_JOINED_TIMEOUT_IN_SECONDS,
-                  },
-                  transcription_options: {
-                    provider: "gladia",
-                  },
-                  metadata: botMetadata,
-                },
-              },
-              {
-                params: { id: meetingBot.event.id },
-              },
-            );
-
-          for (const bot of calendarEventResult.bots) {
-            logger.info("✅ Successfully created Google Meet bot", {
-              bot_id: bot.bot_id,
-              event_id: event.id,
-              profile_id: meetingBot.profile?.id,
-              user_email: meetingBot.profile?.email,
-              deduplication_key: bot.deduplication_key,
-            });
-
-            await slack.success({
-              text: `[${meetingBot.profile?.email}] Successfully created Google Meet bot: ${bot.bot_id}`,
-            });
-          }
-
-          await supabase.from("meeting_bots_v2").insert(
-            calendarEventResult.bots.map(
-              (bot) =>
-                ({
-                  id: bot.bot_id,
-                  provider: "recall",
-                  profile_id: meetingBot.profile_id,
-                  recall_calendar_id: meetingBot.recall_calendar_id,
-                  event_id: meetingBot.event_id,
-                  deduplication_key: newDeduplicationKey,
-                }) satisfies TablesInsert<"meeting_bots_v2">,
-            ),
-          );
 
           return;
         }

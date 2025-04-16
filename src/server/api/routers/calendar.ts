@@ -236,6 +236,7 @@ export const calendarRouter = createTRPCRouter({
         meetingUrl: z.string().url(),
         meetingTitle: z.string(),
         profileId: z.string(),
+        eventId: z.string().optional(),
       }),
     )
     .mutation(async ({ input }) => {
@@ -254,6 +255,7 @@ export const calendarRouter = createTRPCRouter({
         userId: input.profileId,
         meetingUrl: input.meetingUrl,
         meetingTitle: input.meetingTitle,
+        eventId: input.eventId,
       });
 
       if (!result.success) {

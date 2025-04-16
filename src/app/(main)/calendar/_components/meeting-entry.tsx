@@ -314,6 +314,7 @@ export function MeetingEntry({ event, isNow = false }: MeetingEntryProps) {
         profileId: event.profile_id,
         meetingUrl: event.meeting_url,
         meetingTitle: event.summary,
+        eventId: event.id,
       });
     }
   };

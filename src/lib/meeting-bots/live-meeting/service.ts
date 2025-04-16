@@ -10,6 +10,7 @@ export type LaunchLiveMeetingInput = {
   userId: string;
   meetingUrl: string;
   meetingTitle: string;
+  eventId?: string;
 };
 
 export function createLiveMeetingService(deps: MeetingBotsServiceDependencies) {
@@ -30,6 +31,14 @@ export function createLiveMeetingService(deps: MeetingBotsServiceDependencies) {
         };
       }
 
+      const { data: event } = input.eventId
+        ? await supabase
+            .from("calendar_events_v2")
+            .select("*, recall_calendar:recall_calendar_id(*)")
+            .eq("id", input.eventId)
+            .maybeSingle()
+        : { data: null };
+
       const now = dayjs().utc().format();
       const nowRoundedToTheFifthMinute =
         dayjs(now).minute() % 5 === 0
@@ -49,6 +58,7 @@ export function createLiveMeetingService(deps: MeetingBotsServiceDependencies) {
       const botMetadata = {
         user_id: userDetails.profile.id,
         meeting_title: meetingTitle,
+        ...(input.eventId && { event_id: input.eventId }),
       };
 
       const isZoomMeeting = input.meetingUrl.includes("zoom.us");
@@ -114,6 +124,10 @@ export function createLiveMeetingService(deps: MeetingBotsServiceDependencies) {
             provider: "meeting_baas",
             deduplication_key: botDeduplicationKey,
             title: meetingTitle,
+            ...(input.eventId && { event_id: input.eventId }),
+            ...(event?.recall_calendar?.id && {
+              recall_calendar_id: event.recall_calendar.id,
+            }),
           });
 
         if (meetingBotError) {
@@ -186,6 +200,10 @@ export function createLiveMeetingService(deps: MeetingBotsServiceDependencies) {
           provider: "recall",
           deduplication_key: botDeduplicationKey,
           title: meetingTitle,
+          ...(input.eventId && { event_id: input.eventId }),
+          ...(event?.recall_calendar?.id && {
+            recall_calendar_id: event.recall_calendar.id,
+          }),
         });
 
       if (meetingBotError) {
