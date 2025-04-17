@@ -3,11 +3,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import dayjs from "dayjs";
 import { motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import {
   Dialog,
@@ -27,6 +28,8 @@ import {
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { api, type RouterOutputs } from "~/trpc/react";
+
+import { Link } from "../ui/link";
 
 const formSchema = z.object({
   meetingUrl: z
@@ -62,6 +65,11 @@ export function AddLiveMeetingDialog({
     },
   });
 
+  const { data: userHasAuthorizedZoom } =
+    api.auth.checkUserHasAuthorizedZoom.useQuery({
+      profileId: user.id,
+    });
+
   const { mutate: launchMeetingBot, isPending: isLoading } =
     api.calendar.launchMeetingBot.useMutation({
       onSuccess: () => {
@@ -82,6 +90,11 @@ export function AddLiveMeetingDialog({
       profileId: user.id,
     });
   }
+
+  const meetingUrl = form.watch("meetingUrl");
+  const isZoomMeeting =
+    meetingUrl.includes("zoom.us") || meetingUrl.includes("zoomgov.com");
+  const showZoomAuthWarning = isZoomMeeting && userHasAuthorizedZoom === false;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -136,6 +149,18 @@ export function AddLiveMeetingDialog({
               )}
             />
 
+            {showZoomAuthWarning && (
+              <Alert variant="destructive" className="mt-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Zoom Authorization Required</AlertTitle>
+                <AlertDescription>
+                  You need to authorize Zoom before recording Zoom meetings.
+                  Please connect your Zoom account in{" "}
+                  <Link href="/integrations">Integrations</Link>.
+                </AlertDescription>
+              </Alert>
+            )}
+
             <DialogFooter>
               <Button
                 type="button"
@@ -145,7 +170,7 @@ export function AddLiveMeetingDialog({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isLoading}>
+              <Button type="submit" disabled={isLoading || showZoomAuthWarning}>
                 {isLoading && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.8 }}

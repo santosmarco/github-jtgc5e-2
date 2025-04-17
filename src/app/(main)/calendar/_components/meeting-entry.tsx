@@ -95,6 +95,11 @@ export function MeetingEntry({ event, isNow = false }: MeetingEntryProps) {
   const utils = api.useUtils();
   const prefersReducedMotion = useReducedMotion();
 
+  const { data: userHasAuthorizedZoom } =
+    api.auth.checkUserHasAuthorizedZoom.useQuery({
+      profileId: event.profile_id,
+    });
+
   // Determine whether the meeting bot should join this meeting
   const [shouldJoin, setShouldJoin] = React.useState<boolean>(
     // Use the explicit override value if available, otherwise use the system-calculated value
@@ -294,7 +299,12 @@ export function MeetingEntry({ event, isNow = false }: MeetingEntryProps) {
     return <Video className="h-4 w-4" />;
   };
 
-  const botStatusDetails = getBotStatusInfo(event, shouldJoin, isInPast);
+  const botStatusDetails = getBotStatusInfo(
+    event,
+    shouldJoin,
+    isInPast,
+    userHasAuthorizedZoom,
+  );
 
   // Add bot mutation
   const addBotMutation = api.calendar.launchMeetingBot.useMutation({

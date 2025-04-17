@@ -71,6 +71,7 @@ export function createLiveMeetingService(deps: MeetingBotsServiceDependencies) {
         meeting_title: meetingTitle,
       });
 
+      /*
       if (
         isZoomMeeting &&
         !userDetails.user.app_metadata?.integration_providers?.includes("zoom")
@@ -152,6 +153,7 @@ export function createLiveMeetingService(deps: MeetingBotsServiceDependencies) {
           data: meetingBot,
         };
       }
+      */
 
       const botResult = await recall.bot
         .bot_create({

@@ -600,4 +600,25 @@ export const authRouter = createTRPCRouter({
         });
       }
     }),
+
+  checkUserHasAuthorizedZoom: publicProcedure
+    .input(z.object({ profileId: z.string() }))
+    .output(z.boolean())
+    .query(async ({ input }) => {
+      const supabaseAdmin = await __dangerouslyCreateAdminClient__();
+      const { data: userData, error: getUserError } =
+        await supabaseAdmin.auth.admin.getUserById(input.profileId);
+
+      if (getUserError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to get user data: ${getUserError.message}`,
+          cause: getUserError,
+        });
+      }
+
+      const { user } = userData;
+
+      return !!user.app_metadata?.integration_providers?.includes("zoom");
+    }),
 });

@@ -8,6 +8,7 @@ import { Calendar } from "~/components/ui/calendar";
 import { Card } from "~/components/ui/card";
 import { getBotStatusInfo } from "~/lib/meeting-bots/status";
 import type { RouterOutputs } from "~/trpc/react";
+import { api } from "~/trpc/react";
 
 type SidebarCalendarProps = {
   events: RouterOutputs["calendar"]["getCalendarEvents"];
@@ -108,6 +109,11 @@ export function SidebarCalendar({
   onSelectDate,
   selectedDate,
 }: SidebarCalendarProps) {
+  const { data: userHasAuthorizedZoom } =
+    api.auth.checkUserHasAuthorizedZoom.useQuery({
+      profileId: events[0]?.profile_id ?? "",
+    });
+
   // Get events for the selected date with detailed status counts
   const selectedDateEventDetails = React.useMemo(() => {
     if (!selectedDate) return null;
@@ -136,6 +142,7 @@ export function SidebarCalendar({
           ? !!event.should_join_user_override
           : !!event.should_join_calculated,
         event.start_time ? new Date(event.start_time) < new Date() : false,
+        userHasAuthorizedZoom,
       );
 
       switch (status.variant) {

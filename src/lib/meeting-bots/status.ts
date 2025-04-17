@@ -122,6 +122,7 @@ export function getBotStatusInfo(
   event: RouterOutputs["calendar"]["getCalendarEvents"][number],
   shouldJoin = false,
   isInPast = false,
+  userHasAuthorizedZoom = true,
 ): BotStatusInfo {
   const meetingBot = event.meeting_bot;
 
@@ -143,6 +144,10 @@ export function getBotStatusInfo(
     }
 
     if (shouldJoin) {
+      if (event.meeting_platform === "zoom" && !userHasAuthorizedZoom) {
+        return statusInfoFactories.error("Zoom not authorized");
+      }
+
       return statusInfoFactories.primary(
         "Scheduled",
         "Will join when meeting starts",

@@ -866,6 +866,7 @@ export function createCalendarSyncService(
           return;
         }
 
+        /*
         const meetingJoinResult = await meetingBaas.meetings.join({
           bot_name: botName,
           bot_image: "https://i.ibb.co/jbZmcsG/Slide-16-9-1.jpg",
@@ -931,6 +932,7 @@ export function createCalendarSyncService(
           user_email: calendar.profile.email,
           bot_count: meetingBots?.length ?? 0,
         });
+        */
       } catch (error) {
         logger.error("Failed to handle Zoom meeting", {
           error,
