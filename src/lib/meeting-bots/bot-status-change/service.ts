@@ -195,7 +195,6 @@ export function createBotStatusChangeService(
           meetingBot.profile_id &&
           "event" in meetingBot &&
           meetingBot.event &&
-          recallBot.google_meet &&
           status?.sub_code === "call_ended_by_platform_waiting_room_timeout"
         ) {
           const { launchLiveMeeting } = createLiveMeetingService(deps);
