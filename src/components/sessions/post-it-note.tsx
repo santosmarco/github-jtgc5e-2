@@ -307,8 +307,6 @@ export default function PostItNote({
       let newX = x.get() + info.offset.x;
       let newY = y.get() + info.offset.y;
 
-      console.log({ x, y, info });
-
       // Constrain to container bounds with some padding
       const safetyPadding = 10;
       const maxX =
@@ -318,8 +316,6 @@ export default function PostItNote({
         (isMinimized ? 40 : noteBounds.height) -
         paddingTop -
         safetyPadding;
-
-      console.log(newX, newY, maxX, maxY, containerBounds, noteBounds);
 
       newX = Math.max(safetyPadding, Math.min(newX, maxX));
       newY = Math.max(safetyPadding, Math.min(newY, maxY));

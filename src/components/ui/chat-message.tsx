@@ -5,11 +5,13 @@ import type { VariantProps } from "class-variance-authority";
 import { cva } from "class-variance-authority";
 import {
   BookOpen,
+  BrainIcon,
   Database,
   Eye,
   FileText,
   Link,
   List,
+  Navigation,
   Tag,
   TagIcon,
   Users,
@@ -34,6 +36,7 @@ import type {
   ListMeetingsToolOutput,
   ListReportsToolOutput,
   SearchMomentsToolOutput,
+  ThinkToolOutput,
 } from "~/lib/ai/tools";
 import type {
   DiscoverKeyEntitiesToolOutput,
@@ -49,6 +52,8 @@ import type { VideoMoment } from "~/lib/schemas/video-moment";
 import { cn } from "~/lib/utils";
 
 import { Badge } from "./badge";
+
+type Animation = "none" | "slide" | "scale" | "fade";
 
 const chatBubbleVariants = cva(
   "group/message relative break-words rounded-lg p-3 text-sm",
@@ -90,13 +95,13 @@ const chatBubbleVariants = cva(
   },
 );
 
-type Animation = VariantProps<typeof chatBubbleVariants>["animation"];
-
 export interface ChatMessageProps extends UIMessage {
   showTimeStamp?: boolean;
   animation?: Animation;
   actions?: React.ReactNode;
 }
+
+const CONTEXT_REGEX = /^.*<context>.*<\/context>.*---\n\n/s;
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({
   id,
@@ -133,6 +138,420 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     ChatRequestBody["selectedMoments" | "selectedVideos"]
   >[number][];
 
+  const cleanContent = (text: string): string =>
+    text.replace(CONTEXT_REGEX, "");
+
+  const renderUserContent = (): React.ReactNode => (
+    <div className={isUser ? "text-primary-foreground" : "text-foreground"}>
+      {pinnedContent.length > 0 && (
+        <div className="flex flex-wrap gap-1 pb-2">
+          {pinnedContent.map((item) => (
+            <Badge
+              key={"id" in item ? item.id : item.videoId}
+              variant="outline"
+              className="flex items-center gap-1.5 border-border bg-accent font-normal"
+            >
+              {"videoId" in item ? (
+                <VideoIcon className="h-3 w-3" />
+              ) : (
+                <TagIcon className="h-3 w-3" />
+              )}
+              {item.title}
+            </Badge>
+          ))}
+        </div>
+      )}
+      <MarkdownRenderer>{cleanContent(content)}</MarkdownRenderer>
+    </div>
+  );
+
+  const renderDataMessage = (): React.ReactNode => {
+    try {
+      const data = JSON.parse(content);
+
+      if (data.type === "user_navigation") {
+        return (
+          <div className="flex flex-col text-xs text-muted-foreground">
+            <div className="mb-1 flex items-center gap-1 leading-none">
+              <Navigation className="h-3.5 w-3.5" />
+              <span className="font-medium">Navigation:</span> {data.pathname}
+            </div>
+            <div className="mt-1 flex items-center">
+              <div>{data.context}</div>
+            </div>
+          </div>
+        );
+      }
+
+      // Handle other data message types as needed
+      return (
+        <div className="text-xs text-muted-foreground">
+          {data.context || JSON.stringify(data)}
+        </div>
+      );
+    } catch (e) {
+      return <div className="text-xs text-muted-foreground">{content}</div>;
+    }
+  };
+
+  const getToolLoadingMessage = (toolName: string): string => {
+    const toolMessages: Record<string, string> = {
+      displayMoment: "Analyzing moment...",
+      listMeetings: "Searching across all your meetings...",
+      searchMoments: "Finding relevant moments...",
+      discoverKeyEntities: "Discovering key entities...",
+      findEntityRelationships: "Finding entity relationships...",
+      findRelatedTopics: "Finding related topics...",
+      entityLookup: "Looking up entity information...",
+      entitySemanticSearch: "Searching for relevant entities...",
+      listEntityNames: "Listing entity names...",
+      listRelationshipTypes: "Listing relationship types...",
+      listEntityTypes: "Listing entity types...",
+      listReports: "Finding reports...",
+      think: "Thinking...",
+    };
+
+    return toolMessages[toolName] || "Processing...";
+  };
+
+  const renderToolInvocationResult = (
+    toolInvocation: NonNullable<
+      Extract<
+        UIMessage["parts"][number],
+        { type: "tool-invocation" }
+      >["toolInvocation"]
+    >,
+  ): React.ReactNode => {
+    if (toolInvocation.state !== "result") {
+      return (
+        <LoadingIndicator
+          key={toolInvocation.toolCallId}
+          message={getToolLoadingMessage(toolInvocation.toolName)}
+        />
+      );
+    }
+
+    switch (toolInvocation.toolName) {
+      case "displayMoment": {
+        const { id, moment } = toolInvocation.result as {
+          id: string;
+          reasoning: string;
+          moment: VideoMoment;
+        };
+
+        if (!moment) return null;
+
+        return (
+          <CollapsibleSection
+            key={toolInvocation.toolCallId}
+            title={moment.title}
+            icon={Tag}
+            args={toolInvocation.args}
+          >
+            <MomentDisplay id={id} />
+          </CollapsibleSection>
+        );
+      }
+
+      case "listMeetings": {
+        const { data } = toolInvocation.result as ListMeetingsToolOutput;
+
+        return (
+          <CollapsibleSection
+            key={toolInvocation.toolCallId}
+            title="Found Meetings"
+            icon={VideoIcon}
+            count={data?.length ?? 0}
+            args={toolInvocation.args}
+          >
+            <ChatMeetingList meetings={data} />
+          </CollapsibleSection>
+        );
+      }
+
+      case "searchMoments": {
+        const { results } = toolInvocation.result as SearchMomentsToolOutput;
+
+        return (
+          <CollapsibleSection
+            key={toolInvocation.toolCallId}
+            title="Found Moments"
+            icon={Tag}
+            count={results?.length ?? 0}
+            args={toolInvocation.args}
+          >
+            <ChatMomentList moments={results} />
+          </CollapsibleSection>
+        );
+      }
+
+      case "discoverKeyEntities": {
+        const { entities, totalEntitiesFound } =
+          toolInvocation.result as DiscoverKeyEntitiesToolOutput;
+
+        return (
+          <CollapsibleSection
+            key={toolInvocation.toolCallId}
+            title="Key Entities"
+            icon={Database}
+            count={totalEntitiesFound ?? 0}
+            args={toolInvocation.args}
+          >
+            <EntityList entities={entities || []} />
+          </CollapsibleSection>
+        );
+      }
+
+      case "findEntityRelationships": {
+        const { entityName, relationships, totalRelationships } =
+          toolInvocation.result as FindEntityRelationshipsToolOutput;
+
+        const formattedRelationships =
+          relationships?.map((rel) => ({
+            relationship: rel.relationshipType,
+            subject:
+              rel.direction === "outgoing" ? entityName : rel.otherEntity,
+            object: rel.direction === "outgoing" ? rel.otherEntity : entityName,
+            otherEntity: rel.otherEntity,
+            isSubject: rel.direction === "outgoing",
+            topicTitle: rel.topicTitle,
+            topicId: rel.topicId,
+            confidence: rel.confidence,
+          })) || [];
+
+        return (
+          <CollapsibleSection
+            key={toolInvocation.toolCallId}
+            title={`Relationships for "${entityName}"`}
+            icon={Link}
+            count={totalRelationships ?? 0}
+            args={toolInvocation.args}
+          >
+            <RelationshipList
+              relationships={formattedRelationships}
+              entityName={entityName}
+            />
+          </CollapsibleSection>
+        );
+      }
+
+      case "findRelatedTopics": {
+        const { topics, totalTopicsFound } =
+          toolInvocation.result as FindRelatedTopicsToolOutput;
+
+        return (
+          <CollapsibleSection
+            key={toolInvocation.toolCallId}
+            title="Related Topics"
+            icon={BookOpen}
+            count={totalTopicsFound ?? 0}
+            args={toolInvocation.args}
+          >
+            <TopicList topics={topics || []} />
+          </CollapsibleSection>
+        );
+      }
+
+      case "entityLookup": {
+        const { entityName, entity, observations, relationships } =
+          toolInvocation.result as EntityLookupToolOutput;
+
+        if (!entity) return null;
+
+        return (
+          <CollapsibleSection
+            key={toolInvocation.toolCallId}
+            title={`Entity: ${entityName}`}
+            icon={Users}
+            args={toolInvocation.args}
+          >
+            <div className="space-y-4">
+              <EntityList
+                entities={[
+                  {
+                    ...entity,
+                    observations: observations?.map((obs) => obs.text),
+                  },
+                ]}
+              />
+
+              {relationships && relationships.length > 0 && (
+                <div className="mt-4">
+                  <h5 className="mb-2 text-sm font-medium">Relationships</h5>
+                  <RelationshipList
+                    relationships={relationships}
+                    entityName={entityName}
+                  />
+                </div>
+              )}
+            </div>
+          </CollapsibleSection>
+        );
+      }
+
+      case "entitySemanticSearch": {
+        const { results, totalResults } =
+          toolInvocation.result as EntitySemanticSearchToolOutput;
+
+        const totalCount = totalResults
+          ? totalResults.entities +
+            totalResults.relationships +
+            totalResults.observations
+          : 0;
+
+        return (
+          <CollapsibleSection
+            key={toolInvocation.toolCallId}
+            title="Semantic Search Results"
+            icon={Eye}
+            count={totalCount}
+            args={toolInvocation.args}
+          >
+            <div className="space-y-6">
+              {results?.entities && results.entities.length > 0 && (
+                <div>
+                  <h5 className="mb-2 text-sm font-medium">
+                    Entities ({results.entities.length})
+                  </h5>
+                  <EntityList entities={results.entities} />
+                </div>
+              )}
+
+              {results?.relationships && results.relationships.length > 0 && (
+                <div>
+                  <h5 className="mb-2 text-sm font-medium">
+                    Relationships ({results.relationships.length})
+                  </h5>
+                  <RelationshipList
+                    relationships={results.relationships.map((r) => ({
+                      ...r,
+                      subject: r.subject,
+                      object: r.object,
+                    }))}
+                  />
+                </div>
+              )}
+
+              {results?.observations && results.observations.length > 0 && (
+                <div>
+                  <h5 className="mb-2 text-sm font-medium">
+                    Observations ({results.observations.length})
+                  </h5>
+                  <ObservationList observations={results.observations} />
+                </div>
+              )}
+            </div>
+          </CollapsibleSection>
+        );
+      }
+
+      case "listEntityNames":
+      case "listRelationshipTypes":
+      case "listEntityTypes": {
+        const result = toolInvocation.result as
+          | ListEntityNamesToolOutput
+          | ListRelationshipTypesToolOutput
+          | ListEntityTypesToolOutput;
+
+        let items: Array<{ name: string }> = [];
+        let title = "";
+
+        if (result?.success) {
+          if ("entities" in result) {
+            items =
+              result.entities?.map((entity) => ({
+                name: entity.name,
+              })) || [];
+            title = "Entity Names";
+          } else if ("relationshipTypes" in result) {
+            items = result.relationshipTypes.map((type) => ({
+              name: type,
+            }));
+            title = "Relationship Types";
+          } else if ("entityTypes" in result) {
+            items =
+              result.entityTypes?.map((type) => ({
+                name: type,
+              })) || [];
+            title = "Entity Types";
+          }
+        }
+
+        return (
+          <CollapsibleSection
+            key={toolInvocation.toolCallId}
+            title={title}
+            icon={List}
+            count={items.length}
+            args={toolInvocation.args}
+          >
+            <SimpleList icon={List} items={items} />
+          </CollapsibleSection>
+        );
+      }
+
+      case "listReports": {
+        const result = toolInvocation.result as ListReportsToolOutput;
+
+        return (
+          <CollapsibleSection
+            key={toolInvocation.toolCallId}
+            title="Reports"
+            icon={FileText}
+            count={result?.flatMap((r) => r.reports).length ?? 0}
+            args={toolInvocation.args}
+          >
+            <ReportList reports={result || []} />
+          </CollapsibleSection>
+        );
+      }
+
+      case "think": {
+        const { thought } = toolInvocation.result as ThinkToolOutput;
+
+        return (
+          <CollapsibleSection
+            key={toolInvocation.toolCallId}
+            title="Thinking Process"
+            icon={BrainIcon}
+            args={toolInvocation.args}
+          >
+            <div className="space-y-4 px-1">
+              <MarkdownRenderer>{thought}</MarkdownRenderer>
+            </div>
+          </CollapsibleSection>
+        );
+      }
+
+      default:
+        return null;
+    }
+  };
+
+  const renderAssistantContent = (): React.ReactNode => {
+    const relevantParts = parts?.filter(
+      (part) => part.type === "tool-invocation" || part.type === "text",
+    );
+
+    if (!relevantParts?.length) return null;
+
+    return (
+      <div className="min-w-full space-y-2">
+        {relevantParts.map((part) => {
+          if (part.type === "text") {
+            return (
+              <MarkdownRenderer key={`${id}-${part.text}`}>
+                {cleanContent(part.text)}
+              </MarkdownRenderer>
+            );
+          }
+
+          return renderToolInvocationResult(part.toolInvocation);
+        })}
+      </div>
+    );
+  };
+
   return (
     <div className={cn("flex flex-col", isUser ? "items-end" : "items-start")}>
       <div
@@ -142,418 +561,20 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
           "space-y-3",
         )}
       >
-        {role === "user" && (
-          <div
-            className={isUser ? "text-primary-foreground" : "text-foreground"}
-          >
-            {pinnedContent.length > 0 && (
-              <div className="flex flex-wrap gap-1 pb-2">
-                {pinnedContent.map((item) => (
-                  <Badge
-                    key={"id" in item ? item.id : item.videoId}
-                    variant="outline"
-                    className="flex items-center gap-1.5 border-border bg-accent font-normal"
-                  >
-                    {"videoId" in item ? (
-                      <VideoIcon className="h-3 w-3" />
-                    ) : (
-                      <TagIcon className="h-3 w-3" />
-                    )}
-                    {item.title}
-                  </Badge>
-                ))}
-              </div>
-            )}
-            <MarkdownRenderer>
-              {content.replace(/^.*<context>.*<\/context>.*---\n\n/s, "")}
-            </MarkdownRenderer>
-          </div>
-        )}
+        {role === "data" && renderDataMessage()}
 
-        {role === "assistant" && actions ? (
+        {role === "user" && renderUserContent()}
+
+        {role === "assistant" && actions && (
           <div className="absolute -bottom-4 right-2 flex space-x-1 rounded-lg border bg-background p-1 opacity-0 transition-opacity group-hover/message:opacity-100">
             {actions}
           </div>
-        ) : null}
+        )}
 
-        {role === "assistant" &&
-          !!parts?.filter(
-            (part) => part.type === "tool-invocation" || part.type === "text",
-          ).length && (
-            <div className="min-w-full space-y-2">
-              {parts
-                ?.filter(
-                  (part) =>
-                    part.type === "tool-invocation" || part.type === "text",
-                )
-                .map((part, index) => {
-                  if (part.type === "text") {
-                    return (
-                      <MarkdownRenderer key={`${id}-${part.text}`}>
-                        {part.text.replace(
-                          /^.*<context>.*<\/context>.*---\n\n/s,
-                          "",
-                        )}
-                      </MarkdownRenderer>
-                    );
-                  }
-
-                  const toolInvocation = part.toolInvocation;
-
-                  if (toolInvocation.state !== "result") {
-                    return (
-                      <LoadingIndicator
-                        key={toolInvocation.toolCallId}
-                        message={
-                          toolInvocation.toolName === "displayMoment"
-                            ? "Analyzing moment..."
-                            : toolInvocation.toolName === "listMeetings"
-                              ? "Searching across all your meetings..."
-                              : toolInvocation.toolName === "searchMoments"
-                                ? "Finding relevant moments..."
-                                : toolInvocation.toolName ===
-                                    "discoverKeyEntities"
-                                  ? "Discovering key entities..."
-                                  : toolInvocation.toolName ===
-                                      "findEntityRelationships"
-                                    ? "Finding entity relationships..."
-                                    : toolInvocation.toolName ===
-                                        "findRelatedTopics"
-                                      ? "Finding related topics..."
-                                      : toolInvocation.toolName ===
-                                          "entityLookup"
-                                        ? "Looking up entity information..."
-                                        : toolInvocation.toolName ===
-                                            "entitySemanticSearch"
-                                          ? "Searching for relevant entities..."
-                                          : toolInvocation.toolName ===
-                                              "listEntityNames"
-                                            ? "Listing entity names..."
-                                            : toolInvocation.toolName ===
-                                                "listRelationshipTypes"
-                                              ? "Listing relationship types..."
-                                              : toolInvocation.toolName ===
-                                                  "listEntityTypes"
-                                                ? "Listing entity types..."
-                                                : toolInvocation.toolName ===
-                                                    "listReports"
-                                                  ? "Finding reports..."
-                                                  : "Processing..."
-                        }
-                      />
-                    );
-                  }
-
-                  if (toolInvocation.toolName === "displayMoment") {
-                    const { id, moment } = toolInvocation.result as {
-                      id: string;
-                      reasoning: string;
-                      moment: VideoMoment;
-                    };
-
-                    if (!moment) {
-                      return null;
-                    }
-
-                    return (
-                      <CollapsibleSection
-                        key={toolInvocation.toolCallId}
-                        title={moment.title}
-                        icon={Tag}
-                        args={toolInvocation.args}
-                      >
-                        <MomentDisplay id={id} />
-                      </CollapsibleSection>
-                    );
-                  }
-
-                  if (toolInvocation.toolName === "listMeetings") {
-                    const { data } =
-                      toolInvocation.result as ListMeetingsToolOutput;
-
-                    return (
-                      <CollapsibleSection
-                        key={toolInvocation.toolCallId}
-                        title="Found Meetings"
-                        icon={VideoIcon}
-                        count={data?.length ?? 0}
-                        args={toolInvocation.args}
-                      >
-                        <ChatMeetingList meetings={data} />
-                      </CollapsibleSection>
-                    );
-                  }
-
-                  if (toolInvocation.toolName === "searchMoments") {
-                    const { results } =
-                      toolInvocation.result as SearchMomentsToolOutput;
-
-                    return (
-                      <CollapsibleSection
-                        key={toolInvocation.toolCallId}
-                        title="Found Moments"
-                        icon={Tag}
-                        count={results?.length ?? 0}
-                        args={toolInvocation.args}
-                      >
-                        <ChatMomentList moments={results} />
-                      </CollapsibleSection>
-                    );
-                  }
-
-                  if (toolInvocation.toolName === "discoverKeyEntities") {
-                    const { entities, totalEntitiesFound } =
-                      toolInvocation.result as DiscoverKeyEntitiesToolOutput;
-
-                    return (
-                      <CollapsibleSection
-                        key={toolInvocation.toolCallId}
-                        title="Key Entities"
-                        icon={Database}
-                        count={totalEntitiesFound ?? 0}
-                        args={toolInvocation.args}
-                      >
-                        <EntityList entities={entities || []} />
-                      </CollapsibleSection>
-                    );
-                  }
-
-                  if (toolInvocation.toolName === "findEntityRelationships") {
-                    const { entityName, relationships, totalRelationships } =
-                      toolInvocation.result as FindEntityRelationshipsToolOutput;
-
-                    const formattedRelationships =
-                      relationships?.map((rel) => ({
-                        relationship: rel.relationshipType,
-                        subject:
-                          rel.direction === "outgoing"
-                            ? entityName
-                            : rel.otherEntity,
-                        object:
-                          rel.direction === "outgoing"
-                            ? rel.otherEntity
-                            : entityName,
-                        otherEntity: rel.otherEntity,
-                        isSubject: rel.direction === "outgoing",
-                        topicTitle: rel.topicTitle,
-                        topicId: rel.topicId,
-                        confidence: rel.confidence,
-                      })) || [];
-
-                    return (
-                      <CollapsibleSection
-                        key={toolInvocation.toolCallId}
-                        title={`Relationships for "${entityName}"`}
-                        icon={Link}
-                        count={totalRelationships ?? 0}
-                        args={toolInvocation.args}
-                      >
-                        <RelationshipList
-                          relationships={formattedRelationships}
-                          entityName={entityName}
-                        />
-                      </CollapsibleSection>
-                    );
-                  }
-
-                  if (toolInvocation.toolName === "findRelatedTopics") {
-                    const { topics, totalTopicsFound } =
-                      toolInvocation.result as FindRelatedTopicsToolOutput;
-
-                    return (
-                      <CollapsibleSection
-                        key={toolInvocation.toolCallId}
-                        title="Related Topics"
-                        icon={BookOpen}
-                        count={totalTopicsFound ?? 0}
-                        args={toolInvocation.args}
-                      >
-                        <TopicList topics={topics || []} />
-                      </CollapsibleSection>
-                    );
-                  }
-
-                  if (toolInvocation.toolName === "entityLookup") {
-                    const { entityName, entity, observations, relationships } =
-                      toolInvocation.result as EntityLookupToolOutput;
-
-                    if (!entity) {
-                      return null;
-                    }
-
-                    return (
-                      <CollapsibleSection
-                        key={toolInvocation.toolCallId}
-                        title={`Entity: ${entityName}`}
-                        icon={Users}
-                        args={toolInvocation.args}
-                      >
-                        <div className="space-y-4">
-                          <EntityList
-                            entities={[
-                              {
-                                ...entity,
-                                observations: observations?.map(
-                                  (obs) => obs.text,
-                                ),
-                              },
-                            ]}
-                          />
-
-                          {relationships && relationships.length > 0 && (
-                            <div className="mt-4">
-                              <h5 className="mb-2 text-sm font-medium">
-                                Relationships
-                              </h5>
-                              <RelationshipList
-                                relationships={relationships}
-                                entityName={entityName}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </CollapsibleSection>
-                    );
-                  }
-
-                  if (toolInvocation.toolName === "entitySemanticSearch") {
-                    const { results, totalResults } =
-                      toolInvocation.result as EntitySemanticSearchToolOutput;
-
-                    const totalCount = totalResults
-                      ? totalResults.entities +
-                        totalResults.relationships +
-                        totalResults.observations
-                      : 0;
-
-                    return (
-                      <CollapsibleSection
-                        key={toolInvocation.toolCallId}
-                        title="Semantic Search Results"
-                        icon={Eye}
-                        count={totalCount}
-                        args={toolInvocation.args}
-                      >
-                        <div className="space-y-6">
-                          {results?.entities && results.entities.length > 0 && (
-                            <div>
-                              <h5 className="mb-2 text-sm font-medium">
-                                Entities ({results.entities.length})
-                              </h5>
-                              <EntityList entities={results.entities} />
-                            </div>
-                          )}
-
-                          {results?.relationships &&
-                            results.relationships.length > 0 && (
-                              <div>
-                                <h5 className="mb-2 text-sm font-medium">
-                                  Relationships ({results.relationships.length})
-                                </h5>
-                                <RelationshipList
-                                  relationships={results.relationships.map(
-                                    (r) => ({
-                                      ...r,
-                                      subject: r.subject,
-                                      object: r.object,
-                                    }),
-                                  )}
-                                />
-                              </div>
-                            )}
-
-                          {results?.observations &&
-                            results.observations.length > 0 && (
-                              <div>
-                                <h5 className="mb-2 text-sm font-medium">
-                                  Observations ({results.observations.length})
-                                </h5>
-                                <ObservationList
-                                  observations={results.observations}
-                                />
-                              </div>
-                            )}
-                        </div>
-                      </CollapsibleSection>
-                    );
-                  }
-
-                  if (
-                    [
-                      "listEntityNames",
-                      "listRelationshipTypes",
-                      "listEntityTypes",
-                    ].includes(toolInvocation.toolName)
-                  ) {
-                    const result = toolInvocation.result as
-                      | ListEntityNamesToolOutput
-                      | ListRelationshipTypesToolOutput
-                      | ListEntityTypesToolOutput;
-
-                    let items: Array<{ name: string }> = [];
-
-                    if (result?.success) {
-                      if ("entities" in result) {
-                        items =
-                          result.entities?.map((entity) => ({
-                            name: entity.name,
-                          })) || [];
-                      } else if ("relationshipTypes" in result) {
-                        items = result.relationshipTypes.map((type) => ({
-                          name: type,
-                        }));
-                      } else if ("entityTypes" in result) {
-                        items =
-                          result.entityTypes?.map((type) => ({
-                            name: type,
-                          })) || [];
-                      }
-                    }
-
-                    return (
-                      <CollapsibleSection
-                        key={toolInvocation.toolCallId}
-                        title={
-                          toolInvocation.toolName === "listEntityNames"
-                            ? "Entity Names"
-                            : toolInvocation.toolName ===
-                                "listRelationshipTypes"
-                              ? "Relationship Types"
-                              : "Entity Types"
-                        }
-                        icon={List}
-                        count={items.length}
-                        args={toolInvocation.args}
-                      >
-                        <SimpleList icon={List} items={items} />
-                      </CollapsibleSection>
-                    );
-                  }
-
-                  if (toolInvocation.toolName === "listReports") {
-                    const result =
-                      toolInvocation.result as ListReportsToolOutput;
-
-                    return (
-                      <CollapsibleSection
-                        key={toolInvocation.toolCallId}
-                        title="Reports"
-                        icon={FileText}
-                        count={result?.flatMap((r) => r.reports).length ?? 0}
-                        args={toolInvocation.args}
-                      >
-                        <ReportList reports={result || []} />
-                      </CollapsibleSection>
-                    );
-                  }
-
-                  return null;
-                })}
-            </div>
-          )}
+        {role === "assistant" && renderAssistantContent()}
       </div>
 
-      {showTimeStamp && createdAt ? (
+      {showTimeStamp && createdAt && (
         <span
           className={cn(
             "mt-1 block px-1 text-xs opacity-50",
@@ -562,7 +583,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
         >
           {formattedTime}
         </span>
-      ) : null}
+      )}
     </div>
   );
 };

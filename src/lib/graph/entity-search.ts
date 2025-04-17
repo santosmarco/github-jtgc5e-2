@@ -1,7 +1,5 @@
+import { type SearchOptions, SearchService } from "../core/searchService";
 import type { EntityVectorMetadata } from "../processing/entity-embeddings";
-import { SearchService, type SearchOptions } from "../core/searchService";
-import { getEntitiesIndex } from "../pinecone/client";
-import { embedText } from "../pinecone/embeddings";
 
 // Initialize the service as a singleton
 const searchService = new SearchService();
@@ -1026,23 +1024,3 @@ export async function multiCriteriaEntitySearch(
     .sort((a, b) => b.totalScore - a.totalScore)
     .slice(0, resultLimit);
 }
-
-// get info about the index
-const a = async () => {
-  const indexInfo = await (await getEntitiesIndex())
-    .namespace("relationships")
-    .query({
-      vector: await embedText("Kimberly Shenk"),
-      topK: 100,
-      includeValues: true,
-      includeMetadata: true,
-      filter: {
-        profile_id: {
-          $eq: "5071bb6c-ffb3-4ff7-b662-4c72837ac021",
-        },
-      },
-    });
-  console.log(indexInfo.matches.map((m) => m.metadata));
-};
-
-a();

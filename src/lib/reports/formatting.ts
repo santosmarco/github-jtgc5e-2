@@ -127,3 +127,127 @@ export function formatReportToMarkdown(report: Report): string {
     .filter((line): line is string => Boolean(line))
     .join("\n");
 }
+
+/**
+ * Extracts the full coaching payload—every skill, goal, signal, moment, etc.—so
+ * your LLM has all the fuel it needs.
+ */
+export function extractOnlyUsefulReportData(
+  payload: RouterOutputs["reports"]["getGroupReports"]["reports"][number],
+) {
+  return {
+    summary: payload.summary,
+    profileId: payload.profile_id,
+    startDate: payload.start_date,
+    endDate: payload.end_date,
+
+    personality: {
+      text: payload.personality_text,
+      description: payload.personality_description,
+      badges: payload.personality_badges,
+      color: payload.personality_color,
+      icon: payload.personality_icon,
+    },
+
+    ...(payload.skill && {
+      skill: {
+        id: payload.skill.id,
+        title: payload.skill.title,
+        description: payload.skill.description,
+
+        goals: payload.skill.goals.map((g) => ({
+          id: g.id,
+          text: g.text,
+          progress: g.progress,
+          is_current: g.is_current,
+          is_default: g.is_default,
+          hidden_text: g.hidden_text,
+          user_provided_context: g.user_provided_context,
+          completed_at: g.completed_at,
+          previous_goal_id: g.previous_goal_id,
+        })),
+
+        scales: payload.skill.scales.map((s) => ({
+          id: s.id,
+          negative_tag_title: s.negative_tag_title,
+          positive_tag_title: s.positive_tag_title,
+          negative_tag_description: s.negative_tag_description,
+          positive_tag_description: s.positive_tag_description,
+        })),
+
+        statuses: payload.skill.statuses.map((st) => ({
+          id: st.id,
+          status: st.status,
+          goal_ids: st.goal_ids,
+        })),
+
+        goalTemplates: payload.skill.goal_templates.map((t) => ({
+          id: t.id,
+          text: t.text,
+          context: t.context,
+          is_current: t.is_current,
+        })),
+      },
+    }),
+
+    report: {
+      sections: payload.report_sections.map((sec) => ({
+        id: sec.id,
+        index: sec.index,
+        title: sec.title,
+        summary: sec.summary,
+        direction: sec.direction,
+      })),
+
+      goals: payload.report_goals.map((rg) => ({
+        id: rg.id,
+        text: rg.text,
+        hidden_text: rg.hidden_text,
+        is_reviewed: rg.is_reviewed,
+        user_provided_context: rg.user_provided_context,
+        signals: rg.goal.signals.map((sig) => ({
+          id: sig.id,
+          tag: sig.tag,
+          text: sig.text,
+          activity: sig.activity,
+          direction: sig.direction,
+          activity_type: sig.activity_type,
+          target_person_type: sig.target_person_type,
+          hidden_text: sig.hidden_text,
+        })),
+      })),
+
+      moments: payload.report_moments.map((rm) => ({
+        id: rm.id,
+        VTT: rm.VTT,
+        score: rm.score,
+        report_section_id: rm.report_section_id,
+        report_goal_signal_id: rm.report_goal_signal_id,
+        report_section_reasoning: rm.report_section_reasoning,
+        report_section_confidence: rm.report_section_confidence,
+        report_section_above_threshold: rm.report_section_above_threshold,
+        moment: {
+          id: rm.moment.id,
+          vtt: rm.moment.vtt,
+          title: rm.moment.title,
+          summary: rm.moment.summary,
+          version: rm.moment.version,
+          activity: rm.moment.activity,
+          relevant: rm.moment.relevant,
+          topic_id: rm.moment.topic_id,
+          intensity: rm.moment.intensity,
+          created_at: rm.moment.created_at,
+          moment_url: rm.moment.moment_url,
+          subtags: rm.moment.subtags.map((st) => ({
+            id: st.id,
+            tag: st.tag,
+            reasoning: st.reasoning,
+            confidence: st.confidence,
+          })),
+        },
+      })),
+
+      comments: payload.report_comments,
+    },
+  };
+}

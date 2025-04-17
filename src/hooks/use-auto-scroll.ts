@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export function useAutoScroll(dependencies: React.DependencyList) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     if (containerRef.current) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
     }
-  };
+  }, []);
 
   const handleScroll = () => {
     if (containerRef.current) {

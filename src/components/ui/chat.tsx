@@ -2,7 +2,7 @@
 
 import type { UIMessage } from "ai";
 import { ArrowDown, ThumbsDown, ThumbsUp } from "lucide-react";
-import { type ReactElement, forwardRef, useState } from "react";
+import { forwardRef, type ReactElement, useState } from "react";
 
 import { Button } from "~/components/ui/button";
 import { CopyButton } from "~/components/ui/copy-button";
@@ -134,15 +134,17 @@ Chat.displayName = "Chat";
 export function ChatMessages({
   messages,
   children,
+  className,
 }: React.PropsWithChildren<{
   messages: UIMessage[];
+  className?: string;
 }>) {
   const { containerRef, scrollToBottom, handleScroll, shouldAutoScroll } =
     useAutoScroll([messages]);
 
   return (
     <div
-      className="relative overflow-y-auto pb-4 pt-24"
+      className={cn("relative overflow-y-auto pb-4 pt-24", className)}
       ref={containerRef}
       onScroll={handleScroll}
     >

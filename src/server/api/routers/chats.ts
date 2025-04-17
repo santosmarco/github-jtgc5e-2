@@ -105,8 +105,6 @@ export const chatsRouter = createTRPCRouter({
           Now analyze the conversation and generate three targeted follow-up questions.
         `;
 
-        console.log(prompt);
-
         const result = await generateObject({
           model: openai("gpt-4o-2024-08-06"),
           prompt,

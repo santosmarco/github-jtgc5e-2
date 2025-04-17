@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
+import { ChatContextProvider } from "~/components/floating-chat/chat-context-provider";
 import { ProfileProvider } from "~/components/profile-provider";
 import { PostHogProvider } from "~/components/providers/posthog";
 import { Toaster } from "~/components/ui/sonner";
@@ -34,14 +35,16 @@ export default function RootLayout({
         <NuqsAdapter>
           <TRPCReactProvider>
             <PostHogProvider>
-              <ProfileProvider>
-                <TooltipProvider delayDuration={0}>
-                  {children}
-                  <Toaster />
-                  <Analytics />
-                  <SpeedInsights />
-                </TooltipProvider>
-              </ProfileProvider>
+              <ChatContextProvider>
+                <ProfileProvider>
+                  <TooltipProvider delayDuration={0}>
+                    {children}
+                    <Toaster />
+                    <Analytics />
+                    <SpeedInsights />
+                  </TooltipProvider>
+                </ProfileProvider>
+              </ChatContextProvider>
             </PostHogProvider>
           </TRPCReactProvider>
         </NuqsAdapter>

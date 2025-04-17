@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { AppSidebar } from "~/components/app-sidebar";
+import { FloatingChat } from "~/components/floating-chat/floating-chat";
 import OnboardingFlow from "~/components/onboarding-flow";
 import { OnboardingFlowStage2 } from "~/components/onboarding-flow-stage-2";
 import { ProfileWarning } from "~/components/profile-warning";
@@ -59,6 +60,7 @@ export default async function MainLayout({
         </main>
       </div>
       <FeedbackButton />
+      <FloatingChat />
     </>
   );
 }

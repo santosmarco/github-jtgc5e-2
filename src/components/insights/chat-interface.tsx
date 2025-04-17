@@ -517,7 +517,7 @@ export function ChatInterface({
           })()}
 
           {/* Chat Messages */}
-          <ChatMessages messages={messages as UIMessage[]}>
+          <ChatMessages messages={messages}>
             {error && (
               <Alert variant="destructive" className="mb-4">
                 <AlertCircle className="h-4 w-4" />
@@ -525,10 +525,7 @@ export function ChatInterface({
                 <AlertDescription>{error.message}</AlertDescription>
               </Alert>
             )}
-            <MessageList
-              messages={messages as UIMessage[]}
-              isTyping={isTyping && !error}
-            />
+            <MessageList messages={messages} isTyping={isTyping && !error} />
           </ChatMessages>
 
           <AnimatePresence>

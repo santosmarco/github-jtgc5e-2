@@ -1,7 +1,7 @@
-import { tool } from "ai";
 import dedent from "ts-dedent";
 import { z } from "zod";
 
+import { tool, ToolCategory } from "~/lib/ai/tools";
 import { createClient as createSupabaseClient } from "~/lib/supabase/server";
 
 import { type SearchOptions, SearchService } from "../core/searchService";
@@ -108,7 +108,7 @@ function createSearchOptions(
  * Tool that allows the LLM to perform semantic search over entities
  */
 export const entitySemanticSearchTool = (profileId: string) =>
-  tool({
+  tool("entitySemanticSearch", {
     description:
       "Performs powerful semantic search across entities, relationships, and observations using natural language queries. Ideal for discovering connections between concepts, finding relevant information without knowing exact entity names, or exploring how different ideas relate to each other across multiple meetings. Use this when you need to uncover insights or patterns that might not be immediately obvious. If you're unsure which specific entities exist, first use the listEntityNamesTool to discover available entities.",
     parameters: z.object({
@@ -317,13 +317,19 @@ export const entitySemanticSearchTool = (profileId: string) =>
         };
       }
     },
+    category: ToolCategory.EXPLORE,
+    priority: 10,
+    useCases: [
+      "Discovering connections between entities",
+      "Finding relevant information across multiple meetings",
+    ],
   });
 
 /**
  * Tool that allows the LLM to look up comprehensive information about a specific entity
  */
 export const entityLookupTool = (profileId: string) =>
-  tool({
+  tool("entityLookup", {
     description:
       "Retrieves comprehensive, in-depth information about a specific entity by exact name. This tool provides a complete profile including the entity's description, all relationships with other entities, every observation mentioning it, and all topics where it appears. Essential when you need to build a complete understanding of a person, project, concept, or decision across the entire conversation history. Use this for detailed analysis of key entities that have already been identified. If you don't know which entities exist, first use the listEntityNamesTool to discover available entity names.",
     parameters: z.object({
@@ -709,13 +715,20 @@ export const entityLookupTool = (profileId: string) =>
         };
       }
     },
+    category: ToolCategory.EXPLORE,
+    priority: 10,
+    useCases: [
+      "Finding all instances where a particular subject was addressed",
+      "Identifying recurring themes across meetings",
+      "Locating specific discussions without knowing exactly when they occurred",
+    ],
   });
 
 /**
  * Tool that allows the LLM to find topics related to a specific query
  */
 export const findRelatedTopicsTool = (profileId: string) =>
-  tool({
+  tool("findRelatedTopics", {
     description:
       "Discovers meeting topics and discussions that are most relevant to a specific query or theme. This tool analyzes the semantic meaning of your query to identify conversation segments where similar concepts were discussed, even if different terminology was used. Perfect for finding all instances where a particular subject was addressed, identifying recurring themes across meetings, or locating specific discussions without knowing exactly when they occurred. Use this to map the landscape of conversations around a particular subject. If you want to identify which entities exist first, use the listEntityNamesTool.",
     parameters: z.object({
@@ -861,13 +874,20 @@ export const findRelatedTopicsTool = (profileId: string) =>
         };
       }
     },
+    category: ToolCategory.EXPLORE,
+    priority: 10,
+    useCases: [
+      "Finding all instances where a particular subject was addressed",
+      "Identifying recurring themes across meetings",
+      "Locating specific discussions without knowing exactly when they occurred",
+    ],
   });
 
 /**
  * Tool that allows the LLM to find all relationships for a specific entity
  */
 export const findEntityRelationshipsTool = (profileId: string) =>
-  tool({
+  tool("findEntityRelationships", {
     description: dedent`
       Maps the complete network of relationships and connections for a specific entity.
       This tool reveals how an entity interacts with other entities across all meetings, showing both direct relationships (where the entity is actively involved) and indirect relationships (where the entity is being acted upon).
@@ -1133,13 +1153,19 @@ export const findEntityRelationshipsTool = (profileId: string) =>
         };
       }
     },
+    category: ToolCategory.EXPLORE,
+    priority: 10,
+    useCases: [
+      "Finding all relationships for a specific entity",
+      "Analyzing relationships within a particular context or timeframe",
+    ],
   });
 
 /**
  * Tool that allows the LLM to discover key entities across meetings
  */
 export const discoverKeyEntitiesTool = (profileId: string) =>
-  tool({
+  tool("discoverKeyEntities", {
     description: dedent`
       Identifies the most significant and frequently discussed entities across meetings or topics.
       This tool analyzes patterns of mentions to surface the most important people, projects, decisions, or concepts that appear consistently throughout conversations.
@@ -1382,13 +1408,19 @@ export const discoverKeyEntitiesTool = (profileId: string) =>
         };
       }
     },
+    category: ToolCategory.EXPLORE,
+    priority: 10,
+    useCases: [
+      "Getting a high-level overview of what matters most across multiple conversations",
+      "Identifying key stakeholders or recurring themes",
+    ],
   });
 
 /**
  * Tool that allows the LLM to list available entity names for further exploration
  */
 export const listEntityNamesTool = (profileId: string) =>
-  tool({
+  tool("listEntityNames", {
     description: dedent`
       Retrieves a list of entity names available in the system, filtered by optional criteria.
       This tool is particularly useful when you need to discover what entities exist before using other tools that require specific entity names as input.
@@ -1545,13 +1577,19 @@ export const listEntityNamesTool = (profileId: string) =>
         };
       }
     },
+    category: ToolCategory.EXPLORE,
+    priority: 10,
+    useCases: [
+      "Discovering what entities exist in the system",
+      "Finding specific entities by name",
+    ],
   });
 
 /**
  * Tool that allows the LLM to list available relationship types in the system
  */
 export const listRelationshipTypesTool = (profileId: string) =>
-  tool({
+  tool("listRelationshipTypes", {
     description: dedent`
       Retrieves a list of relationship types available in the system, such as 'works with', 'reports to', or 'is responsible for'.
       Use this tool to discover what types of relationships exist between entities before using tools like findEntityRelationships tool with specific relationship type filters.
@@ -1677,13 +1715,19 @@ export const listRelationshipTypesTool = (profileId: string) =>
         };
       } catch (error) {}
     },
+    category: ToolCategory.EXPLORE,
+    priority: 10,
+    useCases: [
+      "Discovering what types of relationships exist between entities",
+      "Analyzing relationships within a particular context or timeframe",
+    ],
   });
 
 /**
  * Tool that allows the LLM to list available entity types in the system
  */
 export const listEntityTypesTool = (profileId: string) =>
-  tool({
+  tool("listEntityTypes", {
     description: dedent`
       Retrieves a list of entity types available in the system, such as 'Person', 'Project', 'Decision', or 'Concept'.
       Use this tool to discover what types of entities exist before using tools like discoverKeyEntities tool or listEntityNames tool with specific entity type filters.
@@ -1842,6 +1886,12 @@ export const listEntityTypesTool = (profileId: string) =>
         };
       }
     },
+    category: ToolCategory.EXPLORE,
+    priority: 10,
+    useCases: [
+      "Discovering what types of entities exist in the system",
+      "Analyzing entities within a particular context or timeframe",
+    ],
   });
 
 /**
