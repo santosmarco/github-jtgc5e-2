@@ -8,6 +8,7 @@ import {
   RefreshCw,
   X,
 } from "lucide-react";
+import Image from "next/image";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -94,7 +95,15 @@ export function FloatingChatContainer({
         type="button"
       >
         <div className="ml-1.5 flex items-center justify-start gap-2">
-          <MessageCircle className="h-4 w-4" />
+          <div className="relative h-6 w-6 overflow-hidden rounded-full">
+            <Image
+              src="/images/icons/titan-coach.png"
+              alt="Titan Coach"
+              width={24}
+              height={24}
+              className="object-cover"
+            />
+          </div>
           <AnimatePresence mode="wait" initial={false}>
             <motion.span
               key={`open-minimized-${!isOpen || isMinimized}`}
