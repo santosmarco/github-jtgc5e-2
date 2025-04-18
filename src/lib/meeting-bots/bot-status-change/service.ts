@@ -1132,7 +1132,7 @@ export function createBotStatusChangeService(
         user_email: bot.profile?.email,
       });
 
-      void processVideo({
+      await processVideo({
         meetingBotId: bot.id,
         processingId: meetingProcessingStatusId,
         steps: ["all"],
