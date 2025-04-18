@@ -541,6 +541,7 @@ function buildEnhancedUserMessage({
            * The Coaching Habit by Michael Bungay Stanier
            * Essentialism by Greg McKeown
            * Radical Candor by Kim Scott
+         - IMPORTANT: When citing sources for a specific topic, there is no need to reference multiple sources. Simply cite the one that is most relevant to your citation.
       4. ALWAYS evaluate the feasibility and effectiveness of each recommendation.
       5. ALWAYS select and apply the most appropriate insights based on the analysis.
       6. When giving examples, ALWAYS prefer to use real-world examples from the context rather than generic examples.
