@@ -28,8 +28,8 @@ const cspHeader = [
   "form-action 'self'",
 
   // Frame handling
-  "frame-src https://withtitan.retool.com/",
-  "frame-ancestors 'self' https://withtitan.retool.com/",
+  "frame-src https://withtitan.retool.com/ https://app.withtitan.com/",
+  "frame-ancestors 'self' https://withtitan.retool.com/ https://app.withtitan.com/",
 
   // API and service connections
   "connect-src 'self' https://withtitan.retool.com/ https://*.posthog.com https://*.i.posthog.com https://va.vercel-scripts.com https://db.withtitan.com https://vitals.vercel-insights.com https://vod.api.video",
