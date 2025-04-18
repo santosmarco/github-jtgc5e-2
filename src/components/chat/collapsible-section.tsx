@@ -36,14 +36,6 @@ export function CollapsibleSection({
   headerActions,
 }: CollapsibleSectionProps) {
   const [internalOpen, setInternalOpen] = React.useState(() => defaultOpen);
-  const [initialWidth, setInitialWidth] = React.useState<number>();
-  const ref = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    if (ref.current && !initialWidth) {
-      setInitialWidth(ref.current.getBoundingClientRect().width);
-    }
-  }, [initialWidth]);
 
   const isControlled = open !== undefined;
   const isOpen = isControlled ? open : internalOpen;
@@ -58,11 +50,9 @@ export function CollapsibleSection({
         onOpenChange?.(newOpen);
       }}
       className={cn(
-        "-mx-1 w-[calc(100%+8px)] overflow-hidden rounded-md border border-border/70 bg-background/50 data-[state=open]:border-border/50",
+        "w-full overflow-hidden rounded-md border border-border/70 bg-background/50 data-[state=open]:border-border/50",
         className,
       )}
-      ref={ref}
-      style={initialWidth ? { maxWidth: initialWidth } : undefined}
     >
       <CollapsibleTrigger asChild>
         <Button

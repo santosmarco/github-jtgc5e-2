@@ -54,6 +54,13 @@ const nextConfig = {
   },
   // Add security headers
   async headers() {
+    // Skip CSP in development environment
+    const isDevelopment = process.env.NODE_ENV === "development";
+
+    if (isDevelopment) {
+      return [];
+    }
+
     return [
       {
         // Apply security headers to all routes except webhooks

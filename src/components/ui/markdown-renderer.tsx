@@ -149,9 +149,9 @@ function childrenTakeAllStringContents(element: any): string {
       return children
         .map((child) => childrenTakeAllStringContents(child))
         .join("");
-    } else {
-      return childrenTakeAllStringContents(children);
     }
+
+    return childrenTakeAllStringContents(children);
   }
 
   return "";
@@ -222,20 +222,16 @@ const COMPONENTS = {
       <>
         <TooltipProvider delayDuration={0}>
           <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-1.5 !h-6 gap-1.5 rounded-full border-foreground/20 px-2.5 leading-none text-muted-foreground transition-all hover:border-primary hover:bg-accent hover:text-accent-foreground"
-              >
-                <TrendingUpIcon className="text-primary" />
-                {moment.title}
-              </Button>
+            <TooltipTrigger>
+              <span className="inline-flex items-center gap-1 rounded border-b border-dotted border-primary/40 px-1 text-xs font-medium text-muted-foreground hover:text-primary">
+                <TrendingUpIcon className="inline h-3 w-3 text-primary" />
+                <span className="inline">{moment.title}</span>
+              </span>
             </TooltipTrigger>
             <TooltipContent
               side="bottom"
               align="start"
-              className="rounded-lg border bg-card p-0 shadow-lg"
+              className="max-w-screen-2xl rounded-lg border bg-card p-0 shadow-lg"
             >
               <MomentDisplay id={moment.id} reasoning={momentReasoning} />
             </TooltipContent>

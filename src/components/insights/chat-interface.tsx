@@ -151,6 +151,9 @@ const TOPIC_CONFIGURATIONS: Record<string, TopicConfiguration> = {
   },
 };
 
+// Memoized ChatInput to prevent unnecessary re-renders
+const MemoizedChatInput = memo(ChatInput);
+
 export function ChatInterface({
   userId,
   selectedTopic,
@@ -179,9 +182,6 @@ export function ChatInterface({
   const [followUpQuestions, setFollowUpQuestions] = useState<string[] | null>(
     null,
   );
-
-  // Memoized ChatInput to prevent unnecessary re-renders
-  const MemoizedChatInput = memo(ChatInput);
 
   const generateFollowUpQuestions =
     api.chats.generateFollowUpQuestions.useMutation({

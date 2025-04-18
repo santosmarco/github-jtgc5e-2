@@ -536,17 +536,21 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     if (!relevantParts?.length) return null;
 
     return (
-      <div className="min-w-full space-y-2">
+      <div className="w-full space-y-2">
         {relevantParts.map((part) => {
           if (part.type === "text") {
             return (
-              <MarkdownRenderer key={`${id}-${part.text}`}>
-                {cleanContent(part.text)}
-              </MarkdownRenderer>
+              <div className="w-full" key={`${id}-${part.text}`}>
+                <MarkdownRenderer>{cleanContent(part.text)}</MarkdownRenderer>
+              </div>
             );
           }
 
-          return renderToolInvocationResult(part.toolInvocation);
+          return (
+            <div className="w-full" key={part.toolInvocation?.toolCallId}>
+              {renderToolInvocationResult(part.toolInvocation)}
+            </div>
+          );
         })}
       </div>
     );
@@ -557,7 +561,9 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
       <div
         className={cn(
           chatBubbleVariants({ isUser, animation }),
-          "sm:max-w-[70%]",
+          parts?.find((part) => part.type === "tool-invocation")
+            ? "sm:w-[70%]"
+            : "sm:max-w-[70%]",
           "space-y-3",
         )}
       >

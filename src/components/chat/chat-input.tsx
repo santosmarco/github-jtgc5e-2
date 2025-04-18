@@ -7,8 +7,8 @@ import { Button } from "~/components/ui/button";
 import type { Tables } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
 import type { VideoOutput } from "~/lib/videos";
-
 import type { RouterOutputs } from "~/trpc/react";
+
 import { ContentSelector } from "./content-selector";
 import { SelectedContentList } from "./selected-content-list";
 
@@ -140,6 +140,7 @@ export function ChatInput({
             className="h-8 w-8 transition-opacity"
             aria-label="Send message"
             disabled={isGenerating}
+            onClick={onSubmit}
           >
             <ArrowUp className="h-5 w-5" />
           </Button>
