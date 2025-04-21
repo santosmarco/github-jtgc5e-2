@@ -17,11 +17,20 @@ export function usePageChatContext() {
   const reportId = pathname.includes("/goals/reports/")
     ? pathname.split("/goals/reports/")[1]?.split("?")[0] || null
     : null;
+  // Extract API video ID from path if we're on a video page
+  const apiVideoId = pathname.includes("/videos/")
+    ? pathname.split("/videos/")[1]?.split("?")[0] || null
+    : null;
 
   // Fetch report data when on a report page
   const { data: groupReports } = api.reports.getGroupReports.useQuery(
     { groupId: reportId ?? "" },
     { enabled: !!reportId },
+  );
+  // // Fetch video data when on a video page
+  const { data: video } = api.videos.getBasicInfo.useQuery(
+    { videoId: apiVideoId ?? "" },
+    { enabled: !!apiVideoId },
   );
 
   const getContextForPath = useCallback((path: string) => {
@@ -58,8 +67,17 @@ export function usePageChatContext() {
           reportMarkdown: formattedReport,
         },
       });
+    } else if (apiVideoId && video) {
+      setCurrentContext({
+        video_data: {
+          type: "video_data",
+          video,
+        },
+      });
+    } else {
+      setCurrentContext(null);
     }
-  }, [reportId, groupReports, setCurrentContext]);
+  }, [reportId, groupReports, setCurrentContext, apiVideoId, video]);
 
   useEffect(() => {
     const contextInfo = getContextForPath(pathname);
