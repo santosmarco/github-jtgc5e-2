@@ -157,7 +157,12 @@ async function fetchVideoData(
 
     // Fetch meeting and moments data in parallel
     const [meetingResult, momentsResult, videoSrc] = await Promise.all([
-      supabase.from("meetings").select("*").eq("video_api_id", videoId),
+      supabase
+        .from("meetings")
+        .select(
+          "*, action_items:meeting_action_items(*), topics_discussed:meeting_topics(*)",
+        )
+        .eq("video_api_id", videoId),
       momentsQuery,
       getVideoSourceUrl(videoId),
     ]);

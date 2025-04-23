@@ -546,6 +546,7 @@ function buildEnhancedUserMessage({
       5. ALWAYS select and apply the most appropriate insights based on the analysis.
       6. When giving examples, ALWAYS prefer to use real-world examples from the context rather than generic examples.
       7. When coaching, if applicable, ALWAYS include correcting examples in your response.
+      8. When coaching about a specific meeting, ALWAYS use precise timestamps with the format https://app.withtitan.com/videos/{meeting_video_api_id}?startAt={start_time_in_seconds} to reference specific moments. This creates a seamless experience for the user to jump directly to the relevant part of the meeting. Include brief context about what they'll see at that timestamp to increase engagement and relevance.
       
       Your role is to:
       - Reference specific sections, goals, or behaviors mentioned in the context
