@@ -3995,6 +3995,59 @@ export type Database = {
         }
         Relationships: []
       }
+      session_annotation_reactions: {
+        Row: {
+          created_at: string
+          id: string
+          reaction_type: Database["public"]["Enums"]["moment_reaction_type"]
+          session_annotation_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reaction_type: Database["public"]["Enums"]["moment_reaction_type"]
+          session_annotation_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reaction_type?: Database["public"]["Enums"]["moment_reaction_type"]
+          session_annotation_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_annotation_reactions_session_annotation_id_fkey"
+            columns: ["session_annotation_id"]
+            isOneToOne: false
+            referencedRelation: "session_annotations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_annotation_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "session_annotation_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "session_annotation_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_annotation_sources: {
         Row: {
           created_at: string
@@ -4033,6 +4086,8 @@ export type Database = {
           description: string | null
           id: string
           session_id: string
+          thumbs_down: number
+          thumbs_up: number
           title: string | null
           title_summarized: string | null
           type: string | null
@@ -4042,6 +4097,8 @@ export type Database = {
           description?: string | null
           id?: string
           session_id: string
+          thumbs_down?: number
+          thumbs_up?: number
           title?: string | null
           title_summarized?: string | null
           type?: string | null
@@ -4051,6 +4108,8 @@ export type Database = {
           description?: string | null
           id?: string
           session_id?: string
+          thumbs_down?: number
+          thumbs_up?: number
           title?: string | null
           title_summarized?: string | null
           type?: string | null
