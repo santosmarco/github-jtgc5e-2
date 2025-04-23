@@ -18,18 +18,11 @@ import {
 } from "~/components/ui/tooltip";
 import { getBotStatusInfo } from "~/lib/meeting-bots/status";
 import { cn } from "~/lib/utils";
-import { api, type RouterOutputs } from "~/trpc/react";
+import { type RouterOutputs, api } from "~/trpc/react";
 
 interface MeetingEntryProps {
   event: RouterOutputs["calendar"]["getCalendarEvents"][number];
   isNow?: boolean;
-}
-
-interface BotStatusDetails {
-  border: string;
-  message: string;
-  icon: JSX.Element;
-  badge: string;
 }
 
 // Animation variants
@@ -86,7 +79,7 @@ const buttonVariants = {
 };
 
 export function MeetingEntry({ event, isNow = false }: MeetingEntryProps) {
-  const [tag, setTag] = React.useState("");
+  // const [tag, setTag] = React.useState("");
   const hasMeetingUrl = !!event.meeting_url;
   const isInPast = event.start_time
     ? new Date(event.start_time) < new Date()
@@ -163,7 +156,7 @@ export function MeetingEntry({ event, isNow = false }: MeetingEntryProps) {
         updateEvents,
       );
 
-      setTag(""); // Clear input optimistically
+      // setTag(""); // Clear input optimistically
       return { previousFutureEvents, previousPastEvents };
     },
     onError: (_err, _newTag, context) => {
@@ -181,52 +174,52 @@ export function MeetingEntry({ event, isNow = false }: MeetingEntryProps) {
   });
 
   // Remove tag mutation with optimistic updates
-  const removeTagMutation = api.calendar.removeTag.useMutation({
-    onMutate: async ({ tag: tagToRemove }) => {
-      await utils.calendar.getCalendarEvents.cancel();
-      await utils.calendar.getPastCalendarEvents.cancel();
+  // const removeTagMutation = api.calendar.removeTag.useMutation({
+  //   onMutate: async ({ tag: tagToRemove }) => {
+  //     await utils.calendar.getCalendarEvents.cancel();
+  //     await utils.calendar.getPastCalendarEvents.cancel();
 
-      const previousFutureEvents = utils.calendar.getCalendarEvents.getData();
-      const previousPastEvents = utils.calendar.getPastCalendarEvents.getData();
+  //     const previousFutureEvents = utils.calendar.getCalendarEvents.getData();
+  //     const previousPastEvents = utils.calendar.getPastCalendarEvents.getData();
 
-      const updateEvents = (old: typeof previousFutureEvents) => {
-        if (!old) return old;
-        return _.uniqBy(
-          old.map((e) => {
-            if (e.id !== event.id) return e;
-            return {
-              ...e,
-              tags: (e.tags ?? []).filter((t) => t !== tagToRemove),
-            };
-          }),
-          (e) => e.id,
-        );
-      };
+  //     const updateEvents = (old: typeof previousFutureEvents) => {
+  //       if (!old) return old;
+  //       return _.uniqBy(
+  //         old.map((e) => {
+  //           if (e.id !== event.id) return e;
+  //           return {
+  //             ...e,
+  //             tags: (e.tags ?? []).filter((t) => t !== tagToRemove),
+  //           };
+  //         }),
+  //         (e) => e.id,
+  //       );
+  //     };
 
-      utils.calendar.getCalendarEvents.setData(
-        { profileId: event.profile_id ?? "" },
-        updateEvents,
-      );
+  //     utils.calendar.getCalendarEvents.setData(
+  //       { profileId: event.profile_id ?? "" },
+  //       updateEvents,
+  //     );
 
-      utils.calendar.getPastCalendarEvents.setData(
-        { profileId: event.profile_id ?? "" },
-        updateEvents,
-      );
+  //     utils.calendar.getPastCalendarEvents.setData(
+  //       { profileId: event.profile_id ?? "" },
+  //       updateEvents,
+  //     );
 
-      return { previousFutureEvents, previousPastEvents };
-    },
-    onError: (_err, _variables, context) => {
-      utils.calendar.getCalendarEvents.setData(
-        { profileId: event.profile_id ?? "" },
-        context?.previousFutureEvents,
-      );
-      utils.calendar.getPastCalendarEvents.setData(
-        { profileId: event.profile_id ?? "" },
-        context?.previousPastEvents,
-      );
-      toast.error("Failed to remove tag");
-    },
-  });
+  //     return { previousFutureEvents, previousPastEvents };
+  //   },
+  //   onError: (_err, _variables, context) => {
+  //     utils.calendar.getCalendarEvents.setData(
+  //       { profileId: event.profile_id ?? "" },
+  //       context?.previousFutureEvents,
+  //     );
+  //     utils.calendar.getPastCalendarEvents.setData(
+  //       { profileId: event.profile_id ?? "" },
+  //       context?.previousPastEvents,
+  //     );
+  //     toast.error("Failed to remove tag");
+  //   },
+  // });
 
   // Handle toggle change
   const handleJoinToggleChange = (checked: boolean) => {

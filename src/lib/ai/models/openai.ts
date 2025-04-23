@@ -4,6 +4,10 @@ export const four_oh_mini = openai("gpt-4o-mini", {
   structuredOutputs: true,
 });
 
+export const four_point_one = openai("gpt-4.1", {
+  structuredOutputs: true,
+});
+
 export const o3_mini = openai("o3-mini", {
   structuredOutputs: true,
 });

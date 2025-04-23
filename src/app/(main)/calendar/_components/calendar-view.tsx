@@ -389,7 +389,7 @@ export function CalendarView({
                   variants={headerVariants}
                 >
                   <Calendar className="h-4 w-4" />
-                  <span>Today's Completed</span>
+                  <span>Today&apos;s Completed</span>
                 </motion.div>
                 <motion.div className="space-y-4">
                   {pastTodayEvents.map((event, index) => (

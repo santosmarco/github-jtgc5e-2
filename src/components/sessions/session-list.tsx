@@ -4,8 +4,10 @@ import dayjs from "dayjs";
 import { AnimatePresence, motion, useInView } from "framer-motion";
 import _ from "lodash";
 import { useMemo, useRef } from "react";
+
 import { Skeleton } from "~/components/ui/skeleton";
 import type { RouterOutputs } from "~/trpc/shared";
+
 import SessionCard from "./session-card";
 
 interface SessionListProps {
@@ -18,13 +20,6 @@ interface SessionListProps {
     insightId: string,
     isStarred: boolean,
   ) => void;
-  onAddAction?: (sessionId: string, content: string) => void;
-  onToggleComplete?: (
-    sessionId: string,
-    actionId: string,
-    isComplete: boolean,
-  ) => void;
-  onDeleteAction?: (sessionId: string, actionId: string) => void;
 }
 
 // Calculate consecutive session streaks
@@ -50,9 +45,6 @@ export function SessionList({
   emptyMessage = "No sessions found",
   onAddInsight,
   onToggleStar,
-  onAddAction,
-  onToggleComplete,
-  onDeleteAction,
 }: SessionListProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isInView = useInView(containerRef, { once: false, amount: 0.1 });
@@ -138,16 +130,23 @@ export function SessionList({
   };
 
   return (
-    <div ref={containerRef} className="space-y-6" aria-label="Sessions list">
+    <div
+      ref={containerRef}
+      className="mx-auto max-w-screen-md space-y-6"
+      aria-label="Sessions list"
+    >
       <AnimatePresence mode="popLayout">
         {sessions.length > 0 ? (
           sessions.map((session, idx) => {
             // Determine if this session should be collapsed
             // Sessions after the immediate next one should be collapsed
             const isNextUpcoming = nextSession?.id === session.id;
-            const shouldBeCollapsed = dayjs(session.date).isAfter(
-              nextSession?.date,
-            );
+            const sessionDate = dayjs(session.date);
+            const isPastSession = sessionDate.isBefore(dayjs());
+
+            // Only future sessions that are not the immediate next should be collapsed
+            const shouldBeCollapsed =
+              !isPastSession && !isNextUpcoming && sessionDate.isAfter(dayjs());
 
             // Calculate streak starting from the current session and looking forward
             const sessionStreak = calculateSessionStreak(sessions, idx);

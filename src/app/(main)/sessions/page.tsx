@@ -92,20 +92,37 @@ export default function SessionsPage() {
       .value();
   }, [sortedSessions]);
 
+  const sortedSessionsBeforeNextSession = useMemo(() => {
+    if (_.isEmpty(sortedSessions)) return [];
+    return sortedSessions.filter((session) => {
+      if (!nextSession) return true;
+      return !dayjs(session.date).isAfter(dayjs(nextSession.date));
+    });
+  }, [sortedSessions, nextSession]);
+
   // Group sessions by month
   const groupedSessions = useMemo(() => {
-    if (_.isEmpty(sortedSessions)) return [];
+    if (_.isEmpty(sortedSessionsBeforeNextSession)) return [];
 
     // First, ensure we filter out sessions without dates
-    const sessionsWithDates = sortedSessions.filter((session) =>
-      Boolean(session.date),
+    const sessionsWithDates = sortedSessionsBeforeNextSession.filter(
+      (session) => Boolean(session.date),
     );
 
+    // Filter out sessions that are after the next session
+    const sessionsBeforeNextSession = sessionsWithDates.filter((session) => {
+      if (!nextSession) return true;
+      return !dayjs(session.date).isAfter(dayjs(nextSession.date));
+    });
+
     // Use a more reliable groupBy approach with consistent date formatting
-    const sessionsByMonth: Record<string, typeof sortedSessions> = {};
+    const sessionsByMonth: Record<
+      string,
+      typeof sortedSessionsBeforeNextSession
+    > = {};
 
     // Group sessions by YYYY-MM format
-    for (const session of sessionsWithDates) {
+    for (const session of sessionsBeforeNextSession) {
       const monthKey = dayjs(session.date).format("YYYY-MM");
       if (!sessionsByMonth[monthKey]) {
         sessionsByMonth[monthKey] = [];
@@ -140,7 +157,7 @@ export default function SessionsPage() {
     }
 
     return sortedGroups;
-  }, [sortedSessions, expandedMonths]);
+  }, [sortedSessionsBeforeNextSession, expandedMonths, nextSession]);
 
   // Toggle month expansion
   const toggleMonthExpansion = (monthKey: string) => {
@@ -152,7 +169,7 @@ export default function SessionsPage() {
 
   // Use the session navigation hook with options
   const { activeSessionId, setSessionRef, handleSessionClick } =
-    useSessionNavigation(sortedSessions, {
+    useSessionNavigation(sortedSessionsBeforeNextSession, {
       threshold: 0.6, // Increased threshold for better detection
       scrollBehavior: "smooth",
       highlightOnScroll: true,
@@ -332,9 +349,9 @@ export default function SessionsPage() {
                     </motion.div>
                   ))}
                 </div>
-              ) : sortedSessions.length > 0 ? (
+              ) : sortedSessionsBeforeNextSession.length > 0 ? (
                 <ul className="space-y-1.5">
-                  {sortedSessions.map((session) => {
+                  {sortedSessionsBeforeNextSession.map((session) => {
                     const isActive = activeSessionId === session.id;
                     const sessionDate = session.date
                       ? new Date(session.date)
@@ -380,7 +397,15 @@ export default function SessionsPage() {
                                   : "text-foreground group-hover:text-foreground/80",
                               )}
                             >
-                              {session.title || "Untitled Session"}
+                              {session.title ??
+                                (session.user?.nickname &&
+                                session.coach?.nickname
+                                  ? `${session.user.nickname} & ${session.coach.nickname}`
+                                  : session.user?.nickname
+                                    ? `Session with ${session.user.nickname}`
+                                    : session.coach?.nickname
+                                      ? `Session with ${session.coach.nickname}`
+                                      : "Untitled Session")}
                             </div>
                             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                               <Calendar className="h-3 w-3 opacity-70" />
@@ -548,21 +573,23 @@ export default function SessionsPage() {
                       open={isExpanded}
                       onOpenChange={() => toggleMonthExpansion(group.monthKey)}
                     >
-                      <CollapsibleTrigger className="group flex w-full items-center justify-between px-4 py-3 text-left text-muted-foreground hover:text-foreground">
+                      <CollapsibleTrigger className="group mx-auto flex w-full max-w-screen-md items-center justify-between px-4 py-3 text-left text-muted-foreground hover:text-foreground">
                         <div className="flex items-center">
                           <h3 className="flex items-center gap-x-2 text-sm font-medium leading-none">
                             <CalendarIcon className="-mt-0.5 mr-2 h-4 w-4" />
-                            {group.month}
-                            {hasNextSession ? (
-                              <span className="ml-2 text-xs leading-none text-primary">
-                                (Next Session)
-                              </span>
-                            ) : (
-                              <span className="ml-2 text-xs leading-none text-muted-foreground">
-                                ({group.sessions.length} session
-                                {group.sessions.length === 1 ? "" : "s"})
-                              </span>
-                            )}
+                            <span>
+                              {group.month}
+                              {hasNextSession ? (
+                                <span className="ml-2 text-xs leading-none text-primary">
+                                  (Next Session)
+                                </span>
+                              ) : (
+                                <span className="ml-2 text-xs leading-none text-muted-foreground">
+                                  ({group.sessions.length} session
+                                  {group.sessions.length === 1 ? "" : "s"})
+                                </span>
+                              )}
+                            </span>
                           </h3>
                         </div>
                         <ChevronDown
@@ -572,10 +599,19 @@ export default function SessionsPage() {
                           )}
                         />
                       </CollapsibleTrigger>
-                      <CollapsibleContent className="space-y-4 p-4 pt-2">
+                      <CollapsibleContent className="mx-auto max-w-screen-lg space-y-4 p-4 pt-2">
                         {group.sessions.map((session) => {
                           const isActive = activeSessionId === session.id;
                           const isNextUpcoming = nextSession?.id === session.id;
+                          const isAfterNextSession =
+                            !nextSession ||
+                            dayjs(session.date).isAfter(
+                              dayjs(nextSession.date),
+                            );
+
+                          if (isAfterNextSession) {
+                            return;
+                          }
 
                           return (
                             <div
@@ -616,10 +652,6 @@ export default function SessionsPage() {
                                     insightId,
                                     isStarred,
                                   );
-                                }}
-                                onAddAction={(sessionId, content) => {
-                                  // Handle add action when implemented
-                                  console.log("Add action", sessionId, content);
                                 }}
                               />
                             </div>

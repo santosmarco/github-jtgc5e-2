@@ -13,6 +13,7 @@ import { meetingsRouter } from "./routers/meetings";
 import { momentsRouter } from "./routers/moments";
 import { onboardingRouter } from "./routers/onboarding";
 import { reportsRouter } from "./routers/reports";
+import { sessionAnnotationsRouter } from "./routers/session-annotations";
 import { sessionsRouter } from "./routers/sessions";
 import { settingsRouter } from "./routers/settings";
 import { skillsRouter } from "./routers/skills";
@@ -40,6 +41,7 @@ export const appRouter = createTRPCRouter({
   meetingTopics: meetingTopicsRouter,
   skills: skillsRouter,
   sessions: sessionsRouter,
+  sessionAnnotations: sessionAnnotationsRouter,
 });
 
 export type AppRouter = typeof appRouter;

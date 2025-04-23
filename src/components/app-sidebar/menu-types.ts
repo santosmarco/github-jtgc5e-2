@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 export interface BaseMenuItem {
-  label: string;
+  label: ReactNode;
   icon: ReactNode;
   isActive: boolean;
 }

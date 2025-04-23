@@ -97,29 +97,7 @@ export function ActionItemForm({
                   server_deleted_at: null,
                   vtt_start_segment_id: null,
                   vtt_end_segment_id: null,
-                  meeting: {
-                    summary: meeting.summary,
-                    updated_at: meeting.updated_at,
-                    clean_vtt_file: meeting.clean_vtt_file,
-                    created_at: meeting.created_at,
-                    date: meeting.date,
-                    db_created_at: meeting.db_created_at,
-                    duration_in_ms: meeting.duration_in_ms,
-                    duration_in_seconds: meeting.duration_in_seconds,
-                    meeting_baas_original_json:
-                      meeting.meeting_baas_original_json,
-                    name: meeting.name,
-                    video_api_id: meeting.video_api_id,
-                    original_vtt_file: meeting.original_vtt_file,
-                    preprocessing_payload: meeting.preprocessing_payload,
-                    profile_id: meeting.profile_id,
-                    provider: meeting.provider,
-                    searchable: meeting.searchable,
-                    speaker: meeting.speaker,
-                    tags: meeting.tags,
-                    thumbnail_url: meeting.thumbnail_url,
-                    vectorized: meeting.vectorized,
-                  },
+                  meeting,
                   assignees: (newItem.assigneeIds ?? []).map((id) => {
                     const person = old.people.find((p) => p.id === id);
                     return {

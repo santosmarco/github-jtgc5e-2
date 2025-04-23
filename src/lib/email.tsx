@@ -12,7 +12,12 @@ import {
 import MeetingRecapEmail, {
   type MeetingRecapEmailProps,
 } from "~/email/meeting-recap";
+import SuggestedTopicsEmail, {
+  type SuggestedTopicsEmailProps,
+} from "~/email/suggested-topics";
 import { env } from "~/env";
+
+import { createClient } from "./supabase/server";
 
 const resend = new Resend(env.RESEND_API_KEY);
 
@@ -99,6 +104,37 @@ export async function sendMeetingRecapEmail({
   const data = await resend.emails.send({
     from: "Titan <onboarding@emails.withtitan.com>",
     to: meeting.profile.email,
+    subject,
+    html: emailHtml,
+  });
+
+  return data;
+}
+
+export async function sendSuggestedTopicsEmail({
+  profile,
+  suggested_topics,
+  meetingHours,
+}: SuggestedTopicsEmailProps) {
+  const supabase = await createClient();
+
+  const emailHtml = await render(
+    SuggestedTopicsEmail({ profile, suggested_topics, meetingHours }),
+  );
+
+  const { data: coach } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", profile.coach_id ?? "")
+    .single();
+
+  const subject = `Suggested Topics for Your Coaching Session${
+    coach?.nickname ? ` with ${coach.nickname}` : ""
+  }`;
+
+  const data = await resend.emails.send({
+    from: "Titan <onboarding@emails.withtitan.com>",
+    to: profile.email,
     subject,
     html: emailHtml,
   });

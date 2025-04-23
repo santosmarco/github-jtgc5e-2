@@ -144,6 +144,27 @@ export const sessionsRouter = createTRPCRouter({
       }
 
       // Prepare new session records
+      // First, fetch meeting bots with api_video_id for the events
+      const { data: meetingBots, error: meetingBotsError } = await supabase
+        .from("meeting_bots_v2")
+        .select("event_id, api_video_id")
+        .in(
+          "event_id",
+          eventsWithoutSessions.map((event) => event.id),
+        )
+        .not("api_video_id", "is", null);
+
+      if (meetingBotsError) {
+        logger.error("Failed to fetch meeting bots", {
+          error: meetingBotsError,
+        });
+      }
+
+      // Create a map of event_id to api_video_id for quick lookup
+      const eventToVideoIdMap = new Map(
+        (meetingBots || []).map((bot) => [bot.event_id, bot.api_video_id]),
+      );
+
       const newSessions = eventsWithoutSessions.map(
         (event) =>
           ({
@@ -152,6 +173,7 @@ export const sessionsRouter = createTRPCRouter({
             event_id: event.id,
             title: event.summary || "Coaching Session",
             date: event.start_date_time,
+            api_video_id: eventToVideoIdMap.get(event.id) || null,
           }) satisfies TablesInsert<"sessions">,
       );
 

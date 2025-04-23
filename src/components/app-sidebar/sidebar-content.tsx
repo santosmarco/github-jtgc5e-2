@@ -14,12 +14,14 @@ import {
   TextQuote,
   TrendingUpIcon,
   User,
+  Users,
   UsersIcon,
   Video,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import dayjs from "dayjs";
 
 import { LiveMeetingStatus } from "~/components/meetings/live-meeting-status";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
@@ -72,8 +74,17 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
         refetchInterval: 60000, // Refetch every minute
       },
     );
+  const { data: sessions } = api.sessions.getAllSessionsForUser.useQuery({
+    profileId: selectedProfile?.id ?? user.id,
+  });
 
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+
+  const hasSessionInTheNext48Hours = sessions?.some(
+    (session) =>
+      dayjs(session.date).isAfter(dayjs()) &&
+      dayjs(session.date).isBefore(dayjs().add(2, "days")),
+  );
 
   useEffect(() => {
     if (didSetProfiles) return;
@@ -138,29 +149,88 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
 
   const menuItems = (
     [
+      hasSessionInTheNext48Hours
+        ? {
+            type: "item" as const,
+            href: "/sessions",
+            icon: (
+              <motion.div
+                animate={{
+                  scale: [1, 1.15, 1],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Number.POSITIVE_INFINITY,
+                  repeatType: "loop",
+                }}
+                className="relative"
+              >
+                <Users className="h-5 w-5 text-primary" />
+                <motion.div
+                  className="absolute -inset-1 rounded-full bg-primary/10"
+                  animate={{
+                    opacity: [0.1, 0.3, 0.1],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Number.POSITIVE_INFINITY,
+                    repeatType: "loop",
+                  }}
+                />
+              </motion.div>
+            ),
+            label: (
+              <motion.span
+                className="font-medium text-primary"
+                animate={{
+                  opacity: [0.8, 1, 0.8],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Number.POSITIVE_INFINITY,
+                  repeatType: "loop",
+                }}
+              >
+                Upcoming Session
+              </motion.span>
+            ),
+            isActive: pathname.startsWith("/sessions"),
+          }
+        : null,
       {
         type: "group",
         label: "Growth",
         icon: <TrendingUpIcon className="h-5 w-5" />,
         isActive:
-          pathname.startsWith("/goals") || pathname.startsWith("/insights"),
+          pathname.startsWith("/goals") ||
+          pathname.startsWith("/insights") ||
+          (!hasSessionInTheNext48Hours && pathname.startsWith("/sessions")),
         defaultHref: "/goals",
         children: [
           {
-            type: "item",
+            type: "item" as const,
             href: "/goals",
             icon: <GoalIcon className="h-5 w-5" />,
             label: "Skills",
             isActive: pathname.startsWith("/goals"),
           },
           {
-            type: "item",
+            type: "item" as const,
             href: "/insights",
             icon: <Brain className="h-5 w-5" />,
             label: "Explore",
             isActive: pathname.startsWith("/insights"),
           },
-        ],
+          !hasSessionInTheNext48Hours
+            ? {
+                type: "item" as const,
+                href: "/sessions",
+                icon: <Users className="h-5 w-5" />,
+                label: "Sessions",
+                isActive: pathname.startsWith("/sessions"),
+              }
+            : null,
+        ].filter(isTruthy),
       },
       {
         type: "group",
@@ -221,7 +291,17 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
               <div className="relative">
                 <Puzzle className="h-5 w-5" />
                 {showZoomPromo && !hasConnectedZoom && (
-                  <div className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-primary" />
+                  <motion.div
+                    className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-primary"
+                    animate={{
+                      scale: [1, 1.2, 1],
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      repeat: Number.POSITIVE_INFINITY,
+                      repeatType: "loop",
+                    }}
+                  />
                 )}
               </div>
             ),
@@ -341,7 +421,7 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
                   >
                     {/* Animated background gradient */}
                     <motion.div
-                      className="absolute inset-0 bg-gradient-to-r from-primary/5 to-primary/10"
+                      className="absolute inset-0 bg-primary/5"
                       initial={{ x: "-100%" }}
                       animate={{ x: authSectionIsHovered ? "0%" : "-100%" }}
                       transition={{ duration: 0.3 }}
@@ -454,7 +534,17 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
                     <Puzzle className="h-4 w-4" />
                     Integrations
                     {showZoomPromo && !hasConnectedZoom && (
-                      <span className="ml-1.5 h-1.5 w-1.5 rounded-full bg-primary" />
+                      <motion.span
+                        className="ml-1.5 h-1.5 w-1.5 rounded-full bg-primary"
+                        animate={{
+                          opacity: [0.7, 1, 0.7],
+                        }}
+                        transition={{
+                          duration: 1.5,
+                          repeat: Number.POSITIVE_INFINITY,
+                          repeatType: "loop",
+                        }}
+                      />
                     )}
                   </DropdownMenuItem>
                 </Link>

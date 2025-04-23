@@ -2410,9 +2410,11 @@ export type Database = {
             | null
           searchable: unknown | null
           speaker: string | null
+          speaker_time_percentage: number | null
           summary: string | null
           tags: string | null
           thumbnail_url: string | null
+          type: Database["public"]["Enums"]["event_type"] | null
           updated_at: string
           vectorized: boolean
           video_api_id: string
@@ -2434,9 +2436,11 @@ export type Database = {
             | null
           searchable?: unknown | null
           speaker?: string | null
+          speaker_time_percentage?: number | null
           summary?: string | null
           tags?: string | null
           thumbnail_url?: string | null
+          type?: Database["public"]["Enums"]["event_type"] | null
           updated_at?: string
           vectorized?: boolean
           video_api_id: string
@@ -2458,9 +2462,11 @@ export type Database = {
             | null
           searchable?: unknown | null
           speaker?: string | null
+          speaker_time_percentage?: number | null
           summary?: string | null
           tags?: string | null
           thumbnail_url?: string | null
+          type?: Database["public"]["Enums"]["event_type"] | null
           updated_at?: string
           vectorized?: boolean
           video_api_id?: string
@@ -4015,23 +4021,29 @@ export type Database = {
       session_annotations: {
         Row: {
           created_at: string
+          description: string | null
           id: string
           session_id: string
           title: string | null
+          title_summarized: string | null
           type: string | null
         }
         Insert: {
           created_at?: string
+          description?: string | null
           id?: string
           session_id: string
           title?: string | null
+          title_summarized?: string | null
           type?: string | null
         }
         Update: {
           created_at?: string
+          description?: string | null
           id?: string
           session_id?: string
           title?: string | null
+          title_summarized?: string | null
           type?: string | null
         }
         Relationships: [
@@ -5007,9 +5019,11 @@ export type Database = {
             | null
           searchable: unknown | null
           speaker: string | null
+          speaker_time_percentage: number | null
           summary: string | null
           tags: string | null
           thumbnail_url: string | null
+          type: Database["public"]["Enums"]["event_type"] | null
           updated_at: string
           vectorized: boolean
           video_api_id: string
@@ -5064,7 +5078,7 @@ export type Database = {
       }
     }
     Enums: {
-      event_type: "meeting" | "coaching_session"
+      event_type: "meeting" | "coaching_session" | "one_on_one" | "external"
       goal_signal_direction_type: "positive" | "negative"
       icon_enum:
         | "Brain"
@@ -5274,7 +5288,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      event_type: ["meeting", "coaching_session"],
+      event_type: ["meeting", "coaching_session", "one_on_one", "external"],
       goal_signal_direction_type: ["positive", "negative"],
       icon_enum: [
         "Brain",

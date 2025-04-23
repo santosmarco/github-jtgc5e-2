@@ -104,8 +104,8 @@ export default function ZoomReviewerInvitePage() {
               transition={{ duration: 0.5, delay: 0.5 }}
               className="mt-2 text-sm text-muted-foreground"
             >
-              Enter the information below to continue. You'll receive an email
-              with instructions on how to sign in.
+              Enter the information below to continue. You&apos;ll receive an
+              email with instructions on how to sign in.
             </motion.p>
           </motion.div>
 

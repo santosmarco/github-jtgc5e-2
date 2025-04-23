@@ -224,7 +224,7 @@ export function InsightsList({
         ) : (
           <motion.button
             variants={itemVariants}
-            className="hover:border-amber/30 hover:bg-amber/5 hover:text-amber/70 mt-2 w-full cursor-pointer rounded-lg border border-dashed border-muted-foreground/20 bg-muted/30 p-3 text-center text-muted-foreground/60 transition-colors"
+            className="mt-2 w-full cursor-pointer rounded-lg border border-dashed border-muted-foreground/20 bg-muted/30 p-3 text-center text-muted-foreground/60 transition-colors hover:border-amber-500/30 hover:bg-amber-500/5 hover:text-amber-500/70"
             onClick={() => setIsDialogOpen(true)}
           >
             <p className="flex items-center justify-center gap-2 text-sm">
