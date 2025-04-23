@@ -2059,6 +2059,9 @@ export type Database = {
           internal: boolean | null
           meeting_bot_id: string | null
           meetings_status: string | null
+          meta_data_status:
+            | Database["public"]["Enums"]["processing_status"]
+            | null
           moments_status: string | null
           observation_status: string | null
           origin: string | null
@@ -2091,6 +2094,9 @@ export type Database = {
           internal?: boolean | null
           meeting_bot_id?: string | null
           meetings_status?: string | null
+          meta_data_status?:
+            | Database["public"]["Enums"]["processing_status"]
+            | null
           moments_status?: string | null
           observation_status?: string | null
           origin?: string | null
@@ -2123,6 +2129,9 @@ export type Database = {
           internal?: boolean | null
           meeting_bot_id?: string | null
           meetings_status?: string | null
+          meta_data_status?:
+            | Database["public"]["Enums"]["processing_status"]
+            | null
           moments_status?: string | null
           observation_status?: string | null
           origin?: string | null
@@ -5078,7 +5087,12 @@ export type Database = {
       }
     }
     Enums: {
-      event_type: "meeting" | "coaching_session" | "one_on_one" | "external"
+      event_type:
+        | "meeting"
+        | "coaching_session"
+        | "one_on_one"
+        | "external"
+        | "team"
       goal_signal_direction_type: "positive" | "negative"
       icon_enum:
         | "Brain"
@@ -5288,7 +5302,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      event_type: ["meeting", "coaching_session", "one_on_one", "external"],
+      event_type: [
+        "meeting",
+        "coaching_session",
+        "one_on_one",
+        "external",
+        "team",
+      ],
       goal_signal_direction_type: ["positive", "negative"],
       icon_enum: [
         "Brain",
