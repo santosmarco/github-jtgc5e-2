@@ -2,10 +2,10 @@ import { logger, schedules } from "@trigger.dev/sdk/v3";
 import dayjs from "dayjs";
 
 import { sendSuggestedTopicsEmail } from "~/lib/email";
+import { handleGetAllSessionsForUser } from "~/lib/sessions/queries";
 import { slack } from "~/lib/slack";
 import { generateSuggestedTopics as generateSuggestedTopicsCore } from "~/lib/suggested-topics";
 import { __dangerouslyCreateAdminClient__ } from "~/lib/supabase/admin";
-import { api } from "~/trpc/server";
 
 export const generateSuggestedTopics = schedules.task({
   id: "generate-suggested-topics",
@@ -26,9 +26,12 @@ export const generateSuggestedTopics = schedules.task({
     }
 
     for (const user of users) {
-      const sessions = await api.sessions.getAllSessionsForUser({
-        profileId: user.id,
-      });
+      const sessions = await handleGetAllSessionsForUser(
+        {
+          profileId: user.id,
+        },
+        supabase,
+      );
 
       const sessionsInTheNext48Hours = sessions.filter(
         (session) =>
