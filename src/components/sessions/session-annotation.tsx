@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, type Variants } from "framer-motion";
+import { AnimatePresence, type Variants, motion } from "framer-motion";
 import _ from "lodash";
 import {
   Bookmark,
@@ -33,6 +33,7 @@ import type { Tables } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import type { RouterOutputs } from "~/trpc/shared";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 // Type definitions
 type SessionAnnotation = Tables<"session_annotations"> & {
@@ -506,9 +507,19 @@ function AnnotationItem({
 
             {/* Title preview - 2 lines */}
             {annotation.title && (
-              <div className="mt-1.5 line-clamp-2 text-sm text-muted-foreground">
-                {annotation.title}
-              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="mt-1.5 line-clamp-2 text-sm text-muted-foreground">
+                    {annotation.title}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-[20rem]">
+                  <p>{annotation.title}</p>
+                  <p className="mt-2 text-xs font-medium italic">
+                    Click for more details
+                  </p>
+                </TooltipContent>
+              </Tooltip>
             )}
           </div>
         </CollapsibleTrigger>
