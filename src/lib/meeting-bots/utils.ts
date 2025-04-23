@@ -23,7 +23,12 @@ export async function evaluateShouldScheduleBot(
   profileId: string,
   event: Pick<
     Tables<"calendar_events_v2">,
-    "id" | "is_deleted" | "meeting_url" | "raw" | "should_join_user_override"
+    | "id"
+    | "is_deleted"
+    | "meeting_url"
+    | "raw"
+    | "should_join_user_override"
+    | "event_type"
   >,
   supabase: SupabaseBrowserClient,
 ): Promise<{ shouldJoin: boolean; reason: string }> {
@@ -103,6 +108,29 @@ export async function evaluateShouldScheduleBot(
       return {
         shouldJoin: false,
         reason: "No user email",
+      };
+    }
+
+    const eventType = event.event_type;
+    if (eventType === "coaching_session") {
+      if (userSettings.should_not_join_coaching_sessions) {
+        logger.info("⏭️ Skipping - Coaching session", {
+          event_id: event.id,
+          profile_email: userEmail,
+        });
+        return {
+          shouldJoin: false,
+          reason: "Not joining coaching sessions",
+        };
+      }
+
+      logger.info("⏭️ Joining - Coaching session", {
+        event_id: event.id,
+        profile_email: userEmail,
+      });
+      return {
+        shouldJoin: true,
+        reason: "Joining coaching session",
       };
     }
 

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { AppSidebar } from "~/components/app-sidebar";
+import { ChatVisibilityProvider } from "~/components/floating-chat/chat-visibility-provider";
 import { FloatingChat } from "~/components/floating-chat/floating-chat";
 import OnboardingFlow from "~/components/onboarding-flow";
 import { OnboardingFlowStage2 } from "~/components/onboarding-flow-stage-2";
@@ -45,22 +46,25 @@ export default async function MainLayout({
 
   return (
     <>
-      <ProfileWarning />
-      <AppSidebar user={user} />
-      <div className="pt-6 lg:pl-72 lg:pt-0">
-        <ZoomIntegrationBanner />
-        <main className="p-4 py-12 lg:p-12">
-          {!user.did_complete_onboarding && <OnboardingFlow user={user} />}
-          {(meetings.length >= 10 || user.force_post_ten_meeting_onboarding) &&
-            user.did_complete_onboarding &&
-            !user.did_complete_post_ten_meeting_onboarding && (
-              <OnboardingFlowStage2 user={user} />
-            )}
-          {children}
-        </main>
-      </div>
-      <FeedbackButton />
-      <FloatingChat />
+      <ChatVisibilityProvider>
+        <ProfileWarning />
+        <AppSidebar user={user} />
+        <div className="pt-6 lg:pl-72 lg:pt-0">
+          <ZoomIntegrationBanner />
+          <main className="p-4 py-12 lg:p-12">
+            {!user.did_complete_onboarding && <OnboardingFlow user={user} />}
+            {(meetings.length >= 10 ||
+              user.force_post_ten_meeting_onboarding) &&
+              user.did_complete_onboarding &&
+              !user.did_complete_post_ten_meeting_onboarding && (
+                <OnboardingFlowStage2 user={user} />
+              )}
+            {children}
+          </main>
+        </div>
+        <FeedbackButton />
+        <FloatingChat />
+      </ChatVisibilityProvider>
     </>
   );
 }

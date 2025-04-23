@@ -45,6 +45,7 @@ export const settingsRouter = createTRPCRouter({
           "should_join_external_meetings",
           "should_not_join_pending_meetings",
           "should_not_join_owned_by_others_meetings",
+          "should_not_join_coaching_sessions",
         ]),
         value: z.union([z.string(), z.boolean()]),
       }),

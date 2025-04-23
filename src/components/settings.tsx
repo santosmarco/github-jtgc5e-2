@@ -16,6 +16,7 @@ import {
 import { cn } from "~/lib/utils";
 import type { RouterOutputs } from "~/trpc/react";
 import { api } from "~/trpc/react";
+import { CoachingSessionDialog } from "~/components/coaching-session-dialog";
 
 export type SettingsProps = {
   user: RouterOutputs["auth"]["getUser"];
@@ -41,12 +42,23 @@ export function Settings({ user, settings: initialSettings }: SettingsProps) {
   const updateSettingMutation = api.settings.updateSetting.useMutation();
   const [botName, setBotName] = useState(initialSettings.bot_name ?? "");
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
+  const [isCoachingDialogOpen, setIsCoachingDialogOpen] = useState(false);
+  const [pendingCoachingSetting, setPendingCoachingSetting] = useState<
+    boolean | null
+  >(null);
 
   const updateSetting = useCallback(
     async (
       key: Parameters<typeof updateSettingMutation.mutateAsync>[0]["key"],
       value: Parameters<typeof updateSettingMutation.mutateAsync>[0]["value"],
     ) => {
+      // Special confirmation flow for coaching sessions
+      if (key === "should_not_join_coaching_sessions" && value === true) {
+        setPendingCoachingSetting(true);
+        setIsCoachingDialogOpen(true);
+        return;
+      }
+
       // we are enabling coaches to change client settings for now @marco
       if (/* isCoach || */ initialSettings[key] === value) return;
 
@@ -86,6 +98,53 @@ export function Settings({ user, settings: initialSettings }: SettingsProps) {
       updateSettingMutation,
     ],
   );
+
+  const handleCoachingDialogConfirm = useCallback(async () => {
+    if (pendingCoachingSetting !== null) {
+      // Update the setting after confirmation
+      try {
+        await updateSettingMutation.mutateAsync({
+          profileId: initialSettings.profile_id,
+          key: "should_not_join_coaching_sessions",
+          value: pendingCoachingSetting,
+        });
+
+        // Update the local state
+        utils.settings.retrieveForProfile.setData(
+          { profileId: initialSettings.profile_id },
+          (old) =>
+            old
+              ? {
+                  ...old,
+                  should_not_join_coaching_sessions: pendingCoachingSetting,
+                }
+              : old,
+        );
+
+        // Invalidate to ensure consistency
+        await utils.settings.retrieveForProfile.invalidate({
+          profileId: initialSettings.profile_id,
+        });
+
+        toast.success("Setting updated");
+      } catch (error) {
+        toast.error("Failed to update setting");
+      } finally {
+        setIsCoachingDialogOpen(false);
+        setPendingCoachingSetting(null);
+      }
+    }
+  }, [
+    initialSettings.profile_id,
+    pendingCoachingSetting,
+    updateSettingMutation,
+    utils.settings.retrieveForProfile,
+  ]);
+
+  const handleCoachingDialogCancel = useCallback(() => {
+    setIsCoachingDialogOpen(false);
+    setPendingCoachingSetting(null);
+  }, []);
 
   const debouncedUpdateBotName = useCallback(
     (value: string) => {
@@ -270,12 +329,29 @@ export function Settings({ user, settings: initialSettings }: SettingsProps) {
                     description="Meetings where you are an invitee, not the organizer"
                     // disabled={isCoach}
                   />
+
+                  <ToggleSetting
+                    value={!settings.should_not_join_coaching_sessions}
+                    onChange={(value) =>
+                      updateSetting("should_not_join_coaching_sessions", !value)
+                    }
+                    title="Coaching sessions"
+                    description="Critical for automated notes and progress tracking in coaching"
+                    // disabled={isCoach}
+                  />
                 </div>
               </div>
             </div>
           </div>
         </motion.div>
       </motion.div>
+
+      {/* Confirmation Dialog */}
+      <CoachingSessionDialog
+        isOpen={isCoachingDialogOpen}
+        onConfirm={handleCoachingDialogConfirm}
+        onCancel={handleCoachingDialogCancel}
+      />
     </motion.div>
   );
 }

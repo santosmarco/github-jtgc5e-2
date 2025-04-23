@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { CogIcon } from "lucide-react";
 
 import { Settings } from "~/components/settings";
+import { useFloatingChat } from "~/hooks/use-floating-chat";
 import { useProfile } from "~/hooks/use-profile";
 import { api } from "~/trpc/react";
 
@@ -18,6 +19,9 @@ export default function SettingsPage() {
       { profileId: profile?.id },
       { enabled: !!profile?.id },
     );
+
+  // Hide the floating chat on this page
+  useFloatingChat(true);
 
   if (!profile || !user || !settings || settingsLoading || userLoading) {
     return (

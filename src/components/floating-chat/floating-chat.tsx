@@ -16,6 +16,7 @@ import type { RouterOutputs } from "~/trpc/react";
 
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { useChatContext } from "./chat-context-provider";
+import { useChatVisibility } from "./chat-visibility-provider";
 import { FloatingChatContainer } from "./floating-chat-container";
 
 interface FloatingChatProps {
@@ -34,6 +35,9 @@ export const FloatingChat: React.FC<FloatingChatProps> = ({ className }) => {
   const [selectedVideos, setSelectedVideos] = useState<VideoOutput[]>([]);
   const { messages, append, status, stop, reload, setMessages, error } =
     useChatContext();
+
+  // Use the chat visibility context
+  const { isVisible, isAnimating } = useChatVisibility();
 
   // Initialize page-specific context
   usePageChatContext();
@@ -166,11 +170,14 @@ export const FloatingChat: React.FC<FloatingChatProps> = ({ className }) => {
     </motion.div>
   );
 
-  return (
+  return isVisible || isAnimating ? (
     <FloatingChatContainer
       isOpen={isOpen}
       onToggle={toggleChat}
-      className={className}
+      className={cn(
+        className,
+        isAnimating && "duration-300 animate-out fade-out slide-out-to-bottom",
+      )}
       chatInputComponent={chatInputComponent}
       isMinimized={isMinimized}
       onMinimizeToggle={toggleMinimize}
@@ -212,5 +219,5 @@ export const FloatingChat: React.FC<FloatingChatProps> = ({ className }) => {
         </motion.div>
       </AnimatePresence>
     </FloatingChatContainer>
-  );
+  ) : null;
 };

@@ -4556,6 +4556,7 @@ export type Database = {
           profile_id: string
           should_join_external_meetings: boolean
           should_join_team_meetings: boolean
+          should_not_join_coaching_sessions: boolean
           should_not_join_owned_by_others_meetings: boolean
           should_not_join_pending_meetings: boolean
         }
@@ -4566,6 +4567,7 @@ export type Database = {
           profile_id: string
           should_join_external_meetings?: boolean
           should_join_team_meetings?: boolean
+          should_not_join_coaching_sessions?: boolean
           should_not_join_owned_by_others_meetings?: boolean
           should_not_join_pending_meetings?: boolean
         }
@@ -4576,6 +4578,7 @@ export type Database = {
           profile_id?: string
           should_join_external_meetings?: boolean
           should_join_team_meetings?: boolean
+          should_not_join_coaching_sessions?: boolean
           should_not_join_owned_by_others_meetings?: boolean
           should_not_join_pending_meetings?: boolean
         }
