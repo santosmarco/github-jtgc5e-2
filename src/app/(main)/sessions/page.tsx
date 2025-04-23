@@ -663,15 +663,47 @@ export default function SessionsPage() {
                 })}
               </div>
             ) : (
-              <div className="rounded-lg border border-border/60 bg-muted/20 p-8 text-center">
-                <p className="text-muted-foreground">
+              <motion.div
+                className="flex flex-col items-center justify-center rounded-lg border border-border/60 bg-muted/10 p-12 text-center"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+              >
+                <motion.div
+                  className="mb-6 rounded-full bg-primary/10 p-4"
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                  transition={{
+                    duration: 0.5,
+                    ease: [0.22, 1, 0.36, 1],
+                    delay: 0.1,
+                  }}
+                >
+                  <Calendar className="h-8 w-8 text-primary" />
+                </motion.div>
+
+                <motion.h3
+                  className="mb-2 text-xl font-semibold"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.4, delay: 0.2 }}
+                >
+                  No sessions yet
+                </motion.h3>
+
+                <motion.p
+                  className="mb-6 max-w-sm text-muted-foreground"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.4, delay: 0.3 }}
+                >
                   {searchQuery ||
                   selectedTimeFilter !== "all" ||
                   selectedTypeFilter !== "all"
-                    ? "No sessions match your filters"
-                    : "No sessions found"}
-                </p>
-              </div>
+                    ? "No sessions match your current filters. Try adjusting your search criteria."
+                    : "Your session history will appear here. Ready to start your journey?"}
+                </motion.p>
+              </motion.div>
             )}
           </div>
         </motion.div>

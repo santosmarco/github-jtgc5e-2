@@ -1,5 +1,6 @@
 "use client";
 
+import dayjs from "dayjs";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Brain,
@@ -21,7 +22,6 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import dayjs from "dayjs";
 
 import { LiveMeetingStatus } from "~/components/meetings/live-meeting-status";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
@@ -492,7 +492,7 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
                       </div>
                       {checkUserFlags(user, [Flag.ALLOW_LIST_ALL_USERS])
                         ? "Admin"
-                        : "Coach"}
+                        : "Coach"}{" "}
                       • Switch Profile
                     </DropdownMenuLabel>
                     <div className="max-h-[400px] overflow-y-auto">
