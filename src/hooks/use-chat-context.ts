@@ -85,7 +85,9 @@ export function usePageChatContext() {
     if (!contextInfo) return;
 
     setMessages((prevMessages) =>
-      prevMessages.length === 1
+      prevMessages.length === 1 &&
+      prevMessages[0]?.role === "data" &&
+      prevMessages[0].content.includes(`"pathname":"${pathname}"`)
         ? prevMessages
         : [
             ...prevMessages,
