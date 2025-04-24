@@ -5,6 +5,7 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { CoachingSessionDialog } from "~/components/coaching-session-dialog";
 import { Input } from "~/components/ui/input";
 import { Switch } from "~/components/ui/switch";
 import {
@@ -16,7 +17,6 @@ import {
 import { cn } from "~/lib/utils";
 import type { RouterOutputs } from "~/trpc/react";
 import { api } from "~/trpc/react";
-import { CoachingSessionDialog } from "~/components/coaching-session-dialog";
 
 export type SettingsProps = {
   user: RouterOutputs["auth"]["getUser"];
