@@ -5,6 +5,7 @@ import type { LucideProps } from "lucide-react";
 import { Sparkles } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
+
 import { useParticles } from "~/hooks/use-particles";
 import type { Tables } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
@@ -94,7 +95,7 @@ export function PersonalityProfile({
         setIsActive(false);
       }}
       className={cn(
-        "group/personality relative min-h-[260px] overflow-hidden rounded-xl border border-border/40 bg-gradient-to-br from-background/90 to-background/70 shadow-lg transition-all duration-500 hover:border-primary/70",
+        "group/personality relative overflow-hidden rounded-xl border border-border/40 bg-gradient-to-br from-background/90 to-background/70 shadow-lg transition-all duration-500 hover:border-primary/70 sm:min-h-[260px]",
         "px-1 after:absolute after:inset-0 after:z-0 after:bg-gradient-to-br after:from-background/10 after:to-background/5 after:backdrop-blur-[1px]",
         isHovered && "scale-[1.02]",
       )}
@@ -112,10 +113,10 @@ export function PersonalityProfile({
       {/* Particle effects using the useParticles hook */}
       <ParticleEffect />
 
-      <div className="relative z-20 flex h-full items-center justify-center sm:p-4">
+      <div className="relative z-20 flex h-full items-center justify-center p-3 sm:p-4">
         {/* Header */}
         <motion.div
-          className="absolute left-4 right-4 top-4 flex items-start justify-between"
+          className="absolute left-3 right-3 top-3 flex items-start justify-between sm:left-4 sm:right-4 sm:top-4"
           variants={{
             hidden: { opacity: 0, x: -20 },
             visible: {
@@ -157,20 +158,20 @@ export function PersonalityProfile({
               rotate: 5,
               transition: { duration: 0.2 },
             }}
-            className="flex h-9 w-9 items-center justify-center self-center rounded-full bg-gradient-to-br from-primary/20 to-primary/10 p-2 shadow-sm"
+            className="flex h-8 w-8 items-center justify-center self-center rounded-full bg-gradient-to-br from-primary/20 to-primary/10 p-2 shadow-sm sm:h-9 sm:w-9"
           >
-            <Icon className="h-7 w-7 text-primary drop-shadow-md" />
+            <Icon className="h-6 w-6 text-primary drop-shadow-md sm:h-7 sm:w-7" />
           </motion.div>
         </motion.div>
 
-        <div className="flex flex-col pt-4">
+        <div className="flex flex-col pt-8 sm:pt-4">
           {/* Title with animated underline */}
           <div className="relative mb-2.5">
             <motion.h2
               variants={fadeIn}
               initial="hidden"
               animate="visible"
-              className="text-left text-lg font-bold leading-tight text-primary"
+              className="text-left text-base font-bold leading-tight text-primary sm:text-lg"
             >
               {report.personality_text}
             </motion.h2>
@@ -188,7 +189,7 @@ export function PersonalityProfile({
             initial="hidden"
             animate="visible"
             transition={{ delay: 0.2 }}
-            className="mt-1 text-sm leading-relaxed text-muted-foreground/80 transition-all duration-700 group-hover/personality:text-foreground"
+            className="mt-1 text-xs leading-relaxed text-muted-foreground/80 transition-all duration-700 group-hover/personality:text-foreground sm:text-sm"
           >
             {report.personality_description}
           </motion.p>

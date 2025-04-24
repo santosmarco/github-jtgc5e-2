@@ -10,6 +10,14 @@ import { api } from "~/trpc/react";
 
 // Define the default paths where the chat should be hidden
 const DEFAULT_HIDDEN_PATHS = [
+  "/calendar",
+  "/calendar/*",
+  "/insights",
+  "/insights/*",
+  "/moments",
+  "/moments/*",
+  "/sessions",
+  "/sessions/*",
   "/settings",
   "/settings/*",
   // Add more paths as needed

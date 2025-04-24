@@ -2936,6 +2936,249 @@ export type Database = {
           },
         ]
       }
+      moments_qa: {
+        Row: {
+          _internal_comment: string | null
+          _internal_thumbs_down: number
+          _internal_thumbs_up: number
+          activity: string | null
+          activity_reasoning: string | null
+          activity_type: string | null
+          activity_type_confidence: number | null
+          altitude_reasoning: string | null
+          altitude_score: number | null
+          altitude_score_reasoning: string | null
+          altitude_score_reasoning_not_higher: string | null
+          altitude_score_reasoning_not_lower: string | null
+          altitude_type: string | null
+          created_at: string
+          final_score: number | null
+          id: string
+          intensity: number | null
+          interestingness_reasoning: string | null
+          interestingness_reasoning_not_higher: string | null
+          interestingness_reasoning_not_lower: string | null
+          interestingness_score: number | null
+          latest: boolean
+          moment_url: string | null
+          profile_id: string | null
+          qa_profile_id: string | null
+          qa_reasoning: string | null
+          qa_reasoning_not_higher: string | null
+          qa_reasoning_not_lower: string | null
+          qa_score: number | null
+          relevant: boolean
+          search_vector: unknown | null
+          segment_end_timestamp: string | null
+          segment_end_timestamp_in_seconds: number | null
+          segment_id_sequence_end: number | null
+          segment_id_sequence_start: number | null
+          segment_id_sequence_start_ideal: number | null
+          segment_id_sequence_start_ideal_algorithm: number | null
+          segment_start_timestamp: string | null
+          segment_start_timestamp_in_seconds: number | null
+          segment_start_timestamp_in_seconds_ideal: number | null
+          segment_start_timestamp_in_seconds_ideal_algorithm: number | null
+          summary: string | null
+          target_person_confidence: number | null
+          target_person_reasoning: string | null
+          target_person_score: number | null
+          target_person_type: string | null
+          title: string | null
+          topic_id: string | null
+          updated_at: string | null
+          version: number | null
+          video_api_id: string | null
+          vtt: string | null
+        }
+        Insert: {
+          _internal_comment?: string | null
+          _internal_thumbs_down?: number
+          _internal_thumbs_up?: number
+          activity?: string | null
+          activity_reasoning?: string | null
+          activity_type?: string | null
+          activity_type_confidence?: number | null
+          altitude_reasoning?: string | null
+          altitude_score?: number | null
+          altitude_score_reasoning?: string | null
+          altitude_score_reasoning_not_higher?: string | null
+          altitude_score_reasoning_not_lower?: string | null
+          altitude_type?: string | null
+          created_at?: string
+          final_score?: number | null
+          id: string
+          intensity?: number | null
+          interestingness_reasoning?: string | null
+          interestingness_reasoning_not_higher?: string | null
+          interestingness_reasoning_not_lower?: string | null
+          interestingness_score?: number | null
+          latest?: boolean
+          moment_url?: string | null
+          profile_id?: string | null
+          qa_profile_id?: string | null
+          qa_reasoning?: string | null
+          qa_reasoning_not_higher?: string | null
+          qa_reasoning_not_lower?: string | null
+          qa_score?: number | null
+          relevant?: boolean
+          search_vector?: unknown | null
+          segment_end_timestamp?: string | null
+          segment_end_timestamp_in_seconds?: number | null
+          segment_id_sequence_end?: number | null
+          segment_id_sequence_start?: number | null
+          segment_id_sequence_start_ideal?: number | null
+          segment_id_sequence_start_ideal_algorithm?: number | null
+          segment_start_timestamp?: string | null
+          segment_start_timestamp_in_seconds?: number | null
+          segment_start_timestamp_in_seconds_ideal?: number | null
+          segment_start_timestamp_in_seconds_ideal_algorithm?: number | null
+          summary?: string | null
+          target_person_confidence?: number | null
+          target_person_reasoning?: string | null
+          target_person_score?: number | null
+          target_person_type?: string | null
+          title?: string | null
+          topic_id?: string | null
+          updated_at?: string | null
+          version?: number | null
+          video_api_id?: string | null
+          vtt?: string | null
+        }
+        Update: {
+          _internal_comment?: string | null
+          _internal_thumbs_down?: number
+          _internal_thumbs_up?: number
+          activity?: string | null
+          activity_reasoning?: string | null
+          activity_type?: string | null
+          activity_type_confidence?: number | null
+          altitude_reasoning?: string | null
+          altitude_score?: number | null
+          altitude_score_reasoning?: string | null
+          altitude_score_reasoning_not_higher?: string | null
+          altitude_score_reasoning_not_lower?: string | null
+          altitude_type?: string | null
+          created_at?: string
+          final_score?: number | null
+          id?: string
+          intensity?: number | null
+          interestingness_reasoning?: string | null
+          interestingness_reasoning_not_higher?: string | null
+          interestingness_reasoning_not_lower?: string | null
+          interestingness_score?: number | null
+          latest?: boolean
+          moment_url?: string | null
+          profile_id?: string | null
+          qa_profile_id?: string | null
+          qa_reasoning?: string | null
+          qa_reasoning_not_higher?: string | null
+          qa_reasoning_not_lower?: string | null
+          qa_score?: number | null
+          relevant?: boolean
+          search_vector?: unknown | null
+          segment_end_timestamp?: string | null
+          segment_end_timestamp_in_seconds?: number | null
+          segment_id_sequence_end?: number | null
+          segment_id_sequence_start?: number | null
+          segment_id_sequence_start_ideal?: number | null
+          segment_id_sequence_start_ideal_algorithm?: number | null
+          segment_start_timestamp?: string | null
+          segment_start_timestamp_in_seconds?: number | null
+          segment_start_timestamp_in_seconds_ideal?: number | null
+          segment_start_timestamp_in_seconds_ideal_algorithm?: number | null
+          summary?: string | null
+          target_person_confidence?: number | null
+          target_person_reasoning?: string | null
+          target_person_score?: number | null
+          target_person_type?: string | null
+          title?: string | null
+          topic_id?: string | null
+          updated_at?: string | null
+          version?: number | null
+          video_api_id?: string | null
+          vtt?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moments_qa_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "moments_qa_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "moments_qa_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moments_qa_qa_profile_id_fkey"
+            columns: ["qa_profile_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "moments_qa_qa_profile_id_fkey"
+            columns: ["qa_profile_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "moments_qa_qa_profile_id_fkey"
+            columns: ["qa_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moments_qa_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_topics_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moments_qa_video_api_id_fkey"
+            columns: ["video_api_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["meeting_video_api_id"]
+          },
+          {
+            foreignKeyName: "moments_qa_video_api_id_fkey"
+            columns: ["video_api_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["video_api_id"]
+          },
+          {
+            foreignKeyName: "moments_qa_video_api_id_fkey"
+            columns: ["video_api_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["video_api_id"]
+          },
+          {
+            foreignKeyName: "moments_qa_video_api_id_fkey"
+            columns: ["video_api_id"]
+            isOneToOne: false
+            referencedRelation: "upcoming_meetings_with_action_items"
+            referencedColumns: ["meeting_id"]
+          },
+        ]
+      }
       moments_v2: {
         Row: {
           activity: string | null
