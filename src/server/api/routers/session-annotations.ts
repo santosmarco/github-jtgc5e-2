@@ -292,4 +292,147 @@ export const sessionAnnotationsRouter = createTRPCRouter({
           });
       }
     }),
+
+  // Get reactions for an annotation
+  getReactions: publicProcedure
+    .input(
+      z.object({
+        annotationId: z.string(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const supabase = await createClient();
+
+      const { data, error } = await supabase
+        .from("session_annotation_reactions")
+        .select("*, user:profiles(*)")
+        .eq("session_annotation_id", input.annotationId);
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch annotation reactions",
+        });
+      }
+
+      return data;
+    }),
+
+  // Add a reaction to an annotation
+  addReaction: publicProcedure
+    .input(
+      z.object({
+        annotationId: z.string(),
+        type: z.enum(["thumbs_up", "thumbs_down"]),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const supabase = await createClient();
+
+      // First get the user ID
+      const { data: userData } = await supabase.auth.getUser();
+
+      if (!userData?.user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You must be logged in to react to annotations",
+        });
+      }
+
+      const userId = userData.user.id;
+
+      // Check if the user already reacted to this annotation
+      const { data: existingReaction } = await supabase
+        .from("session_annotation_reactions")
+        .select("*")
+        .eq("session_annotation_id", input.annotationId)
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (existingReaction) {
+        // If clicking the same reaction type, remove it (toggle behavior)
+        if (existingReaction.reaction_type === input.type) {
+          const { error } = await supabase
+            .from("session_annotation_reactions")
+            .delete()
+            .eq("id", existingReaction.id);
+
+          if (error) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Failed to remove reaction",
+            });
+          }
+
+          return { success: true, id: existingReaction.id, toggled: true };
+        }
+
+        // Update the existing reaction if it's different
+        const { error } = await supabase
+          .from("session_annotation_reactions")
+          .update({
+            reaction_type: input.type,
+            created_at: new Date().toISOString(),
+          })
+          .eq("id", existingReaction.id);
+
+        if (error) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to update reaction",
+          });
+        }
+
+        return { success: true, id: existingReaction.id, updated: true };
+      }
+
+      // Create a new reaction
+      const { data, error } = await supabase
+        .from("session_annotation_reactions")
+        .insert({
+          session_annotation_id: input.annotationId,
+          user_id: userId,
+          reaction_type: input.type,
+        })
+        .select("*")
+        .single();
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to add reaction",
+        });
+      }
+
+      return { success: true, id: data.id, created: true };
+    }),
+
+  // Get all reactions for multiple annotations
+  getAllReactions: publicProcedure
+    .input(
+      z.object({
+        annotationIds: z.array(z.string()),
+      }),
+    )
+    .query(async ({ input }) => {
+      const supabase = await createClient();
+
+      if (input.annotationIds.length === 0) {
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from("session_annotation_reactions")
+        .select("*")
+        .in("session_annotation_id", input.annotationIds);
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch annotation reactions",
+        });
+      }
+
+      return data;
+    }),
 });

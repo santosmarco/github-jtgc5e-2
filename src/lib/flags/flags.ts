@@ -10,6 +10,7 @@ export const Flag = {
   ALLOW_VIDEO_DEBUG_DISPLAY: "allow_video_debug_display",
   ALLOW_MEETING_DELETE: "allow_meeting_delete",
   ALLOW_CLIENT_ACCESS: "allow_client_access",
+  ALLOW_AI_COACHING_SWITCH: "allow_ai_coaching_switch",
 } as const;
 
 export type Flag = (typeof Flag)[keyof typeof Flag];
@@ -29,6 +30,7 @@ export const ROLE_FLAGS: Record<Enums<"user_role_enum">, readonly Flag[]> = {
     Flag.ALLOW_VIDEO_DEBUG_DISPLAY,
     Flag.ALLOW_MEETING_DELETE,
     Flag.ALLOW_CLIENT_ACCESS,
+    Flag.ALLOW_AI_COACHING_SWITCH,
   ],
 };
 

@@ -123,7 +123,7 @@ export const FloatingChat: React.FC<FloatingChatProps> = ({ className }) => {
     });
   }, []);
 
-  const isTyping = status === "submitted";
+  const isTyping = status === "submitted" || status === "streaming";
 
   // Separate chat input component that will always be visible
   const chatInputComponent = (

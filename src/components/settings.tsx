@@ -5,6 +5,7 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { CoachingSessionDialog } from "~/components/coaching-session-dialog";
 import { Input } from "~/components/ui/input";
 import { Switch } from "~/components/ui/switch";
 import {
@@ -13,10 +14,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
+import { checkUserFlags, Flag } from "~/lib/flags/flags";
 import { cn } from "~/lib/utils";
 import type { RouterOutputs } from "~/trpc/react";
 import { api } from "~/trpc/react";
-import { CoachingSessionDialog } from "~/components/coaching-session-dialog";
 
 export type SettingsProps = {
   user: RouterOutputs["auth"]["getUser"];
@@ -46,6 +47,9 @@ export function Settings({ user, settings: initialSettings }: SettingsProps) {
   const [pendingCoachingSetting, setPendingCoachingSetting] = useState<
     boolean | null
   >(null);
+  const shouldShowAiCoachingSwitch = checkUserFlags(user, [
+    Flag.ALLOW_AI_COACHING_SWITCH,
+  ]);
 
   const updateSetting = useCallback(
     async (
@@ -236,6 +240,20 @@ export function Settings({ user, settings: initialSettings }: SettingsProps) {
                     This is how your notetaker will appear in meetings
                   </p>
                 </div>
+
+                {shouldShowAiCoachingSwitch && (
+                  <div className="mt-6 border-t border-border pt-4">
+                    <ToggleSetting
+                      value={settings.has_ai_coaching_enabled ?? false}
+                      onChange={(value) =>
+                        updateSetting("has_ai_coaching_enabled", value)
+                      }
+                      title="AI Coaching"
+                      description="Enable AI-powered coaching features"
+                      // disabled={isCoach}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 

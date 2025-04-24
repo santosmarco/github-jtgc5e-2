@@ -13,8 +13,11 @@ import {
   type LucideIcon,
   MessageSquare,
   Sparkles,
+  ThumbsDown,
+  ThumbsUp,
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { SourceTooltip } from "~/components/sessions/source-tooltip";
 import { Badge } from "~/components/ui/badge";
@@ -33,6 +36,8 @@ import type { Tables } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import type { RouterOutputs } from "~/trpc/shared";
+
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 // Type definitions
 type SessionAnnotation = Tables<"session_annotations"> & {
@@ -104,6 +109,27 @@ const sourceVariants: Variants = {
       delay: 0.15 + index * 0.05,
     },
   }),
+};
+
+// Reaction button animation variants
+const reactionVariants: Variants = {
+  hidden: { opacity: 0, scale: 0, y: 0 },
+  hover: {
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    transition: {
+      type: "spring",
+      stiffness: 500,
+      damping: 25,
+    },
+  },
+  tap: {
+    scale: 0.9,
+    transition: {
+      duration: 0.1,
+    },
+  },
 };
 
 // Component for the header section
@@ -379,6 +405,7 @@ interface AnnotationItemProps {
   ) => Record<string, AnnotationSource[]>;
   renderSourceIcon: (sourceType: string) => JSX.Element;
   formatSourceType: (sourceType: string) => string;
+  isDisliked: boolean;
 }
 
 function AnnotationItem({
@@ -389,8 +416,119 @@ function AnnotationItem({
   groupSourcesByType,
   renderSourceIcon,
   formatSourceType,
+  isDisliked,
 }: AnnotationItemProps): JSX.Element {
   const badgeVariant = getBadgeVariant(annotation.type);
+  const utils = api.useUtils();
+  const { data: user } = api.auth.getUser.useQuery();
+  const [isHovering, setIsHovering] = useState(false);
+
+  // Get reactions for this annotation
+  const { data: reactions } = api.sessionAnnotations.getReactions.useQuery({
+    annotationId: annotation.id,
+  });
+
+  // Add reaction mutation with optimistic updates
+  const { mutate: addReaction } =
+    api.sessionAnnotations.addReaction.useMutation({
+      onMutate: async ({ type }) => {
+        // Cancel outgoing refetches
+        await utils.sessionAnnotations.getReactions.cancel({
+          annotationId: annotation.id,
+        });
+
+        // Get the current reactions
+        const previousReactions = utils.sessionAnnotations.getReactions.getData(
+          {
+            annotationId: annotation.id,
+          },
+        );
+
+        // Check if we're toggling off an existing reaction
+        const existingUserReaction = previousReactions?.find(
+          (r) => r.user_id === user?.id,
+        );
+        const isToggling = existingUserReaction?.reaction_type === type;
+
+        // Optimistically update the UI - Handle typing more safely
+        utils.sessionAnnotations.getReactions.setData(
+          { annotationId: annotation.id },
+          (old) => {
+            if (!old) return [];
+
+            // When toggling off, just remove the reaction
+            if (isToggling) {
+              return old.filter((r) => r.user_id !== user?.id);
+            }
+
+            // Remove any existing reaction from this user
+            const filtered = old.filter((r) => r.user_id !== user?.id);
+
+            if (!user) return filtered;
+
+            // Create a new reaction that matches the shape expected by the API
+            return [
+              ...filtered,
+              {
+                id: "temp-id",
+                session_annotation_id: annotation.id,
+                user_id: user.id,
+                reaction_type: type,
+                created_at: new Date().toISOString(),
+                user: {
+                  id: user.id,
+                  email: user.email,
+                  nickname: user.nickname,
+                  coach_id: null,
+                  company: null,
+                  created_at: null,
+                  did_complete_onboarding: user.did_complete_onboarding,
+                  did_complete_post_ten_meeting_onboarding:
+                    user.did_complete_post_ten_meeting_onboarding,
+                  updated_at: new Date().toISOString(),
+                },
+              } as Tables<"session_annotation_reactions"> & {
+                user: Tables<"profiles">;
+              },
+            ];
+          },
+        );
+
+        return { previousReactions };
+      },
+      onError: (_err, _newReaction, context) => {
+        // Restore the previous state if there was an error
+        utils.sessionAnnotations.getReactions.setData(
+          { annotationId: annotation.id },
+          context?.previousReactions,
+        );
+        toast.error("Failed to add reaction. Please try again.");
+      },
+      // Invalidate both individual reaction query and the collection query
+      onSuccess: () => {
+        void utils.sessionAnnotations.getAllReactions.invalidate();
+      },
+    });
+
+  const handleReaction = (type: "thumbs_up" | "thumbs_down") => {
+    if (!user) {
+      toast.error("Please sign in to react to annotations.");
+      return;
+    }
+    addReaction({ annotationId: annotation.id, type });
+  };
+
+  // Calculate reaction counts
+  const thumbsUpCount =
+    reactions?.filter((r) => r.reaction_type === "thumbs_up").length ?? 0;
+  const thumbsDownCount =
+    reactions?.filter((r) => r.reaction_type === "thumbs_down").length ?? 0;
+  const userReaction = reactions?.find(
+    (r) => r.user_id === user?.id,
+  )?.reaction_type;
+
+  // Check if we should always show reaction buttons
+  const hasReactions = thumbsUpCount > 0 || thumbsDownCount > 0;
 
   // Background colors for the entire card based on badge variant
   const cardBackground =
@@ -419,23 +557,26 @@ function AnnotationItem({
       key={annotation.id}
       open={isExpanded}
       onOpenChange={() => toggleExpanded(annotation.id)}
-      className="overflow-hidden"
     >
       <motion.div
         variants={rowVariants}
         initial="hidden"
         animate="visible"
+        whileHover="hover"
         className={cn(
           "group relative rounded-xl border shadow-sm transition-all duration-300",
           isExpanded
             ? `${borderColor} shadow-md ring-1 ring-primary/10`
             : `${borderColor} hover:shadow-sm`,
           cardBackground,
+          // Apply fading effect for disliked annotations
+          isDisliked && "opacity-60 hover:opacity-90",
         )}
         style={{
           position: "relative",
-          overflow: "hidden",
         }}
+        onHoverStart={() => setIsHovering(true)}
+        onHoverEnd={() => setIsHovering(false)}
       >
         {/* Expanded background pulse */}
         {isExpanded && (
@@ -459,6 +600,57 @@ function AnnotationItem({
             }}
           />
         )}
+
+        {/* Reaction buttons that appear on hover - positioned outside the card */}
+        <motion.div
+          className="absolute -top-6 right-2 z-10 flex items-center gap-1"
+          variants={{
+            hidden: { opacity: hasReactions ? 1 : 0, y: hasReactions ? 0 : 10 },
+            hover: { opacity: 1, y: 0 },
+          }}
+          initial={hasReactions ? "visible" : "hidden"}
+          animate={isHovering || hasReactions ? "hover" : "hidden"}
+          transition={{ duration: 0.2 }}
+        >
+          <motion.button
+            variants={reactionVariants}
+            whileTap="tap"
+            className={cn(
+              "flex h-8 items-center justify-center gap-1 rounded-full border bg-background px-2.5 py-1.5 shadow-md transition-colors",
+              userReaction === "thumbs_up"
+                ? "border-primary/30 text-primary"
+                : "border-muted text-muted-foreground hover:text-primary",
+            )}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleReaction("thumbs_up");
+            }}
+          >
+            <ThumbsUp className="h-4 w-4" />
+            {thumbsUpCount > 0 && (
+              <span className="text-xs font-medium">{thumbsUpCount}</span>
+            )}
+          </motion.button>
+          <motion.button
+            variants={reactionVariants}
+            whileTap="tap"
+            className={cn(
+              "flex h-8 items-center justify-center gap-1 rounded-full border bg-background px-2.5 py-1.5 shadow-md transition-colors",
+              userReaction === "thumbs_down"
+                ? "border-destructive/30 text-destructive"
+                : "border-muted text-muted-foreground hover:text-destructive",
+            )}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleReaction("thumbs_down");
+            }}
+          >
+            <ThumbsDown className="h-4 w-4" />
+            {thumbsDownCount > 0 && (
+              <span className="text-xs font-medium">{thumbsDownCount}</span>
+            )}
+          </motion.button>
+        </motion.div>
 
         <CollapsibleTrigger className="w-full text-left">
           <div className="relative flex flex-col px-3.5 py-3">
@@ -506,9 +698,19 @@ function AnnotationItem({
 
             {/* Title preview - 2 lines */}
             {annotation.title && (
-              <div className="mt-1.5 line-clamp-2 text-sm text-muted-foreground">
-                {annotation.title}
-              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="mt-1.5 line-clamp-2 text-sm text-muted-foreground">
+                    {annotation.title}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-[20rem]">
+                  <p>{annotation.title}</p>
+                  <p className="mt-2 text-xs font-medium italic">
+                    Click for more details
+                  </p>
+                </TooltipContent>
+              </Tooltip>
             )}
           </div>
         </CollapsibleTrigger>
@@ -608,6 +810,53 @@ export default function SessionAnnotation({
     }));
   }, []);
 
+  // Fetch all annotations reactions at once for sorting
+  const annotationIds = useMemo(
+    () => annotations.map((a) => a.id),
+    [annotations],
+  );
+  const { data: allReactions } =
+    api.sessionAnnotations.getAllReactions.useQuery(
+      { annotationIds },
+      { enabled: annotationIds.length > 0 },
+    );
+
+  // Calculate net scores for sorting
+  const netScores = useMemo(() => {
+    if (!allReactions) return {};
+
+    const scores: Record<string, number> = {};
+
+    // Initialize all annotations with 0 score
+    for (const id of annotationIds) {
+      scores[id] = 0;
+    }
+
+    // Calculate net scores (thumbs up - thumbs down)
+    for (const reaction of allReactions) {
+      const annotationId = reaction.session_annotation_id;
+      if (reaction.reaction_type === "thumbs_up") {
+        scores[annotationId] = (scores[annotationId] || 0) + 1;
+      } else if (reaction.reaction_type === "thumbs_down") {
+        scores[annotationId] = (scores[annotationId] || 0) - 1;
+      }
+    }
+
+    return scores;
+  }, [allReactions, annotationIds]);
+
+  // Sort annotations by net score
+  const sortedAnnotations = useMemo(() => {
+    if (!netScores || Object.keys(netScores).length === 0)
+      return [...annotations];
+
+    return [...annotations].sort((a, b) => {
+      const scoreA = netScores[a.id] || 0;
+      const scoreB = netScores[b.id] || 0;
+      return scoreB - scoreA; // Sort by descending score (highest first)
+    });
+  }, [annotations, netScores]);
+
   return (
     <motion.div
       variants={containerVariants}
@@ -619,25 +868,31 @@ export default function SessionAnnotation({
 
       <div className="relative grid grid-cols-1 gap-4 rounded-lg">
         <AnimatePresence>
-          {annotations.length > 0 ? (
+          {sortedAnnotations.length > 0 ? (
             <motion.div
               variants={containerVariants}
               initial="hidden"
               animate="visible"
               className="col-span-1 grid grid-cols-1 gap-3"
             >
-              {annotations.map((annotation) => (
-                <AnnotationItem
-                  key={annotation.id}
-                  annotation={annotation}
-                  isExpanded={Boolean(expandedState[annotation.id])}
-                  toggleExpanded={toggleExpanded}
-                  getBadgeVariant={getBadgeVariant}
-                  groupSourcesByType={groupSourcesByType}
-                  renderSourceIcon={renderSourceIcon}
-                  formatSourceType={formatSourceType}
-                />
-              ))}
+              {sortedAnnotations.map((annotation) => {
+                const netScore = netScores[annotation.id] || 0;
+                const isDisliked = netScore < 0;
+
+                return (
+                  <AnnotationItem
+                    key={annotation.id}
+                    annotation={annotation}
+                    isExpanded={Boolean(expandedState[annotation.id])}
+                    toggleExpanded={toggleExpanded}
+                    getBadgeVariant={getBadgeVariant}
+                    groupSourcesByType={groupSourcesByType}
+                    renderSourceIcon={renderSourceIcon}
+                    formatSourceType={formatSourceType}
+                    isDisliked={isDisliked}
+                  />
+                );
+              })}
             </motion.div>
           ) : (
             <EmptyState />
