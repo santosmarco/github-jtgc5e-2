@@ -429,122 +429,96 @@ export default function ReportPage({
     <div className="-mx-4 min-h-screen shadow-sm backdrop-blur-sm sm:-mx-8 sm:-mt-12">
       {/* Date Range Navigation */}
       <div className="sticky top-0 z-40 mb-6 flex items-center justify-between border-b border-border bg-background/60 px-2 py-2 backdrop-blur-xl sm:-mx-4 sm:min-h-0">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <motion.div
-                whileHover={{ x: adjacentReports?.previous ? -5 : 0 }}
-                whileTap={{ scale: adjacentReports?.previous ? 0.95 : 1 }}
-                className="flex w-24 justify-start"
-              >
+        <div className="w-[73px]">
+          <Button
+            variant="ghost"
+            className="hidden items-center gap-2 text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground sm:flex"
+            onClick={() => router.push("/goals")}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span>Back</span>
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
+                  size="icon"
                   className={cn(
-                    "flex items-center gap-2 text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground",
+                    "text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground",
                     !adjacentReports?.previous &&
                       "cursor-not-allowed opacity-50",
                   )}
                   onClick={navigateToPreviousReport}
                   disabled={!adjacentReports?.previous}
                 >
-                  <motion.div
-                    initial={{ x: 0 }}
-                    animate={
-                      adjacentReports?.previous ? { x: [0, -4, 0] } : { x: 0 }
-                    }
-                    transition={{
-                      repeat: adjacentReports?.previous
-                        ? Number.POSITIVE_INFINITY
-                        : 0,
-                      repeatType: "reverse",
-                      duration: 1.5,
-                      ease: "easeInOut",
-                      repeatDelay: 1,
-                    }}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </motion.div>
-                  <span>Previous</span>
+                  <ChevronLeft className="h-4 w-4" />
                 </Button>
-              </motion.div>
-            </TooltipTrigger>
-            {adjacentReports?.previous && (
-              <TooltipContent side="bottom" align="start" sideOffset={5}>
-                <p className="text-sm">
-                  {dayjs(adjacentReports.previous.start_date ?? "").format(
-                    "MMM D",
-                  )}{" "}
-                  to{" "}
-                  {dayjs(adjacentReports.previous.end_date ?? "").format(
-                    "MMM D",
-                  )}
-                </p>
-              </TooltipContent>
-            )}
-          </Tooltip>
-        </TooltipProvider>
+              </TooltipTrigger>
+              {adjacentReports?.previous && (
+                <TooltipContent side="bottom" sideOffset={5}>
+                  <p className="text-sm">
+                    {dayjs(adjacentReports.previous.start_date ?? "").format(
+                      "MMM D",
+                    )}{" "}
+                    to{" "}
+                    {dayjs(adjacentReports.previous.end_date ?? "").format(
+                      "MMM D",
+                    )}
+                  </p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
 
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="flex flex-col items-center gap-1"
-        >
-          <h2 className="text-base font-medium tracking-tight">
-            {dayjs(groupReports?.reports[0]?.start_date).format("MMM D")} to{" "}
-            {dayjs(groupReports?.reports[0]?.end_date).format("MMM D")}
-          </h2>
-        </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="flex flex-col items-center"
+          >
+            <h2 className="text-base font-medium tracking-tight">
+              {dayjs(groupReports?.reports[0]?.start_date).format("MMM D")} to{" "}
+              {dayjs(groupReports?.reports[0]?.end_date).format("MMM D")}
+            </h2>
+          </motion.div>
 
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <motion.div
-                whileHover={{ x: adjacentReports?.next ? 5 : 0 }}
-                whileTap={{ scale: adjacentReports?.next ? 0.95 : 1 }}
-                className="flex w-24 justify-end"
-              >
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
+                  size="icon"
                   className={cn(
-                    "flex h-10 items-center justify-center gap-2 text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground sm:h-auto sm:justify-start",
+                    "text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground",
                     !adjacentReports?.next && "cursor-not-allowed opacity-50",
                   )}
                   onClick={navigateToNextReport}
                   disabled={!adjacentReports?.next}
                 >
-                  <span>Next</span>
-                  <motion.div
-                    initial={{ x: 0 }}
-                    animate={
-                      adjacentReports?.next ? { x: [0, 4, 0] } : { x: 0 }
-                    }
-                    transition={{
-                      repeat: adjacentReports?.next
-                        ? Number.POSITIVE_INFINITY
-                        : 0,
-                      repeatType: "reverse",
-                      duration: 1.5,
-                      ease: "easeInOut",
-                      repeatDelay: 1,
-                    }}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </motion.div>
+                  <ChevronRight className="h-4 w-4" />
                 </Button>
-              </motion.div>
-            </TooltipTrigger>
-            {adjacentReports?.next && (
-              <TooltipContent side="bottom" align="end" sideOffset={5}>
-                <p className="text-sm">
-                  {dayjs(adjacentReports.next.start_date ?? "").format("MMM D")}{" "}
-                  to{" "}
-                  {dayjs(adjacentReports.next.end_date ?? "").format("MMM D")}
-                </p>
-              </TooltipContent>
-            )}
-          </Tooltip>
-        </TooltipProvider>
+              </TooltipTrigger>
+              {adjacentReports?.next && (
+                <TooltipContent side="bottom" sideOffset={5}>
+                  <p className="text-sm">
+                    {dayjs(adjacentReports.next.start_date ?? "").format(
+                      "MMM D",
+                    )}{" "}
+                    to{" "}
+                    {dayjs(adjacentReports.next.end_date ?? "").format("MMM D")}
+                  </p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+
+        {/* Empty div to balance the layout */}
+        <div className="w-[73px]" />
       </div>
 
       {groupReports.reports.map((report) => {
@@ -593,7 +567,10 @@ export default function ReportPage({
             id: `${pt ?? ""}-${nt}`,
             leftLabel: nt,
             rightLabel: pt ?? "",
-            value: 100 * (positiveCount / total),
+            value:
+              positiveCount === 0 && negativeCount === 0
+                ? 50
+                : 100 * (negativeCount / total),
           };
         });
 
