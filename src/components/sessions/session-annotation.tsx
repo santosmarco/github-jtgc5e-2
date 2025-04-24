@@ -603,7 +603,7 @@ function AnnotationItem({
 
         {/* Reaction buttons that appear on hover - positioned outside the card */}
         <motion.div
-          className="absolute -top-2 right-2 z-10 flex items-center gap-1"
+          className="absolute -top-6 right-2 z-10 flex items-center gap-1"
           variants={{
             hidden: { opacity: hasReactions ? 1 : 0, y: hasReactions ? 0 : 10 },
             hover: { opacity: 1, y: 0 },
