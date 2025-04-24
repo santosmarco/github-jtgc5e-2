@@ -24,12 +24,57 @@ import _ from "lodash";
 import { dedent } from "ts-dedent";
 import { z } from "zod";
 
-import { gemini_2_5_pro } from "~/lib/ai/models/gemini";
+import { gemini_1_5_pro } from "~/lib/ai/models/gemini";
 import { four_oh_mini } from "~/lib/ai/models/openai";
 // import { four_point_one } from "~/lib/ai/models/openai";
 import { logger } from "~/lib/logging/server";
 import type { Tables } from "~/lib/supabase/database.types";
 import { createClient, type SupabaseServerClient } from "~/lib/supabase/server";
+
+/**
+ * Converts a JavaScript object into an XML-like string representation
+ * to reduce LLM token usage compared to JSON.stringify
+ *
+ * @param obj - The object to convert
+ * @param nodeName - The root node name for the object
+ * @returns XML-like string representation of the object
+ */
+const objectToXml = (obj: unknown, nodeName = "root"): string => {
+  if (obj == null) {
+    return `<${nodeName}/>`;
+  }
+
+  // Handle non-object types directly
+  if (typeof obj !== "object") {
+    const stringValue =
+      typeof obj === "string"
+        ? obj
+        : typeof obj === "number" || typeof obj === "boolean"
+          ? String(obj)
+          : `[${typeof obj}]`;
+    return `<${nodeName}>${stringValue}</${nodeName}>`;
+  }
+
+  // Handle arrays
+  if (Array.isArray(obj)) {
+    if (obj.length === 0) {
+      return `<${nodeName}></${nodeName}>`;
+    }
+    return obj
+      .map((item, index) => objectToXml(item, `${nodeName}_item`))
+      .join("");
+  }
+
+  // Handle regular objects
+  const entries = Object.entries(obj as Record<string, unknown>);
+  if (entries.length === 0) {
+    return `<${nodeName}></${nodeName}>`;
+  }
+
+  const children = entries.map(([key, val]) => objectToXml(val, key)).join("");
+
+  return `<${nodeName}>${children}</${nodeName}>`;
+};
 
 /**
  * Configuration constants for the application
@@ -190,6 +235,64 @@ type SessionMeetingsMap = Record<string, MeetingWithDetails[]>;
 type SimplifiedSessionMeetingsMap = Record<string, unknown[]>;
 /** Maps session IDs to the AI-generated coaching topics for that session */
 type GeneratedTopicsMap = Record<string, SuggestedTopicsOutput>;
+
+/**
+ * A complete report with all nested analytical components
+ * Contains detailed data about a founder's skill assessment
+ */
+interface ReportWithDetails extends Tables<"reports"> {
+  /** Sections of the report categorizing different aspects of performance */
+  report_sections: Tables<"report_sections">[];
+  /** Goals being assessed in this report */
+  report_goals: Array<
+    Tables<"report_goals"> & {
+      /** The goal being tracked */
+      goal: Tables<"goals"> & {
+        /** Signals associated with this goal */
+        signals: Tables<"goal_signals">[];
+      };
+    }
+  >;
+  /** Signals (behaviors) being tracked across goals */
+  report_goal_signals: Array<
+    Tables<"report_goal_signals"> & {
+      /** The goal signal being tracked */
+      goal_signal: Tables<"goal_signals">;
+    }
+  >;
+  /** Moments from meetings that evidence goal progress */
+  report_moments: Array<
+    Tables<"report_moments"> & {
+      /** The moment from a meeting */
+      moment: Tables<"moments"> & {
+        /** Tags categorizing this moment */
+        subtags: Tables<"moment_subtags">[];
+      };
+      /** The signal this moment is connected to */
+      report_goal_signal: Tables<"report_goal_signals">;
+    }
+  >;
+  /** Comments left on the report */
+  report_comments: Array<
+    Tables<"report_comments"> & {
+      /** User who left the comment */
+      user: Tables<"profiles">;
+    }
+  >;
+  /** The skill being assessed */
+  skill?: Tables<"skills"> | null;
+}
+
+/**
+ * A complete group report with all nested reports
+ */
+interface GroupReportWithDetails
+  extends Tables<"group_report_processing_status"> {
+  /** The individual reports in this group */
+  reports: ReportWithDetails[];
+  /** The skill being assessed in this group report */
+  skill?: Tables<"skills"> | null;
+}
 
 /**
  * Zod schema for validating and generating AI coaching topics
@@ -467,6 +570,7 @@ const writeDataToFile = async <T>(
   dataToWrite: T,
 ): Promise<void> => {
   try {
+    // Still use JSON.stringify for file output since we want human-readable files
     const formattedJsonData = JSON.stringify(dataToWrite, null, 2);
     await writeFile(destinationFilePath, formattedJsonData);
     logger.info(
@@ -496,7 +600,7 @@ const generateChunkSummary = async (
 ): Promise<string> => {
   try {
     const summaryGenerationResult = await generateObject({
-      model: gemini_2_5_pro,
+      model: gemini_1_5_pro,
       schema: summarySchema,
       messages: conversationMessages,
     });
@@ -525,7 +629,7 @@ const generateTopicsForSession = async (
 ): Promise<SuggestedTopicsOutput> => {
   try {
     const topicGenerationResult = await generateObject({
-      model: gemini_2_5_pro,
+      model: gemini_1_5_pro,
       schema: suggestedTopicsSchema,
       messages: conversationMessages,
     });
@@ -589,9 +693,7 @@ const summarizeSessionTopic = async (
 
           Topic data:
 
-          <topic_data>
-          ${JSON.stringify(annotation, null, 2)}
-          </topic_data>
+          ${objectToXml(annotation, "topic_data")}
 
           Remember: Your title MUST be 10 words or fewer and help recall the specific context.
         `,
@@ -1174,6 +1276,7 @@ const generateSessionTopics = async (
   aiSystemPrompt: string,
   sessionMeetingsData: SimplifiedSessionMeetingsMap,
   previousSessionsData: Record<string, SessionWithAnnotations[]> = {},
+  reportsData: unknown[] = [], // Add reports data parameter
 ): Promise<GeneratedTopicsMap> => {
   // Store generated topics for each session
   const sessionsTopicsMap: GeneratedTopicsMap = {};
@@ -1215,6 +1318,42 @@ const generateSessionTopics = async (
       },
     ];
 
+    // Add skill reports data to conversation history if available
+    if (reportsData && reportsData.length > 0) {
+      logger.info(
+        `Including ${reportsData.length} skill reports in the analysis`,
+      );
+
+      // Add reports data to conversation
+      sessionConversationHistory.push({
+        role: "user",
+        content: `
+          Here is data from skill reports that should be considered when generating topic suggestions:
+          
+          ${objectToXml(reportsData, "skill_reports")}
+          
+          These reports include:
+          1. Skills the founder is actively working on
+          2. Goals they've set for each skill
+          3. Positive and negative behavioral signals observed
+          4. Meeting moments that evidence these behaviors
+          5. Overall skills assessment and personality insights
+          
+          Use this information to identify growth patterns, skill development opportunities, behavioral trends, 
+          and connections between meeting discussions and the founder's explicit development goals.
+        `,
+      });
+
+      // Add assistant acknowledgment to maintain conversation flow
+      sessionConversationHistory.push({
+        role: "assistant",
+        content:
+          "I've reviewed the skill reports data and will incorporate these insights into my suggested topics. I'll look for connections between meeting content and development goals, behavioral patterns, and opportunities to address specific skills or signals observed in reports.",
+      });
+    } else {
+      logger.info("No skill reports available for this coaching session");
+    }
+
     // Add previous sessions data to conversation history if available
     const previousSessions = previousSessionsData[sessionId] || [];
     if (previousSessions.length > 0) {
@@ -1228,7 +1367,7 @@ const generateSessionTopics = async (
         content: `
           Here is data from previous coaching sessions that should be considered when generating topic suggestions:
           
-          ${JSON.stringify(previousSessions, null, 2)}
+          ${objectToXml(previousSessions, "previous_sessions")}
           
           Pay special attention to:
           1. Topics that were discussed in previous sessions that might need follow-up
@@ -1277,7 +1416,7 @@ const generateSessionTopics = async (
             
             Here is the next data chunk for session ${sessionId} (${chunkIndex + 1} of ${dataChunks.length}):
             
-            ${JSON.stringify(currentChunk)}
+            ${objectToXml(currentChunk, "meeting_chunk")}
           `,
         });
       } else {
@@ -1287,7 +1426,7 @@ const generateSessionTopics = async (
           content: `
             Here is the data for coaching session ${sessionId} (${chunkIndex + 1} of ${dataChunks.length}):
             
-            ${JSON.stringify(currentChunk)}
+            ${objectToXml(currentChunk, "meeting_chunk")}
           `,
         });
       }
@@ -1313,7 +1452,7 @@ const generateSessionTopics = async (
         // Add the AI's summary response to the conversation history
         sessionConversationHistory.push({
           role: "assistant",
-          content: JSON.stringify({ summary: interChunkSummary }),
+          content: objectToXml({ summary: interChunkSummary }, "chunk_summary"),
         });
 
         logger.info(
@@ -1528,9 +1667,7 @@ export const generateSuggestedTopics = async ({
 
       Today, you will be generating suggested topics for:
 
-      <founder_profile>
-      ${JSON.stringify(founderProfile)}
-      </founder_profile>
+      ${objectToXml(founderProfile, "founder_profile")}
     `;
 
     // Add founder's additional context if available
@@ -1697,6 +1834,33 @@ export const generateSuggestedTopics = async ({
       }
     }
 
+    // ========= FETCH SKILL REPORTS DATA =========
+    logger.info("Retrieving skill reports for founder...");
+    let simplifiedReportsData: unknown[] = [];
+
+    try {
+      // Fetch detailed reports for the founder
+      const founderReports = await fetchReportsForFounder(
+        supabaseClient,
+        founderProfile.id,
+        5, // Limit to 5 most recent reports
+      );
+
+      logger.info(
+        `Retrieved ${founderReports.length} group reports with details`,
+      );
+
+      // Simplify reports data for AI processing
+      if (founderReports.length > 0) {
+        simplifiedReportsData = simplifyReportsForAI(founderReports);
+        logger.info("Successfully transformed reports data for AI processing");
+      }
+    } catch (error) {
+      // Log error but continue with processing - reports are supplementary
+      logger.error("Error fetching or processing reports data:", { error });
+      logger.info("Continuing topic generation without reports data");
+    }
+
     // ========= OUTPUT DIRECTORY PREPARATION =========
     logger.info("Preparing output directories...");
     const currentFilePath = fileURLToPath(import.meta.url);
@@ -1723,19 +1887,31 @@ export const generateSuggestedTopics = async ({
     );
     await writeDataToFile(previousSessionsPath, previousSessionsData);
 
+    // ========= WRITE REPORTS DATA =========
+    let reportsDataPath: string | undefined;
+    if (simplifiedReportsData.length > 0) {
+      logger.info("Writing reports data to file...");
+      reportsDataPath = join(
+        outputDir,
+        `founder-skill-reports-${filenameTimestamp}.json`,
+      );
+      await writeDataToFile(reportsDataPath, simplifiedReportsData);
+    }
+
     // ========= CREATE SIMPLIFIED DATA FOR AI ANALYSIS =========
     logger.info("Creating AI-optimized data representation...");
     const simplifiedSessionData = createLLMFriendlyData(sessionMeetingsData);
 
     // ========= GENERATE COACHING TOPICS WITH AI =========
     logger.info(
-      "Generating AI-powered coaching topics with previous session context...",
+      "Generating AI-powered coaching topics with previous session and reports context...",
     );
     const generatedCoachingTopics = await generateSessionTopics(
       supabaseClient,
       aiSystemPrompt,
       simplifiedSessionData,
       previousSessionsData, // Pass the previous sessions data to include in analysis
+      simplifiedReportsData, // Pass the simplified reports data to include in analysis
     );
 
     // ========= WRITE OUTPUT FILES =========
@@ -1761,10 +1937,226 @@ export const generateSuggestedTopics = async ({
     logger.info(
       `Previous coaching sessions data written to: ${previousSessionsPath}`,
     );
+    if (simplifiedReportsData.length > 0 && reportsDataPath) {
+      logger.info(`Skill reports data written to: ${reportsDataPath}`);
+    }
     logger.info(`Simplified meetings data written to: ${simplifiedDataPath}`);
     logger.info(`Generated coaching topics written to: ${topicsOutputPath}`);
   } catch (error) {
     logger.error("Fatal error in coaching topics generation:", { error });
     process.exit(1);
   }
+};
+
+/**
+ * Retrieves all reports for a founder profile
+ *
+ * This function fetches all completed group reports for a founder,
+ * along with their detailed report data including sections, goals,
+ * signals, and moments that provide evidence of progress.
+ *
+ * @param supabaseClient - Database client for interacting with Supabase
+ * @param profileId - ID of the founder whose reports should be retrieved
+ * @param limit - Maximum number of recent reports to retrieve (default: 3)
+ * @returns Array of group reports with nested report details
+ * @throws Error if any database query fails
+ */
+const fetchReportsForFounder = async (
+  supabaseClient: SupabaseServerClient,
+  profileId: string,
+  limit = 3,
+): Promise<GroupReportWithDetails[]> => {
+  logger.info(`Retrieving recent skill reports for founder: ${profileId}`);
+
+  // Get recent completed group reports
+  const { data: groupReports, error: groupReportsError } = await supabaseClient
+    .from("group_report_processing_status")
+    .select("*, skill:skills(*)")
+    .eq("profile_id", profileId)
+    .eq("status", "completed")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (groupReportsError) {
+    throw new Error(
+      `Failed to retrieve group reports: ${groupReportsError.message}`,
+    );
+  }
+
+  if (!groupReports || groupReports.length === 0) {
+    logger.info(`No completed reports found for founder: ${profileId}`);
+    return [];
+  }
+
+  logger.info(
+    `Found ${groupReports.length} group reports for founder: ${profileId}`,
+  );
+
+  // Process each group report to fetch detailed report data
+  const enrichedGroupReports: GroupReportWithDetails[] = [];
+
+  for (const groupReport of groupReports) {
+    try {
+      // Get report processing statuses for this group
+      const { data: reportProcessingStatuses, error: statusesError } =
+        await supabaseClient
+          .from("report_processing_status")
+          .select("*")
+          .eq("group_processing_status_id", groupReport.id);
+
+      if (statusesError) {
+        logger.error(
+          `Error fetching report processing statuses: ${statusesError.message}`,
+        );
+        continue;
+      }
+
+      // Get the report IDs that completed processing
+      const reportIds = reportProcessingStatuses
+        .map((status) => status.report_id)
+        .filter((id): id is string => id !== null);
+
+      if (reportIds.length === 0) {
+        logger.info(`No report IDs found for group report: ${groupReport.id}`);
+        continue;
+      }
+
+      // Fetch detailed report data
+      const { data: reports, error: reportsError } = await supabaseClient
+        .from("reports")
+        .select(
+          `
+            *,
+            report_sections(*),
+            report_goals(*, goal:goals!inner(*, signals:goal_signals(*))),
+            report_goal_signals(*, goal_signal:goal_signals!inner(*)),
+            report_moments(*, moment:moments!inner(*, subtags:moment_subtags(*)), report_goal_signal:report_goal_signals!inner(*)),
+            report_comments(*, user:profiles(*))
+          `,
+        )
+        .in("id", reportIds);
+
+      if (reportsError) {
+        logger.error(
+          `Error fetching detailed reports: ${reportsError.message}`,
+        );
+        continue;
+      }
+
+      // Apply gentle rate limiting to avoid overwhelming the database
+      await sleep(DB_THROTTLE_DELAY_MS);
+
+      enrichedGroupReports.push({
+        ...groupReport,
+        reports: reports as ReportWithDetails[],
+      });
+
+      logger.info(
+        `Successfully enriched group report ${groupReport.id} with ${reports.length} detailed reports`,
+      );
+    } catch (error) {
+      logger.error(`Error processing group report ${groupReport.id}:`, {
+        error,
+      });
+      // Continue with other group reports even if one fails
+    }
+  }
+
+  return enrichedGroupReports;
+};
+
+/**
+ * Transforms complex report data structures into a simplified format optimized for AI processing
+ *
+ * This function extracts essential fields from report data, reducing complexity
+ * and volume while maintaining the key insights and evidence needed for analysis.
+ * The resulting structure is more suitable for processing by AI models with
+ * token limits.
+ *
+ * @param groupReports - Array of group reports with nested details
+ * @returns Simplified data structure with relevant report information
+ */
+const simplifyReportsForAI = (
+  groupReports: GroupReportWithDetails[],
+): unknown[] => {
+  return groupReports.map((groupReport) => ({
+    id: groupReport.id,
+    created_at: groupReport.created_at,
+    skill: groupReport.skill
+      ? {
+          id: groupReport.skill.id,
+          title: groupReport.skill.title,
+          description: groupReport.skill.description,
+        }
+      : null,
+
+    reports: groupReport.reports.map((report) => ({
+      id: report.id,
+      created_at: report.created_at,
+      start_date: report.start_date,
+      end_date: report.end_date,
+      summary: report.summary,
+      profile_id: report.profile_id,
+      skill_id: report.skill_id,
+
+      // Personality assessment from the report
+      personality_text: report.personality_text,
+      personality_description: report.personality_description,
+
+      // Key sections of the report
+      sections: report.report_sections.map((section) => ({
+        id: section.id,
+        title: section.title,
+        summary: section.summary,
+        direction: section.direction,
+        index: section.index,
+
+        // Add moments connected to this section
+        moments: report.report_moments
+          .filter((moment) => moment.report_section_id === section.id)
+          .map((moment) => ({
+            id: moment.id,
+            title: moment.moment.title,
+            summary: moment.moment.summary,
+            reasoning: moment.report_section_reasoning,
+            confidence: moment.report_section_confidence,
+            score: moment.score,
+            signal: {
+              id: moment.report_goal_signal.id,
+              text: moment.report_goal_signal.text,
+              direction: moment.report_goal_signal.direction,
+            },
+          })),
+      })),
+
+      // Goals being assessed
+      goals: report.report_goals.map((reportGoal) => ({
+        id: reportGoal.id,
+        text: reportGoal.text,
+        is_reviewed: reportGoal.is_reviewed,
+        goal: {
+          id: reportGoal.goal.id,
+          text: reportGoal.goal.text,
+          signals: reportGoal.goal.signals.map((signal) => ({
+            id: signal.id,
+            text: signal.text,
+            direction: signal.direction,
+          })),
+        },
+      })),
+
+      // Signals observed in the founder's behavior
+      signals: report.report_goal_signals.map((reportSignal) => ({
+        id: reportSignal.id,
+        text: reportSignal.text,
+        direction: reportSignal.direction,
+        activity_type: reportSignal.activity_type,
+
+        // Count moments associated with this signal for frequency
+        moment_count: report.report_moments.filter(
+          (moment) => moment.report_goal_signal_id === reportSignal.id,
+        ).length,
+      })),
+    })),
+  }));
 };
