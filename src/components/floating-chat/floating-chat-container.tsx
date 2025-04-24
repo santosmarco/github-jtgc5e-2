@@ -86,7 +86,9 @@ export function FloatingChatContainer({
           "cursor-pointer hover:bg-muted/80",
         )}
         onClick={() => {
-          if (!isOpen) {
+          if (isFullscreen) {
+            onFullscreenToggle?.();
+          } else if (!isOpen) {
             onToggle();
           } else {
             onMinimizeToggle();
@@ -117,54 +119,120 @@ export function FloatingChatContainer({
             </motion.span>
           </AnimatePresence>
         </div>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onReset();
-            }}
-            className="rounded p-1.5 transition-colors hover:bg-muted"
-            aria-label="Reset chat"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
-          {onFullscreenToggle && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onFullscreenToggle();
+        <div className="flex items-center">
+          <AnimatePresence mode="popLayout">
+            <motion.div
+              key="reset-button"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{
+                type: "spring",
+                stiffness: 500,
+                damping: 25,
               }}
-              className="rounded p-1.5 transition-colors hover:bg-muted"
-              aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+              className="mx-0.5 flex-shrink-0"
             >
-              {isFullscreen ? (
-                <Minimize2 className="h-4 w-4" />
-              ) : (
-                <Maximize2 className="h-4 w-4" />
-              )}
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggle();
-            }}
-            className="rounded p-1.5 transition-colors hover:bg-muted"
-            aria-label="Close chat"
-          >
-            {isOpen ? (
-              isMinimized ? (
-                <X className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )
-            ) : (
-              <ChevronUp className="h-4 w-4" />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onReset();
+                }}
+                className="rounded p-1.5 transition-all duration-200 hover:scale-110 hover:bg-muted"
+                aria-label="Reset chat"
+              >
+                <motion.div
+                  whileTap={{ rotate: 360 }}
+                  transition={{ duration: 0.5, ease: "easeInOut" }}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </motion.div>
+              </button>
+            </motion.div>
+
+            {onFullscreenToggle && (
+              <motion.div
+                key="fullscreen-button"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 500,
+                  damping: 25,
+                }}
+                className="mx-0.5 flex-shrink-0"
+              >
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onFullscreenToggle();
+                  }}
+                  className="rounded p-1.5 transition-all duration-200 hover:scale-110 hover:bg-muted"
+                  aria-label={
+                    isFullscreen ? "Exit fullscreen" : "Enter fullscreen"
+                  }
+                >
+                  <motion.div
+                    initial={false}
+                    animate={{ rotate: isFullscreen ? 0 : 180 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {isFullscreen ? (
+                      <Minimize2 className="h-4 w-4" />
+                    ) : (
+                      <Maximize2 className="h-4 w-4" />
+                    )}
+                  </motion.div>
+                </button>
+              </motion.div>
             )}
-          </button>
+
+            {!isFullscreen && (
+              <motion.div
+                key="toggle-button"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 500,
+                  damping: 25,
+                }}
+                className="mx-0.5 flex-shrink-0"
+              >
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggle();
+                  }}
+                  className="rounded p-1.5 transition-all duration-200 hover:scale-110 hover:bg-muted"
+                  aria-label="Close chat"
+                >
+                  <motion.div
+                    initial={false}
+                    animate={{
+                      rotate: isOpen ? (isMinimized ? 0 : 180) : 180,
+                    }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {isOpen ? (
+                      isMinimized ? (
+                        <X className="h-4 w-4" />
+                      ) : (
+                        <ChevronUp className="h-4 w-4" />
+                      )
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </motion.div>
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </button>
 
