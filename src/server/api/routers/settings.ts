@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import { syncCalendars } from "~/jobs/sync-calendars";
+import type { Tables } from "~/lib/supabase/database.types";
 import { createClient } from "~/lib/supabase/server";
 
 import { createTRPCRouter, publicProcedure } from "../trpc";
@@ -46,7 +47,8 @@ export const settingsRouter = createTRPCRouter({
           "should_not_join_pending_meetings",
           "should_not_join_owned_by_others_meetings",
           "should_not_join_coaching_sessions",
-        ]),
+          "has_ai_coaching_enabled",
+        ]) satisfies z.ZodType<keyof Tables<"user_settings">>,
         value: z.union([z.string(), z.boolean()]),
       }),
     )

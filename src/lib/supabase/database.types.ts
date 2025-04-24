@@ -4611,6 +4611,7 @@ export type Database = {
         Row: {
           bot_name: string | null
           created_at: string
+          has_ai_coaching_enabled: boolean
           id: number
           profile_id: string
           should_join_external_meetings: boolean
@@ -4622,6 +4623,7 @@ export type Database = {
         Insert: {
           bot_name?: string | null
           created_at?: string
+          has_ai_coaching_enabled?: boolean
           id?: number
           profile_id: string
           should_join_external_meetings?: boolean
@@ -4633,6 +4635,7 @@ export type Database = {
         Update: {
           bot_name?: string | null
           created_at?: string
+          has_ai_coaching_enabled?: boolean
           id?: number
           profile_id?: string
           should_join_external_meetings?: boolean

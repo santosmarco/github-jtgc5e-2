@@ -102,6 +102,7 @@ export const authRouter = createTRPCRouter({
           force_post_ten_meeting_onboarding:
             profile.force_post_ten_meeting_onboarding,
           flags: getAllFlagsForRole(profile.role),
+          has_ai_coaching_enabled: !!userSettings?.has_ai_coaching_enabled,
         },
       };
     } catch (error) {
@@ -158,6 +159,7 @@ export const authRouter = createTRPCRouter({
         force_post_ten_meeting_onboarding:
           profile.force_post_ten_meeting_onboarding,
         flags: getAllFlagsForRole(profile.role),
+        has_ai_coaching_enabled: !!userSettings?.has_ai_coaching_enabled,
       };
     } catch (error) {
       throw new TRPCError({
