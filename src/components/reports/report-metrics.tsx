@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { ChartGantt, ChartSpline } from "lucide-react";
 import { useState } from "react";
+import { useIsMobile } from "~/hooks/use-mobile";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useParticles } from "~/hooks/use-particles";
@@ -44,9 +45,10 @@ export function ReportMetrics({
 }: ReportMetricsProps): JSX.Element {
   const [metricTab, setMetricTab] = useState<"scales" | "timeline">("scales");
   const [isHovered, setIsHovered] = useState<boolean>(false);
+  const isMobile = useIsMobile();
 
   const { containerRef, setIsActive, ParticleEffect } = useParticles({
-    count: 72,
+    count: isMobile ? 36 : 72,
   });
 
   const renderMetricScale = (metric: ReportMetric, index: number) => {
@@ -60,7 +62,7 @@ export function ReportMetrics({
     return (
       <motion.div
         key={metric.id}
-        className="flex items-center gap-3"
+        className="flex items-center gap-1.5 sm:gap-3"
         variants={{
           hidden: { opacity: 0, x: -20 },
           visible: {
@@ -77,7 +79,7 @@ export function ReportMetrics({
       >
         <div
           className={cn(
-            "w-40 truncate text-right leading-none transition-all duration-200",
+            "w-24 truncate text-right text-[10px] leading-none transition-all duration-200 sm:w-40 sm:text-xs",
             selectedTab === "negative"
               ? isHighlighted
                 ? "font-medium text-amber-500"
@@ -136,7 +138,7 @@ export function ReportMetrics({
 
         <div
           className={cn(
-            "w-40 truncate text-left leading-none transition-all duration-200",
+            "w-24 truncate text-left text-[10px] leading-none transition-all duration-200 sm:w-40 sm:text-xs",
             selectedTab === "positive"
               ? isHighlighted
                 ? "font-medium text-primary"
@@ -161,11 +163,11 @@ export function ReportMetrics({
           transition={{ duration: 0.5 }}
         >
           {/* Animated coming soon message with staggered letters */}
-          <motion.div className="flex items-center justify-center">
+          <motion.div className="flex flex-wrap items-center justify-center">
             {Array.from("Coming Soon").map((letter, i) => (
               <motion.span
                 key={`letter-${i}`}
-                className="text-lg font-medium text-primary"
+                className="text-base font-medium text-primary sm:text-lg"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{
@@ -215,17 +217,17 @@ export function ReportMetrics({
             <motion.div
               className="absolute left-1/2 top-1/2 h-0.5 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-transparent via-primary/50 to-transparent"
               initial={{ width: 0 }}
-              animate={{ width: "80%" }}
+              animate={{ width: isMobile ? "90%" : "80%" }}
               transition={{ duration: 1, delay: 0.8, ease: "easeOut" }}
             />
 
-            {/* Animated circles */}
-            {[...Array(5)].map((_, i) => (
+            {/* Animated circles - fewer on mobile */}
+            {[...Array(isMobile ? 3 : 5)].map((_, i) => (
               <motion.div
                 key={`circle-${i}`}
                 className="absolute h-3 w-3 rounded-full bg-primary/20"
                 initial={{
-                  x: `calc(${50 + (i - 2) * 15}% - 6px)`,
+                  x: `calc(${50 + (i - (isMobile ? 1 : 2)) * (isMobile ? 25 : 15)}% - 6px)`,
                   y: "calc(50% - 6px)",
                   opacity: 0,
                 }}
@@ -249,7 +251,7 @@ export function ReportMetrics({
           </motion.div>
 
           <motion.p
-            className="text-center text-xs text-muted-foreground"
+            className="px-4 text-center text-[10px] text-muted-foreground sm:text-xs"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 1 }}
@@ -275,7 +277,7 @@ export function ReportMetrics({
         setIsHovered(false);
         setIsActive(false);
       }}
-      className="group/metrics relative flex h-full min-h-[260px] flex-col gap-4 overflow-hidden rounded-xl border border-border/60 bg-card/[0.02] bg-gradient-to-br from-background/90 to-background/70 py-2 text-xs shadow-lg transition-all duration-500 hover:border-primary/70"
+      className="group/metrics relative flex h-full flex-col gap-2 overflow-hidden rounded-xl border border-border/60 bg-card/[0.02] bg-gradient-to-br from-background/90 to-background/70 px-4 py-2 pb-4 text-xs shadow-lg transition-all duration-500 hover:border-primary/70 sm:min-h-[260px] sm:gap-4 sm:px-6 sm:pb-2"
       style={{
         boxShadow: "0 10px 30px rgba(0,0,0,0.1), 0 1px 8px rgba(0,0,0,0.05)",
       }}
@@ -296,17 +298,17 @@ export function ReportMetrics({
         className="relative z-10 h-full w-full flex-col"
       >
         <div className="flex items-center justify-between px-2">
-          <TabsList className="bg-background/5 backdrop-blur-sm">
+          <TabsList className="-mx-6 bg-background/5 backdrop-blur-sm sm:-mx-4">
             <TabsTrigger
               value="scales"
-              className="flex items-center rounded-sm text-xs hover:text-primary data-[state=active]:text-primary"
+              className="flex items-center rounded-sm text-[10px] hover:text-primary data-[state=active]:text-primary sm:text-xs"
             >
               <ChartGantt className="mr-2 h-3.5 w-3.5" />
               Scales
             </TabsTrigger>
             <TabsTrigger
               value="timeline"
-              className="flex items-center rounded-sm text-xs hover:text-primary data-[state=active]:text-primary"
+              className="flex items-center rounded-sm text-[10px] hover:text-primary data-[state=active]:text-primary sm:text-xs"
             >
               <ChartSpline className="mr-2 h-3.5 w-3.5" />
               Timeline
@@ -314,14 +316,14 @@ export function ReportMetrics({
           </TabsList>
         </div>
 
-        <TabsContent value="scales" className="my-4">
-          <div className="flex h-full flex-col justify-center gap-4 px-2 pt-2">
+        <TabsContent value="scales" className="my-2 sm:my-4">
+          <div className="flex h-full flex-col justify-center gap-2.5 pt-1 sm:gap-4 sm:px-2 sm:pt-2">
             <AnimatePresence>{metrics.map(renderMetricScale)}</AnimatePresence>
           </div>
         </TabsContent>
 
-        <TabsContent value="timeline" className="my-4">
-          <div className="flex h-full flex-col justify-center gap-4 px-2">
+        <TabsContent value="timeline" className="my-2 sm:my-4">
+          <div className="flex h-full flex-col justify-center gap-2.5 pt-1 sm:gap-4 sm:px-2 sm:pt-2">
             {[metrics[0]].filter(isTruthy).map(renderMetricTimeline)}
           </div>
         </TabsContent>

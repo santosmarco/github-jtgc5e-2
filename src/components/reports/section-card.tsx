@@ -9,6 +9,8 @@ import {
 } from "~/components/ui/tooltip";
 import type { Enums } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
+import { useIsMobile } from "~/hooks/use-mobile";
+import { useState } from "react";
 
 type Direction = Enums<"goal_signal_direction_type"> | null;
 
@@ -37,6 +39,15 @@ export const SectionCard = ({
   hasMoments,
 }: SectionCardProps): JSX.Element => {
   const isPositive = section.direction === "positive";
+  const isMobile = useIsMobile();
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const handleSelect = () => {
+    if (isMobile) {
+      setIsExpanded(!isExpanded);
+    }
+    onSelect();
+  };
 
   const getDirectionalStyles = (isPositive: boolean) => ({
     hoverBorder: isPositive
@@ -99,6 +110,25 @@ export const SectionCard = ({
     selected: { opacity: 1, x: 0 },
   };
 
+  // Mobile-only text expansion animation variants
+  const textExpandVariants = {
+    collapsed: {
+      height: "3rem",
+      overflow: "hidden",
+      transition: {
+        duration: 0.3,
+        ease: "easeInOut",
+      },
+    },
+    expanded: {
+      height: "auto",
+      transition: {
+        duration: 0.4,
+        ease: "easeOut",
+      },
+    },
+  };
+
   return (
     <motion.div
       variants={cardVariants}
@@ -112,19 +142,19 @@ export const SectionCard = ({
           isSelected && styles.selectedBg,
         )}
         initial="initial"
-        whileHover="hover"
+        whileHover={isMobile ? undefined : "hover"}
         animate={isSelected ? "selected" : "initial"}
       >
         <motion.button
-          onClick={onSelect}
+          onClick={handleSelect}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
-              onSelect();
+              handleSelect();
             }
           }}
           className={cn(
             "relative flex w-full cursor-pointer items-center gap-2 overflow-hidden rounded-md border-transparent px-4 py-3.5 text-left transition-all",
-            styles.hoverBorder,
+            !isMobile && styles.hoverBorder,
             isSelected && styles.selectedBg,
           )}
         >
@@ -137,14 +167,14 @@ export const SectionCard = ({
             )}
           />
 
-          <div className="-mr-6 w-full">
+          <div className="-mr-4 w-full sm:-mr-6">
             <div className="relative flex items-start justify-between">
               <Tooltip open={isAdmin ? undefined : false}>
                 <TooltipTrigger asChild>
                   <h3
                     className={cn(
-                      "mb-1 w-full pb-1 text-left text-base font-medium leading-none transition-all",
-                      styles.hoverText,
+                      "mb-1 w-full pb-1 text-left text-sm font-medium leading-none transition-all sm:text-base",
+                      !isMobile && styles.hoverText,
                       isSelected && styles.selectedText,
                     )}
                   >
@@ -154,33 +184,59 @@ export const SectionCard = ({
                 <TooltipContent align="start">{section.id}</TooltipContent>
               </Tooltip>
             </div>
-            <p
-              className={cn(
-                "text-pretty break-words pr-8 text-sm leading-snug transition-all",
-                isSelected ? "text-foreground/90" : "text-muted-foreground",
-                "group-hover:text-foreground/80",
-              )}
-            >
-              {section.summary}
-            </p>
+            {isMobile ? (
+              <motion.div
+                className="relative overflow-hidden"
+                variants={textExpandVariants}
+                initial="collapsed"
+                animate={(isExpanded || isSelected) ? "expanded" : "collapsed"}
+                transition={{ duration: 0.3 }}
+              >
+                <p
+                  className={cn(
+                    "text-pretty break-words pr-6 text-xs leading-tight sm:pr-8 sm:text-sm sm:leading-snug",
+                    isSelected ? "text-foreground/90" : "text-muted-foreground",
+                  )}
+                >
+                  {section.summary}
+                </p>
+                {!(isExpanded || isSelected) && (
+                  <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-background to-transparent" />
+                )}
+              </motion.div>
+            ) : (
+              <div className="overflow-hidden">
+                <p
+                  className={cn(
+                    "text-pretty break-words pr-6 text-xs leading-tight sm:pr-8 sm:text-sm sm:leading-snug",
+                    isSelected ? "text-foreground/90" : "text-muted-foreground",
+                    "group-hover:text-foreground/80",
+                  )}
+                >
+                  {section.summary}
+                </p>
+              </div>
+            )}
           </div>
 
-          <motion.div
-            variants={indicatorVariants}
-            className="flex-shrink-0 text-muted-foreground"
-          >
-            <ChevronRight
-              className={cn(
-                "h-4 w-4 transition-all",
-                isSelected && "text-foreground",
-              )}
-            />
-          </motion.div>
+          {!isMobile && (
+            <motion.div
+              variants={indicatorVariants}
+              className="flex-shrink-0 text-muted-foreground"
+            >
+              <ChevronRight
+                className={cn(
+                  "h-3.5 w-3.5 transition-all sm:h-4 sm:w-4",
+                  isSelected && "text-foreground",
+                )}
+              />
+            </motion.div>
+          )}
         </motion.button>
       </motion.div>
 
       {isAdmin && !hasMoments && (
-        <span className="absolute right-2 top-2 h-4 px-1 py-0 text-[11px] text-muted-foreground">
+        <span className="absolute right-2 top-2 h-3 px-1 py-0 text-[10px] text-muted-foreground sm:h-4 sm:text-[11px]">
           Hidden
         </span>
       )}

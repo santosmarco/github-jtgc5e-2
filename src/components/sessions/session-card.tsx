@@ -555,7 +555,7 @@ export default function SessionCard({
                       <motion.button
                         onClick={toggleShowAllAnnotations}
                         ref={toggleButtonRef}
-                        className="group flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-primary"
+                        className="group -mt-2 flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-primary"
                         variants={expandButtonVariants}
                         initial="initial"
                         whileHover="hover"

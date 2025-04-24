@@ -426,15 +426,16 @@ export default function ReportPage({
   }
 
   return (
-    <div className="-mx-8 -mt-12 min-h-screen">
+    <div className="-mx-4 min-h-screen shadow-sm backdrop-blur-sm sm:-mx-8 sm:-mt-12">
       {/* Date Range Navigation */}
-      <div className="sticky top-0 z-40 -mx-4 mb-6 flex items-center justify-between border-b border-border bg-background/60 px-2 py-2 backdrop-blur-xl">
+      <div className="sticky top-0 z-40 mb-6 flex items-center justify-between border-b border-border bg-background/60 px-2 py-2 backdrop-blur-xl sm:-mx-4 sm:min-h-0">
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
               <motion.div
                 whileHover={{ x: adjacentReports?.previous ? -5 : 0 }}
                 whileTap={{ scale: adjacentReports?.previous ? 0.95 : 1 }}
+                className="flex w-24 justify-start"
               >
                 <Button
                   variant="ghost"
@@ -501,11 +502,12 @@ export default function ReportPage({
               <motion.div
                 whileHover={{ x: adjacentReports?.next ? 5 : 0 }}
                 whileTap={{ scale: adjacentReports?.next ? 0.95 : 1 }}
+                className="flex w-24 justify-end"
               >
                 <Button
                   variant="ghost"
                   className={cn(
-                    "flex items-center gap-2 text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground",
+                    "flex h-10 items-center justify-center gap-2 text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground sm:h-auto sm:justify-start",
                     !adjacentReports?.next && "cursor-not-allowed opacity-50",
                   )}
                   onClick={navigateToNextReport}
@@ -646,9 +648,9 @@ export default function ReportPage({
         );
 
         return (
-          <div key={report.id} className="space-y-6 px-6">
+          <div key={report.id} className="space-y-4 px-4 sm:space-y-6 sm:px-6">
             {/* First Row - Three Cards */}
-            <div className="grid grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-4 sm:gap-6">
               {report.skill && report.profile_id && (
                 <GoalCardMinimal
                   skill={{
@@ -661,7 +663,7 @@ export default function ReportPage({
               )}
 
               {/* Score Card */}
-              <div className="col-span-2 h-full">
+              <div className="h-full sm:col-span-2">
                 <ReportMetrics metrics={metrics} selectedTab={currentTab} />
               </div>
 
@@ -669,9 +671,9 @@ export default function ReportPage({
             </div>
 
             {/* Second Row - Content */}
-            <div className="grid grid-cols-5 gap-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-5 sm:gap-6">
               {/* Strengths & Growth Areas */}
-              <div className="col-span-3">
+              <div className="sm:col-span-3">
                 <SectionsList
                   positiveSections={sortedPositiveSections}
                   negativeSections={sortedNegativeSections}
@@ -685,7 +687,7 @@ export default function ReportPage({
               </div>
 
               {/* Video Player */}
-              <div className="col-span-2">
+              <div className="hidden sm:col-span-2 sm:block">
                 <MomentsPlayer
                   reportMoments={filteredReportMoments.map((rm, idx) => ({
                     ...rm,

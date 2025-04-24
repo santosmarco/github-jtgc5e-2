@@ -177,7 +177,7 @@ export const GoalCardMinimal = React.forwardRef<HTMLDivElement, SkillCardProps>(
             min={0}
             max={100}
             size="md"
-            className="h-48"
+            className="sm:h-48"
             hasAssessments={!!latestAssessment}
           />
 
@@ -223,10 +223,10 @@ function SimplifiedGauge({
 
   // Size mappings
   const sizeClasses = {
-    sm: "w-32 h-32",
-    md: "w-48 h-48",
-    lg: "w-64 h-64",
-    xl: "w-80 h-80",
+    sm: "w-24 h-24 sm:w-32 sm:h-32",
+    md: "w-32 h-32 sm:w-48 sm:h-48",
+    lg: "w-40 h-40 sm:w-64 sm:h-64",
+    xl: "w-48 h-48 sm:w-80 sm:h-80",
   };
 
   // Animate the displayed value
@@ -237,7 +237,7 @@ function SimplifiedGauge({
   return (
     <div
       className={cn(
-        "flex h-full w-full flex-1 items-center justify-center pt-2",
+        "flex h-full w-full flex-1 items-center justify-center pl-48 pt-2 sm:pl-0",
         className,
       )}
     >
@@ -319,7 +319,7 @@ function SimplifiedGauge({
           >
             {hasAssessments ? (
               <motion.span
-                className="text-5xl font-bold"
+                className="text-3xl font-bold sm:text-5xl"
                 initial={{ value: min } as { value: number }}
                 animate={{ value: displayValue } as { value: number }}
                 transition={{ duration: 1.5, ease: "easeOut" }}
@@ -327,7 +327,7 @@ function SimplifiedGauge({
                 {Math.round(displayValue)}
               </motion.span>
             ) : (
-              <span className="text-5xl font-bold text-muted-foreground">
+              <span className="text-3xl font-bold text-muted-foreground sm:text-5xl">
                 N/A
               </span>
             )}
