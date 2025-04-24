@@ -24,7 +24,7 @@ import _ from "lodash";
 import { dedent } from "ts-dedent";
 import { z } from "zod";
 
-import { gemini_1_5_pro } from "~/lib/ai/models/gemini";
+import { gemini_2_5_pro } from "~/lib/ai/models/gemini";
 import { four_oh_mini } from "~/lib/ai/models/openai";
 // import { four_point_one } from "~/lib/ai/models/openai";
 import { logger } from "~/lib/logging/server";
@@ -496,7 +496,7 @@ const generateChunkSummary = async (
 ): Promise<string> => {
   try {
     const summaryGenerationResult = await generateObject({
-      model: gemini_1_5_pro,
+      model: gemini_2_5_pro,
       schema: summarySchema,
       messages: conversationMessages,
     });
@@ -525,7 +525,7 @@ const generateTopicsForSession = async (
 ): Promise<SuggestedTopicsOutput> => {
   try {
     const topicGenerationResult = await generateObject({
-      model: gemini_1_5_pro,
+      model: gemini_2_5_pro,
       schema: suggestedTopicsSchema,
       messages: conversationMessages,
     });
