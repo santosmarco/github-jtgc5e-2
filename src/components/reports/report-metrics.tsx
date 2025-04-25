@@ -144,6 +144,9 @@ export function ReportMetrics({
         </div>
 
         <div className="relative h-1.5 flex-1 rounded-full bg-accent-foreground/5">
+          {/* Center marker */}
+          <div className="absolute left-1/2 top-1/2 h-3 w-[1px] -translate-x-1/2 -translate-y-1/2 bg-muted-foreground/30" />
+
           <motion.div
             initial={{ left: "50%" }}
             animate={{
@@ -162,7 +165,7 @@ export function ReportMetrics({
               },
             }}
             className={cn(
-              "absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-200",
+              "absolute top-1/2 z-10 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-200",
               isHighlighted && selectedTab === "positive"
                 ? "scale-125 bg-primary"
                 : isHighlighted && selectedTab === "negative"
