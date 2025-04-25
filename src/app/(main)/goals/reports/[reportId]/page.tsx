@@ -27,6 +27,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
+import { useProfile } from "~/hooks/use-profile";
 import { transformMoment } from "~/lib/db/moments";
 import { checkUserFlags, Flag } from "~/lib/flags/flags";
 import { createClient } from "~/lib/supabase/client";
@@ -71,10 +72,25 @@ export default function ReportPage({
 
   const utils = api.useUtils();
   const { data: user } = api.auth.getUser.useQuery();
+  const { profile: selectedProfile } = useProfile();
   const { data: groupReports, isLoading } =
     api.reports.getGroupReports.useQuery({
       groupId: params.reportId,
     });
+
+  // Fetch timeline data for the skill when we have the group reports
+  const { data: timelineData } =
+    api.reports.getReportsTimelineDataForUser.useQuery(
+      {
+        userId: selectedProfile?.id ?? user?.id ?? "",
+        skillId: groupReports?.group.skill_id ?? undefined,
+        includeScores: true,
+      },
+      {
+        enabled:
+          !!(selectedProfile?.id || user?.id) && !!groupReports?.group.skill_id,
+      },
+    );
 
   // Fetch adjacent reports for navigation
   const { data: adjacentReports } = api.reports.getAdjacentReports.useQuery(
@@ -574,6 +590,36 @@ export default function ReportPage({
           };
         });
 
+        // Filter timeline data only for the current skill
+        const skillTimelineHistory =
+          timelineData?.timelineData
+            .filter((item) => item.x !== "" && item.y !== undefined)
+            .map((item) => ({
+              date: item.x,
+              value: item.y,
+            })) ?? [];
+
+        // Create a type-safe metrics array
+        const typeCheckedMetrics: ReadonlyArray<{
+          id: string;
+          leftLabel: string;
+          rightLabel: string;
+          value: number;
+          history?: Array<{ date: string; value: number }>;
+        }> = [
+          ...metrics.map((metric) => ({
+            ...metric,
+            history: undefined,
+          })),
+          {
+            id: "global-skill-score",
+            leftLabel: "Lower Skill Score",
+            rightLabel: "Higher Skill Score",
+            value: 50, // Default value doesn't matter for timeline view
+            history: skillTimelineHistory,
+          },
+        ];
+
         // Calculate section scores
         const sectionScores = report.report_sections.map((section) => {
           const sectionMoments = reportMoments.filter(
@@ -641,7 +687,10 @@ export default function ReportPage({
 
               {/* Score Card */}
               <div className="h-full sm:col-span-2">
-                <ReportMetrics metrics={metrics} selectedTab={currentTab} />
+                <ReportMetrics
+                  metrics={typeCheckedMetrics}
+                  selectedTab={currentTab}
+                />
               </div>
 
               <PersonalityProfile report={report} />
