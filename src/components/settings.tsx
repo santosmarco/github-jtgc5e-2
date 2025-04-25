@@ -289,7 +289,7 @@ export function Settings({ user, settings: initialSettings }: SettingsProps) {
                     <motion.div
                       variants={fadeIn}
                       className={cn(
-                        "group flex cursor-pointer items-center justify-between rounded-lg bg-secondary/40 p-4 transition-all hover:bg-secondary/60",
+                        "group mt-2 flex cursor-pointer items-center justify-between rounded-lg bg-secondary/40 p-4 transition-all hover:bg-secondary/60",
                       )}
                     >
                       <div>
