@@ -47,9 +47,12 @@ export function Settings({ user, settings: initialSettings }: SettingsProps) {
   const [pendingCoachingSetting, setPendingCoachingSetting] = useState<
     boolean | null
   >(null);
-  const shouldShowAiCoachingSwitch = checkUserFlags(user, [
-    Flag.ALLOW_AI_COACHING_SWITCH,
+  const shouldShowAdvancedSettings = checkUserFlags(user, [
+    Flag.ALLOW_ADVANCED_SETTINGS,
   ]);
+  const [reportFrequency, setReportFrequency] = useState(
+    initialSettings.report_frequency_in_days ?? 14,
+  );
 
   const updateSetting = useCallback(
     async (
@@ -167,6 +170,23 @@ export function Settings({ user, settings: initialSettings }: SettingsProps) {
     [initialSettings.bot_name, updateSetting],
   );
 
+  const debouncedUpdateReportFrequency = useCallback(
+    (value: number) => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+
+      saveTimeoutRef.current = setTimeout(() => {
+        void (async () => {
+          if (value !== initialSettings.report_frequency_in_days) {
+            await updateSetting("report_frequency_in_days", value);
+          }
+        })();
+      }, 500);
+    },
+    [initialSettings.report_frequency_in_days, updateSetting],
+  );
+
   const handleBotNameBlur = useCallback(async () => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -175,6 +195,19 @@ export function Settings({ user, settings: initialSettings }: SettingsProps) {
       await updateSetting("bot_name", botName);
     }
   }, [botName, initialSettings.bot_name, updateSetting]);
+
+  const handleReportFrequencyBlur = useCallback(async () => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    if (reportFrequency !== initialSettings.report_frequency_in_days) {
+      await updateSetting("report_frequency_in_days", reportFrequency);
+    }
+  }, [
+    reportFrequency,
+    initialSettings.report_frequency_in_days,
+    updateSetting,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -241,7 +274,7 @@ export function Settings({ user, settings: initialSettings }: SettingsProps) {
                   </p>
                 </div>
 
-                {shouldShowAiCoachingSwitch && (
+                {shouldShowAdvancedSettings && (
                   <div className="mt-6 border-t border-border pt-4">
                     <ToggleSetting
                       value={settings.has_ai_coaching_enabled ?? false}
@@ -252,6 +285,36 @@ export function Settings({ user, settings: initialSettings }: SettingsProps) {
                       description="Enable AI-powered coaching features"
                       // disabled={isCoach}
                     />
+
+                    <motion.div
+                      variants={fadeIn}
+                      className={cn(
+                        "group flex cursor-pointer items-center justify-between rounded-lg bg-secondary/40 p-4 transition-all hover:bg-secondary/60",
+                      )}
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-foreground transition-colors group-hover:text-foreground">
+                          Report Frequency
+                        </p>
+                        <p className="text-xs text-muted-foreground transition-colors group-hover:text-muted-foreground">
+                          How often the user will receive reports (in days)
+                        </p>
+                      </div>
+                      <Input
+                        id="report-frequency"
+                        placeholder="Days"
+                        value={reportFrequency}
+                        onChange={(e) => {
+                          setReportFrequency(Number.parseInt(e.target.value));
+                          debouncedUpdateReportFrequency(
+                            Number.parseInt(e.target.value),
+                          );
+                        }}
+                        onBlur={handleReportFrequencyBlur}
+                        // disabled={isCoach}
+                        className="w-20 text-right"
+                      />
+                    </motion.div>
                   </div>
                 )}
               </div>

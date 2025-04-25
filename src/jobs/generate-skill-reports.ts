@@ -45,10 +45,24 @@ async function generateAssessment(profileId: string, goalIds: string[]) {
 }
 
 async function runTask() {
-  // Get the date 14 days ago at midnight
-  const twoWeeksAgoMidnight = dayjs().subtract(14, "day").startOf("day");
-
   const supabase = await __dangerouslyCreateAdminClient__();
+
+  const { data: profileSettings, error: settingsError } = await supabase
+    .from("user_settings")
+    .select("profile_id, report_frequency_in_days");
+
+  if (settingsError) {
+    logger.error("Failed to fetch user settings", { error: settingsError });
+    throw new Error(`Failed to fetch user settings: ${settingsError.message}`);
+  }
+
+  // Create a map of profile_id to report_frequency_in_days
+  const reportFrequencyByProfileId = Object.fromEntries(
+    profileSettings.map((setting) => [
+      setting.profile_id,
+      setting.report_frequency_in_days || 14, // Default to 14 days if not set
+    ]),
+  );
 
   const { data, error } = await supabase
     .from("skills")
@@ -100,6 +114,14 @@ async function runTask() {
   > = {};
 
   for (const [profileId, profileGoals] of Object.entries(goalsByProfileId)) {
+    // Get the report frequency for this profile
+    const reportFrequencyInDays = reportFrequencyByProfileId[profileId] || 14; // Default to 14 days if not found
+
+    // Calculate the previous period based on this profile's report frequency
+    const previousPeriod = dayjs()
+      .subtract(reportFrequencyInDays, "day")
+      .startOf("day");
+
     // For each profile, group goals by skill_id
     const goalsBySkillId = _.groupBy(profileGoals, (goal) => goal.skill_id);
 
@@ -131,7 +153,7 @@ async function runTask() {
     const profileProcessableGoals = goalsWithTheirLatestReport.filter((datum) =>
       dayjs(
         datum.latestReport ? datum.latestReport.end_date : datum.created_at,
-      ).isSameOrBefore(twoWeeksAgoMidnight),
+      ).isSameOrBefore(previousPeriod),
     );
 
     if (profileProcessableGoals.length > 0) {
