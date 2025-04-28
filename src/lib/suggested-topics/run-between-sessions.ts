@@ -471,6 +471,7 @@ async function processSessionTopics(
 
       EXEMPLARY EMAIL MODEL:
 
+      <exemplary_email_model>
       Subject: Strategic Decision-Making & Team Dynamics: Key Themes for Our Next Session
 
       Hi Sarah,
@@ -501,6 +502,7 @@ async function processSessionTopics(
 
       Warm regards,
       Your Coach
+      </exemplary_email_model>
 
       CRITICAL REQUIREMENTS:
       1. Maintain absolute fidelity to the evidence - never speculate beyond what's directly observable
