@@ -735,7 +735,7 @@ const summarizeSessionTopic = async (
  * @param coachingSessionId - ID of the coaching session these topics are for
  * @param coachingTopics - Array of AI-generated coaching topic suggestions
  */
-const saveTopicsToDatabase = async (
+export const saveTopicsToDatabase = async (
   supabaseClient: SupabaseServerClient,
   coachingSessionId: string,
   coachingTopics: SuggestedTopic[],
