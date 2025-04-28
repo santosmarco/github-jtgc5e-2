@@ -94,7 +94,11 @@ export const generateTopicsForUser = schemaTask({
 
         await sendSuggestedTopicsEmail({
           profile: user,
-          suggested_topics: suggestedTopics,
+          suggested_topics: suggestedTopics.map((topic, index) => ({
+            ...topic,
+            isHidden: false,
+            order: index,
+          })),
           meetingHours:
             meetingDurations?.reduce(
               (acc, duration) =>
