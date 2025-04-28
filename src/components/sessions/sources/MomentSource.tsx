@@ -40,15 +40,7 @@ export function MomentSource({
                 transition={{ delay: 0.1, duration: 0.2 }}
               >
                 <CalendarClock className="h-3 w-3" />
-                <span>
-                  {new Date(data.data.startTimestamp).toLocaleTimeString(
-                    undefined,
-                    {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    },
-                  )}
-                </span>
+                <span>{data.data.startTimestamp}</span>
               </motion.div>
             </div>
           )
