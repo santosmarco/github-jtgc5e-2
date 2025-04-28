@@ -324,6 +324,18 @@ function SourceGroup({
   );
 }
 
+// Helper function to extract parts of the description
+const extractDescriptionParts = (description: string | null) => {
+  if (!description) return { summary: "", pastContext: "", whyDiscuss: "" };
+
+  const sentences = description.split(". ");
+  const whyDiscuss = sentences.pop() || "";
+  const summary = sentences[0] || "";
+  const pastContext = sentences.slice(1).join(". ");
+
+  return { summary, pastContext, whyDiscuss };
+};
+
 // Component for annotation content
 interface AnnotationContentProps {
   annotation: SessionAnnotation;
@@ -343,6 +355,11 @@ function AnnotationContent({
   const hasSources = annotation.sources && annotation.sources.length > 0;
   const groupedSources = groupSourcesByType(annotation.sources || []);
 
+  // Extract description parts
+  const { summary, pastContext, whyDiscuss } = extractDescriptionParts(
+    annotation.description,
+  );
+
   return (
     <motion.div
       className="px-3 pb-4"
@@ -357,12 +374,43 @@ function AnnotationContent({
     >
       {annotation.description && (
         <motion.div
-          className="mb-4 rounded-lg p-3.5 text-sm leading-relaxed shadow-sm"
+          className="mb-4 space-y-4 rounded-lg p-3.5 text-sm leading-relaxed shadow-sm"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          {annotation.description.replace(/\s*\[.*?\]\s*/g, "")}
+          {summary && (
+            <div>
+              <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Summary
+              </div>
+              <div className="text-pretty text-sm leading-6 text-foreground">
+                {summary.replace(/\s*\[.*?\]\s*/g, "")}.
+              </div>
+            </div>
+          )}
+
+          {pastContext && (
+            <div>
+              <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Past Context
+              </div>
+              <div className="text-pretty text-sm leading-6 text-foreground">
+                {pastContext.replace(/\s*\[.*?\]\s*/g, "")}.
+              </div>
+            </div>
+          )}
+
+          {whyDiscuss && (
+            <div>
+              <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Why Discuss
+              </div>
+              <div className="text-pretty text-sm leading-6 text-foreground">
+                {whyDiscuss.replace(/\s*\[.*?\]\s*/g, "")}
+              </div>
+            </div>
+          )}
         </motion.div>
       )}
 
@@ -707,7 +755,7 @@ function AnnotationItem({
                     {annotation.title.replace(/\s*\[.*?\]\s*/g, "")}
                   </div>
                 </TooltipTrigger>
-                <TooltipContent className="max-w-[20rem]">
+                <TooltipContent className="max-w-[40rem]">
                   <p>{annotation.title.replace(/\s*\[.*?\]\s*/g, "")}</p>
                   <p className="mt-2 text-xs font-medium italic">
                     Click for more details
