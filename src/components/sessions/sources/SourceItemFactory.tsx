@@ -4,6 +4,7 @@ import { ActionItemSource } from "./ActionItemSource";
 import { EntityObservationSource } from "./EntityObservationSource";
 import { EntitySource } from "./EntitySource";
 import { MeetingSource } from "./MeetingSource";
+import { MeetingTopicEventSource } from "./MeetingTopicEventSource";
 import { MomentSource } from "./MomentSource";
 import { RelationshipObservationSource } from "./RelationshipObservationSource";
 import { RelationshipSource } from "./RelationshipSource";
@@ -37,6 +38,10 @@ export type TopicDiscussedData = Extract<
 >;
 export type ActionItemData = Extract<SourceData, { type: "action_item" }>;
 export type MeetingData = Extract<SourceData, { type: "meeting" }>;
+export type MeetingTopicEventData = Extract<
+  SourceData,
+  { type: "topic_event" }
+>;
 
 /**
  * Generic props interface for all source components
@@ -80,6 +85,8 @@ export function SourceItemFactory({
       return <ActionItemSource data={data} compact={compact} />;
     case "meeting":
       return <MeetingSource data={data} compact={compact} />;
+    case "topic_event":
+      return <MeetingTopicEventSource data={data} compact={compact} />;
     default:
       return <UnknownSource compact={compact} />;
   }
