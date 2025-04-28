@@ -218,7 +218,7 @@ export function VideoPageClient({ videoId }: VideoPageClientProps) {
           <div className="hidden space-y-3 lg:block">
             {summary && <MeetingSummary summary={summary} />}
             <VideoTags video={video} />
-            <InnerMeetingTopics videoId={videoId} />
+            <InnerMeetingTopics videoId={videoId} vtt={vtt} />
             <ActionItemList videoId={videoId} />
             <InnerTranscriptView videoId={videoId} />
           </div>
@@ -230,10 +230,12 @@ export function VideoPageClient({ videoId }: VideoPageClientProps) {
 
 type InnerMeetingTopicsProps = {
   videoId: string;
+  vtt: string;
 };
 
 const InnerMeetingTopics = memo(function InnerMeetingTopics({
   videoId,
+  vtt,
 }: InnerMeetingTopicsProps) {
   const { seek } = usePlayer();
   // Use the optimized endpoint that only returns the fields we need
@@ -251,7 +253,20 @@ const InnerMeetingTopics = memo(function InnerMeetingTopics({
       topics={topics ?? []}
       onTopicClick={(topic) => {
         if ("vtt_start_segment_id" in topic && topic.vtt_start_segment_id) {
-          seek(topic.vtt_start_segment_id);
+          const vttLines = vtt.split("\n");
+          const vttSegmentIndex = vttLines.findIndex(
+            (line) => line === `${topic.vtt_start_segment_id}`,
+          );
+          const [, vttStart] =
+            vttLines[vttSegmentIndex + 1]?.split(" --> ") ?? [];
+          const [hours, minutes, secondsWithMs] = vttStart?.split(":") ?? [];
+          const [seconds, milliseconds] = secondsWithMs?.split(".") ?? [];
+          const timeInSeconds =
+            Number(hours) * 3600 +
+            Number(minutes) * 60 +
+            Number(seconds) +
+            Number(milliseconds) / 1000;
+          seek(timeInSeconds);
         }
       }}
     />
