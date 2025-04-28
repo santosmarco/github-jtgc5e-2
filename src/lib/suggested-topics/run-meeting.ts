@@ -556,7 +556,7 @@ function transformMeetingData(
     title: rawMeeting.name,
     summary: rawMeeting.summary,
     vtt: rawMeeting.clean_vtt_file,
-    date: rawMeeting.date,
+    date: dayjs(rawMeeting.date).toISOString(),
     event: rawMeeting.meeting_bot?.event
       ? transformEvent(rawMeeting.meeting_bot.event)
       : null,
