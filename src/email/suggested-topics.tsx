@@ -1,7 +1,8 @@
-import { Text } from "@react-email/components";
+import { Link, Text } from "@react-email/components";
 
 import type { Tables } from "~/lib/supabase/database.types";
 
+import { Button } from "./_components/button";
 import { COMPANY_NAME } from "./_components/constants";
 import { EmailContainer } from "./_components/email-container";
 import { SectionContainer } from "./_components/section-container";
@@ -29,6 +30,7 @@ export function SuggestedTopicsEmail({
   meetingHours,
 }: SuggestedTopicsEmailProps) {
   const previewText = "Suggested Topics for Your Next Coaching Session";
+  const sessionsUrl = "https://app.withtitan.com/sessions";
 
   // Sort topics by order
   const sortedTopics = [...suggested_topics].sort((a, b) => a.order - b.order);
@@ -71,45 +73,52 @@ export function SuggestedTopicsEmail({
         );
 
         return (
-          <SectionContainer
+          <Link
             key={`topic-${topic.id}`}
-            title={`${index + 1}. ${topic.title_summarized || ""}`}
-            titleClassName="text-sm font-bold leading-6 text-gray-800 mb-3"
-            className={`mb-4 mt-4 rounded-lg ${
-              index % 2 === 0 ? "bg-slate-50" : "bg-sky-50"
-            } border-l-2 px-4 py-3 ${
-              index % 2 === 0 ? "border-slate-300" : "border-sky-300"
-            }`}
+            href={sessionsUrl}
+            className="block no-underline"
           >
-            <div className="mb-4">
-              <Text className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
-                Summary
-              </Text>
-              <Text className="text-pretty text-sm leading-6 text-gray-800">
-                {topic.title}
-              </Text>
-            </div>
+            <SectionContainer
+              title={`${index + 1}. ${topic.title_summarized || ""}`}
+              titleClassName="text-sm font-bold leading-6 text-gray-800 mb-3"
+              className={`mb-4 mt-4 rounded-lg ${
+                index % 2 === 0 ? "bg-slate-50" : "bg-sky-50"
+              } border-l-2 px-4 py-3 ${
+                index % 2 === 0 ? "border-slate-300" : "border-sky-300"
+              } transition-shadow duration-150 hover:shadow-md`}
+            >
+              <div className="mb-4">
+                <Text className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
+                  Summary
+                </Text>
+                <Text className="text-pretty text-sm leading-6 text-gray-800">
+                  {topic.title}
+                </Text>
+              </div>
 
-            <div className="mb-4">
-              <Text className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
-                Past Context
-              </Text>
-              <Text className="text-pretty text-sm leading-6 text-gray-800">
-                {pastContext}.
-              </Text>
-            </div>
+              <div className="mb-4">
+                <Text className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
+                  Past Context
+                </Text>
+                <Text className="text-pretty text-sm leading-6 text-gray-800">
+                  {pastContext}.
+                </Text>
+              </div>
 
-            <div>
-              <Text className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
-                Why Discuss
-              </Text>
-              <Text className="text-pretty text-sm leading-6 text-gray-800">
-                {whyDiscuss}
-              </Text>
-            </div>
-          </SectionContainer>
+              <div>
+                <Text className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
+                  Why Discuss
+                </Text>
+                <Text className="text-pretty text-sm leading-6 text-gray-800">
+                  {whyDiscuss}
+                </Text>
+              </div>
+            </SectionContainer>
+          </Link>
         );
       })}
+
+      <Button href={sessionsUrl}>Learn More</Button>
 
       <Text className="text-sm leading-6 text-gray-800">
         Best regards,
