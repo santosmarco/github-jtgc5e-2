@@ -1,3 +1,4 @@
+import type { PostgrestError } from "@supabase/supabase-js";
 import { TRPCError } from "@trpc/server";
 import { generateObject, type Message } from "ai";
 import _ from "lodash";
@@ -170,14 +171,14 @@ export const profileRouter = createTRPCRouter({
           });
         }
 
-        let enhancementsError: any;
+        let enhancementsError: PostgrestError | null = null;
 
         if (existingEnhancements && existingEnhancements.length > 0) {
           // Update existing record
           const { error } = await supabase
             .from("profile_enhancements")
             .update({ dossier: input.dossier })
-            .eq("id", existingEnhancements[0]?.id);
+            .eq("id", existingEnhancements[0]?.id ?? "");
 
           enhancementsError = error;
         } else {
