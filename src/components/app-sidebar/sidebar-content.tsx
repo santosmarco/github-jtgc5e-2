@@ -15,6 +15,7 @@ import {
   TextQuote,
   TrendingUpIcon,
   User,
+  UserIcon,
   Users,
   UsersIcon,
   Video,
@@ -526,6 +527,12 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
                     <DropdownMenuSeparator />
                   </>
                 )}
+                <Link href="/profile" onClick={handleItemClick("/profile")}>
+                  <DropdownMenuItem className="cursor-pointer gap-2">
+                    <UserIcon className="h-4 w-4" />
+                    My Profile
+                  </DropdownMenuItem>
+                </Link>
                 <Link
                   href="/integrations"
                   onClick={handleItemClick("/integrations")}

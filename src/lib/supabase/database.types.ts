@@ -3334,6 +3334,80 @@ export type Database = {
           },
         ]
       }
+      profile_development_themes: {
+        Row: {
+          created_at: string | null
+          deleted_at: string | null
+          description: string
+          icon: string
+          id: string
+          is_enabled: boolean
+          key_points: string[]
+          order: number
+          parent_theme: string | null
+          profile_id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          deleted_at?: string | null
+          description: string
+          icon: string
+          id?: string
+          is_enabled: boolean
+          key_points: string[]
+          order: number
+          parent_theme?: string | null
+          profile_id: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          deleted_at?: string | null
+          description?: string
+          icon?: string
+          id?: string
+          is_enabled?: boolean
+          key_points?: string[]
+          order?: number
+          parent_theme?: string | null
+          profile_id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_development_themes_parent_theme_fkey"
+            columns: ["parent_theme"]
+            isOneToOne: false
+            referencedRelation: "profile_development_themes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_development_themes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "profile_development_themes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "profile_development_themes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profile_enhancements: {
         Row: {
           created_at: string
@@ -3373,6 +3447,58 @@ export type Database = {
           },
           {
             foreignKeyName: "profile_enhancements_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profile_signals: {
+        Row: {
+          created_at: string
+          direction: Database["public"]["Enums"]["goal_signal_direction_type"]
+          id: string
+          is_enabled: boolean
+          profile_id: string
+          text: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          direction: Database["public"]["Enums"]["goal_signal_direction_type"]
+          id?: string
+          is_enabled?: boolean
+          profile_id: string
+          text: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          direction?: Database["public"]["Enums"]["goal_signal_direction_type"]
+          id?: string
+          is_enabled?: boolean
+          profile_id?: string
+          text?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_signals_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "profile_signals_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "profile_signals_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -5286,6 +5412,10 @@ export type Database = {
       sparsevec_typmod_in: {
         Args: { "": unknown[] }
         Returns: number
+      }
+      sql_query_runner: {
+        Args: { query: string }
+        Returns: string
       }
       update_profile_id_on_moments: {
         Args: Record<PropertyKey, never>

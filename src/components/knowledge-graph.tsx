@@ -717,7 +717,7 @@ export default function KnowledgeGraph() {
                 showLabels={showLabels}
                 zoomLevel={zoomLevel}
                 onNodeClick={handleNodeClick}
-                onLinkClick={handleLinkClick}
+                onLinkClick={handleLinkClick as any}
                 highlightedNodeIds={highlightedNodeIds}
                 layoutMode={layoutMode}
               />

@@ -11,6 +11,8 @@ export const Flag = {
   ALLOW_MEETING_DELETE: "allow_meeting_delete",
   ALLOW_CLIENT_ACCESS: "allow_client_access",
   ALLOW_ADVANCED_SETTINGS: "allow_advanced_settings",
+  ALLOW_PROFILE_DEVELOPMENT_THEMES_REGENERATION:
+    "allow_profile_development_themes_regeneration",
 } as const;
 
 export type Flag = (typeof Flag)[keyof typeof Flag];
@@ -18,7 +20,10 @@ export type Flag = (typeof Flag)[keyof typeof Flag];
 export const ROLE_FLAGS: Record<Enums<"user_role_enum">, readonly Flag[]> = {
   user: [Flag.ALLOW_MEETING_DELETE],
 
-  coach: [Flag.ALLOW_CLIENT_ACCESS],
+  coach: [
+    Flag.ALLOW_CLIENT_ACCESS,
+    Flag.ALLOW_PROFILE_DEVELOPMENT_THEMES_REGENERATION,
+  ],
 
   admin: [
     Flag.ALLOW_ADMIN_ACCESS,
@@ -31,6 +36,7 @@ export const ROLE_FLAGS: Record<Enums<"user_role_enum">, readonly Flag[]> = {
     Flag.ALLOW_MEETING_DELETE,
     Flag.ALLOW_CLIENT_ACCESS,
     Flag.ALLOW_ADVANCED_SETTINGS,
+    Flag.ALLOW_PROFILE_DEVELOPMENT_THEMES_REGENERATION,
   ],
 };
 

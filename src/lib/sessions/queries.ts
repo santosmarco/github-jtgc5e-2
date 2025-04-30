@@ -62,7 +62,8 @@ export async function handleGetAllSessionsForUser(
   const { data: events, error: eventsError } = await supabase
     .from("calendar_event_details_v2")
     .select("*")
-    .eq("profile_id", profileId);
+    .eq("profile_id", profileId)
+    .eq("is_deleted", false);
 
   if (eventsError) {
     logger.error("Failed to fetch calendar events", {
