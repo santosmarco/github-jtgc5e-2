@@ -531,141 +531,174 @@ export type Database = {
           },
         ]
       }
-      entity_events: {
+      entity_profile_entities: {
         Row: {
-          attributes: Json | null
-          embedding: string | null
-          end_time: string
-          event_text: string
-          event_type: string
-          id: string
-          meeting_id: string
-          start_time: string
+          entity_id: string
+          entity_profile_id: string
         }
         Insert: {
-          attributes?: Json | null
-          embedding?: string | null
-          end_time: string
-          event_text: string
-          event_type: string
-          id?: string
-          meeting_id: string
-          start_time: string
+          entity_id: string
+          entity_profile_id: string
         }
         Update: {
-          attributes?: Json | null
-          embedding?: string | null
-          end_time?: string
-          event_text?: string
-          event_type?: string
-          id?: string
-          meeting_id?: string
-          start_time?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "entity_events_meeting_id_fkey"
-            columns: ["meeting_id"]
-            isOneToOne: false
-            referencedRelation: "meeting_processing_status_view"
-            referencedColumns: ["meeting_video_api_id"]
-          },
-          {
-            foreignKeyName: "entity_events_meeting_id_fkey"
-            columns: ["meeting_id"]
-            isOneToOne: false
-            referencedRelation: "meetings"
-            referencedColumns: ["video_api_id"]
-          },
-          {
-            foreignKeyName: "entity_events_meeting_id_fkey"
-            columns: ["meeting_id"]
-            isOneToOne: false
-            referencedRelation: "meetings_with_profile"
-            referencedColumns: ["video_api_id"]
-          },
-          {
-            foreignKeyName: "entity_events_meeting_id_fkey"
-            columns: ["meeting_id"]
-            isOneToOne: false
-            referencedRelation: "upcoming_meetings_with_action_items"
-            referencedColumns: ["meeting_id"]
-          },
-        ]
-      }
-      entity_observations: {
-        Row: {
-          created_at: string
-          entity_id: string
-          id: string
-          is_test: boolean
-          text: string
-        }
-        Insert: {
-          created_at?: string
-          entity_id: string
-          id?: string
-          is_test?: boolean
-          text: string
-        }
-        Update: {
-          created_at?: string
           entity_id?: string
-          id?: string
-          is_test?: boolean
-          text?: string
+          entity_profile_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "entity_observations_entity_id_fkey"
+            foreignKeyName: "entity_profile_entities_entity_id_fkey"
             columns: ["entity_id"]
             isOneToOne: false
-            referencedRelation: "entities"
+            referencedRelation: "meeting_entities_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_profile_entities_entity_profile_id_fkey"
+            columns: ["entity_profile_id"]
+            isOneToOne: false
+            referencedRelation: "entity_profiles"
             referencedColumns: ["id"]
           },
         ]
       }
-      entity_relationships: {
+      entity_profiles: {
         Row: {
-          attributes: Json | null
+          alliance_structure: string[]
+          communication_architecture: string[]
+          conflict_patterns: string[]
+          conversational_system_prompt: string | null
           created_at: string
+          decision_making_style: string[]
+          entity_description: string
+          entity_name: string
+          environment: string[]
+          goals: string[]
+          guardrails: string[]
           id: string
-          is_test: boolean
-          object_id: string
-          predicate: string
-          subject_id: string
+          interpersonal_effectiveness: string[]
+          organizational_influence: string[]
+          performance_issues: string[]
+          personality: string[]
+          professional_network: string[]
+          profile_id: string
+          profile_version: number
+          project_portfolio: string[]
+          psychological_framework: string[]
+          raw_business_profile: Json | null
+          raw_personal_profile: Json | null
+          raw_relationships_profile: Json | null
+          relationship_health: string[]
+          relationship_with_user: string[]
+          relationships: string[]
+          role_and_responsibilities: string[]
+          source_data_hash: string
+          speech_patterns: string[]
+          stress_responses: string[]
+          tone: string[]
+          tools: string[]
+          traits: string[]
+          typical_phrases: string[]
+          updated_at: string
+          value_creation: string[]
         }
         Insert: {
-          attributes?: Json | null
+          alliance_structure: string[]
+          communication_architecture: string[]
+          conflict_patterns: string[]
+          conversational_system_prompt?: string | null
           created_at?: string
+          decision_making_style: string[]
+          entity_description: string
+          entity_name: string
+          environment: string[]
+          goals: string[]
+          guardrails: string[]
           id?: string
-          is_test?: boolean
-          object_id: string
-          predicate: string
-          subject_id: string
+          interpersonal_effectiveness: string[]
+          organizational_influence: string[]
+          performance_issues: string[]
+          personality: string[]
+          professional_network: string[]
+          profile_id: string
+          profile_version?: number
+          project_portfolio: string[]
+          psychological_framework: string[]
+          raw_business_profile?: Json | null
+          raw_personal_profile?: Json | null
+          raw_relationships_profile?: Json | null
+          relationship_health: string[]
+          relationship_with_user: string[]
+          relationships: string[]
+          role_and_responsibilities: string[]
+          source_data_hash: string
+          speech_patterns: string[]
+          stress_responses: string[]
+          tone: string[]
+          tools: string[]
+          traits: string[]
+          typical_phrases: string[]
+          updated_at?: string
+          value_creation: string[]
         }
         Update: {
-          attributes?: Json | null
+          alliance_structure?: string[]
+          communication_architecture?: string[]
+          conflict_patterns?: string[]
+          conversational_system_prompt?: string | null
           created_at?: string
+          decision_making_style?: string[]
+          entity_description?: string
+          entity_name?: string
+          environment?: string[]
+          goals?: string[]
+          guardrails?: string[]
           id?: string
-          is_test?: boolean
-          object_id?: string
-          predicate?: string
-          subject_id?: string
+          interpersonal_effectiveness?: string[]
+          organizational_influence?: string[]
+          performance_issues?: string[]
+          personality?: string[]
+          professional_network?: string[]
+          profile_id?: string
+          profile_version?: number
+          project_portfolio?: string[]
+          psychological_framework?: string[]
+          raw_business_profile?: Json | null
+          raw_personal_profile?: Json | null
+          raw_relationships_profile?: Json | null
+          relationship_health?: string[]
+          relationship_with_user?: string[]
+          relationships?: string[]
+          role_and_responsibilities?: string[]
+          source_data_hash?: string
+          speech_patterns?: string[]
+          stress_responses?: string[]
+          tone?: string[]
+          tools?: string[]
+          traits?: string[]
+          typical_phrases?: string[]
+          updated_at?: string
+          value_creation?: string[]
         }
         Relationships: [
           {
-            foreignKeyName: "relationships_object_id_fkey"
-            columns: ["object_id"]
+            foreignKeyName: "entity_profiles_profile_id_fkey"
+            columns: ["profile_id"]
             isOneToOne: false
-            referencedRelation: "entities"
-            referencedColumns: ["id"]
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
           },
           {
-            foreignKeyName: "relationships_subject_id_fkey"
-            columns: ["subject_id"]
+            foreignKeyName: "entity_profiles_profile_id_fkey"
+            columns: ["profile_id"]
             isOneToOne: false
-            referencedRelation: "entities"
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "entity_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2567,6 +2600,49 @@ export type Database = {
           },
         ]
       }
+      moment_profile_development_themes: {
+        Row: {
+          created_at: string
+          id: string
+          moment_id: string | null
+          profile_development_theme_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          moment_id?: string | null
+          profile_development_theme_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          moment_id?: string | null
+          profile_development_theme_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moment_profile_development_th_profile_development_theme_id_fkey"
+            columns: ["profile_development_theme_id"]
+            isOneToOne: false
+            referencedRelation: "profile_development_themes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moment_profile_development_themes_moment_id_fkey"
+            columns: ["moment_id"]
+            isOneToOne: false
+            referencedRelation: "moments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moment_profile_development_themes_moment_id_fkey"
+            columns: ["moment_id"]
+            isOneToOne: false
+            referencedRelation: "moments_with_score"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       moment_reactions: {
         Row: {
           created_at: string
@@ -2798,6 +2874,8 @@ export type Database = {
           altitude_score_reasoning_not_higher: string | null
           altitude_score_reasoning_not_lower: string | null
           altitude_type: string | null
+          coaching_theme_summary: string | null
+          coaching_themes_analyses: string | null
           created_at: string
           final_score: number | null
           id: string
@@ -2851,6 +2929,8 @@ export type Database = {
           altitude_score_reasoning_not_higher?: string | null
           altitude_score_reasoning_not_lower?: string | null
           altitude_type?: string | null
+          coaching_theme_summary?: string | null
+          coaching_themes_analyses?: string | null
           created_at?: string
           final_score?: number | null
           id: string
@@ -2904,6 +2984,8 @@ export type Database = {
           altitude_score_reasoning_not_higher?: string | null
           altitude_score_reasoning_not_lower?: string | null
           altitude_type?: string | null
+          coaching_theme_summary?: string | null
+          coaching_themes_analyses?: string | null
           created_at?: string
           final_score?: number | null
           id?: string
@@ -3723,35 +3805,6 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      relationship_observations: {
-        Row: {
-          created_at: string
-          id: string
-          relationship_id: string
-          text: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          relationship_id: string
-          text: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          relationship_id?: string
-          text?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "relationship_observations_relationship_id_fkey"
-            columns: ["relationship_id"]
-            isOneToOne: false
-            referencedRelation: "entity_relationships"
             referencedColumns: ["id"]
           },
         ]

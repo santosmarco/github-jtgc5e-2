@@ -56,6 +56,10 @@ export const env = createEnv({
     SUPABASE_SERVICE_ROLE_KEY: z.string(),
     RECALL_BASE_URL: z.string().min(1).url(),
     RECALL_API_KEY: z.string().min(1),
+    // Database
+    DATABASE_URL: z.string().url(),
+    // ElevenLabs
+    ELEVENLABS_API_KEY: z.string(),
   },
 
   client: {
@@ -109,6 +113,8 @@ export const env = createEnv({
     PINECONE_API_KEY: process.env.PINECONE_API_KEY,
     PINECONE_HOST: process.env.PINECONE_HOST,
     PINECONE_INDEX: process.env.PINECONE_INDEX,
+    DATABASE_URL: process.env.DATABASE_URL,
+    ELEVENLABS_API_KEY: process.env.ELEVENLABS_API_KEY,
     // Resend
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     // Client
