@@ -11,6 +11,7 @@ export const Flag = {
   ALLOW_MEETING_DELETE: "allow_meeting_delete",
   ALLOW_CLIENT_ACCESS: "allow_client_access",
   ALLOW_ADVANCED_SETTINGS: "allow_advanced_settings",
+  ALLOW_PROFILE_EDIT: "allow_profile_edit",
   ALLOW_PROFILE_DEVELOPMENT_THEMES_REGENERATION:
     "allow_profile_development_themes_regeneration",
 } as const;
@@ -36,6 +37,7 @@ export const ROLE_FLAGS: Record<Enums<"user_role_enum">, readonly Flag[]> = {
     Flag.ALLOW_MEETING_DELETE,
     Flag.ALLOW_CLIENT_ACCESS,
     Flag.ALLOW_ADVANCED_SETTINGS,
+    Flag.ALLOW_PROFILE_EDIT,
     Flag.ALLOW_PROFILE_DEVELOPMENT_THEMES_REGENERATION,
   ],
 };

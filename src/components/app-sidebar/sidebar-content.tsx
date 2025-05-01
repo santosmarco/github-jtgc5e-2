@@ -66,6 +66,8 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
     profileId: selectedProfile?.id ?? user.id,
   });
 
+  const utils = api.useUtils();
+
   const { data: events, isLoading: isLoadingEvents } =
     api.calendar.getLiveEvents.useQuery(
       {
@@ -128,6 +130,7 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
 
   const handleProfileChange = async (profile: Tables<"profiles">) => {
     setSelectedProfile(profile);
+    void utils.profile.getProfileEnhancements.invalidate();
   };
 
   const handleItemClick =

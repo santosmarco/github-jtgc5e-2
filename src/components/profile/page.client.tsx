@@ -337,6 +337,7 @@ export function ProfilePageClient({
                 </CardHeader>
                 <CardContent>
                   <ProfileForm
+                    user={user}
                     profileEnhancements={profileEnhancements || null}
                     onUpdate={() => setActiveTab("overview")}
                   />

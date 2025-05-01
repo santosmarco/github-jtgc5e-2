@@ -25,14 +25,13 @@ import {
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { useProfile } from "~/hooks/use-profile";
+import { checkUserFlags, Flag } from "~/lib/flags/flags";
 import type { Tables } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
+import type { RouterOutputs } from "~/trpc/shared";
 
 import { Textarea } from "../ui/textarea";
-
-// Feature flag to control profile editing functionality
-const IS_ENABLED = false;
 
 const profileFormSchema = z.object({
   nickname: z.string().min(1, "Name is required"),
@@ -43,6 +42,7 @@ const profileFormSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 interface ProfileFormProps {
+  user: RouterOutputs["auth"]["getUser"];
   profileEnhancements: Tables<"profile_enhancements"> | null;
   onUpdate?: () => void;
 }
@@ -104,11 +104,14 @@ const disabledContentVariants = {
 };
 
 export function ProfileForm({
+  user,
   profileEnhancements,
   onUpdate,
 }: ProfileFormProps) {
   const { profile } = useProfile();
   const [isGeneratingThemes, setIsGeneratingThemes] = useState(false);
+
+  const canEdit = checkUserFlags(user, [Flag.ALLOW_PROFILE_EDIT]);
 
   const utils = api.useUtils();
 
@@ -179,7 +182,7 @@ export function ProfileForm({
           onSubmit={form.handleSubmit(onSubmit)}
           className={cn(
             "space-y-6",
-            !IS_ENABLED && "pointer-events-none blur-sm filter",
+            !canEdit && "pointer-events-none blur-sm filter",
           )}
           variants={formVariants}
           initial="hidden"
@@ -333,7 +336,7 @@ export function ProfileForm({
           </motion.div>
         </motion.form>
 
-        {!IS_ENABLED && (
+        {!canEdit && (
           <AnimatePresence>
             <motion.div
               className="absolute inset-0 -mx-6 -mb-6 flex items-center justify-center rounded-xl rounded-t-none bg-background/80 backdrop-blur-sm"
