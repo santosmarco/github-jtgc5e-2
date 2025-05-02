@@ -384,8 +384,9 @@ export default function ReportPage({
   const currentReportIndex =
     timelineData?.timelineData.findIndex(
       (t) =>
-        groupReports?.reports.find((r) => r.id === t.entry.reportId) !==
-        undefined,
+        groupReports?.reports.find(
+          (r) => dayjs(r.end_date).format("YYYY-MM-DD") === t.x,
+        ) !== undefined,
     ) ?? 0;
   const previousReport =
     timelineData?.timelineData[currentReportIndex - 1]?.entry;
@@ -402,6 +403,14 @@ export default function ReportPage({
       router.push(`/goals/reports/${nextReport.groupId}`);
     }
   };
+
+  useEffect(() => {
+    if (!timelineData) return;
+
+    for (const { entry } of timelineData.timelineData) {
+      router.prefetch(`/goals/reports/${entry.groupId}`);
+    }
+  }, [timelineData, router]);
 
   if (isLoading) {
     return (
