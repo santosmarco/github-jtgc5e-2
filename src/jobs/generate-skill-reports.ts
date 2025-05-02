@@ -15,6 +15,7 @@ async function generateAssessment(profileId: string, goalIds: string[]) {
     const response = await apiClient.post("/reports", {
       goalIds,
       profileId,
+      origin: "auto",
     });
 
     if (response.data?.error) {
