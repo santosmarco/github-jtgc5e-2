@@ -71,6 +71,7 @@ export interface MeetingTopicEntity extends BaseEntity {
   readonly _table_name: "meeting_entities_v2";
   readonly name: string;
   readonly type: string;
+  readonly description: string | null;
   readonly observations: readonly MeetingTopicObservation[];
 }
 
@@ -163,7 +164,7 @@ type RawMeetingTopicEvent = Pick<
 
 type RawMeetingTopicEntity = Pick<
   Tables<"meeting_entities_v2">,
-  "id" | "name" | "type" | "latest"
+  "id" | "name" | "type" | "description" | "latest"
 > & {
   observations: RawMeetingTopicObservation[];
 };
@@ -388,6 +389,7 @@ export async function fetchMeeting(
             id,
             name,
             type,
+            description,
             latest,
             observations:meeting_entity_observations_v2(
               id,
@@ -701,6 +703,7 @@ function transformTopicEntity(
     id: entity.id,
     name: entity.name,
     type: entity.type,
+    description: entity.description,
     observations: entity.observations.map(
       transformTopicObservation("meeting_entity_observations_v2"),
     ),
