@@ -1,9 +1,12 @@
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import dayjs from "dayjs";
+import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import _ from "lodash";
 
 import type { Database, Enums, Tables } from "../supabase/database.types";
 import { isTruthy } from "../utils";
+
+dayjs.extend(isSameOrAfter);
 
 /**
  * Represents a report list item
@@ -115,7 +118,9 @@ export type ProfileHistoricalReportsListFilters = {
  */
 export type HistoricalSkillScore = {
   reportId: string;
-  date: string | null;
+  groupId: string | null | undefined;
+  startDate: string | null;
+  endDate: string | null;
   score: number;
   positiveTagCount: number;
   negativeTagCount: number;
@@ -195,6 +200,7 @@ export class ReportsService {
 
   /**
    * Create a new ReportsService instance
+   *
    * @param supabaseClient - Supabase client to use for database access
    */
   constructor(supabaseClient: SupabaseClient<Database>) {
@@ -203,6 +209,11 @@ export class ReportsService {
 
   /**
    * Handle Supabase errors with context
+   *
+   * @param error - The error to handle
+   * @param operation - The operation that caused the error
+   * @param context - Additional context for the error
+   * @returns Never
    */
   private handleError(
     error: PostgrestError | Error,
@@ -219,6 +230,9 @@ export class ReportsService {
 
   /**
    * Check if a moment should be included in score calculations
+   *
+   * @param reportMoment - The moment to check
+   * @returns True if the moment should be included, false otherwise
    */
   private isValidMoment(
     reportMoment: Pick<
@@ -236,6 +250,11 @@ export class ReportsService {
 
   /**
    * Check if a tag matches any scales in the provided skill
+   *
+   * @param tag - The tag to check
+   * @param skill - The skill with scales to check
+   * @param isPositive - Whether to check for positive or negative tags
+   * @returns True if the tag matches any scales, false otherwise
    */
   private matchesSkillTags(
     tag: string | null,
@@ -246,12 +265,20 @@ export class ReportsService {
 
     return skill.scales.some((scale) => {
       const tagField = isPositive ? "positive_tag_title" : "negative_tag_title";
-      return scale[tagField].split(",").includes(tag);
+      return scale[tagField]
+        .split(",")
+        .map((t) => t.trim())
+        .includes(tag);
     });
   }
 
   /**
    * Count tags that match skill scales
+   *
+   * @param reportMoments - The moments to analyze
+   * @param skill - The skill with scales to analyze
+   * @param isPositive - Whether to count positive or negative tags
+   * @returns The number of matching tags
    */
   private countMatchingTags(
     reportMoments: ReportMomentWithSubtags[],
@@ -269,6 +296,7 @@ export class ReportsService {
 
   /**
    * Calculate skill score based on moment tags
+   *
    * @param skill - The skill with scales to calculate score for
    * @param reportMoments - The moments to analyze
    * @returns Object containing score and tag counts
@@ -289,6 +317,7 @@ export class ReportsService {
 
     // Calculate score as a value between 0 and 1
     // A higher positive tag ratio yields a higher score (0-1 range)
+    // NOTE: This formula maps scores to [0.5, 1.0] range.
     const score =
       totalTagCounts > 0
         ? 0.5 + 0.5 * (positiveTagCounts / totalTagCounts)
@@ -304,6 +333,9 @@ export class ReportsService {
 
   /**
    * Format a date to day precision (YYYY-MM-DD)
+   *
+   * @param date - The date to format
+   * @returns The formatted date
    */
   private formatToDay(date: string | null): string {
     return date ? dayjs(date).startOf("day").format("YYYY-MM-DD") : "";
@@ -311,6 +343,9 @@ export class ReportsService {
 
   /**
    * Create a unique period key for a report based on start and end dates
+   *
+   * @param report - The report to create a period key for
+   * @returns The period key
    */
   private createPeriodKey(report: ReportWithPeriod): string {
     const startDay = this.formatToDay(report.start_date);
@@ -318,6 +353,12 @@ export class ReportsService {
     return `${startDay}_${endDay}`;
   }
 
+  /**
+   * Converts a ReportListItem to an AdjacentReport
+   *
+   * @param report - The report to convert
+   * @returns The converted AdjacentReport
+   */
   private toAdjacentReport(report: ReportListItem): AdjacentReport | null {
     if (!report.processing_status) {
       return null;
@@ -331,6 +372,7 @@ export class ReportsService {
       end_date: report.end_date,
     };
   }
+
   /**
    * Utility function to deduplicate reports by their date periods
    * Reports with the same start_date and end_date (normalized to day) are considered duplicates
@@ -339,75 +381,117 @@ export class ReportsService {
    * @param reports - Array of reports to deduplicate
    * @returns Array of deduplicated reports, sorted by date
    */
-  public dedupeReports<T extends ReportWithPeriod>(reports: T[]) {
+  public dedupeReports<T extends ReportWithPeriod>(reports: T[]): T[] {
     if (!reports.length) return [];
 
-    // Create a period key for each report to identify duplicates
-    const reportsWithKey = reports.map((report) => ({
-      ...report,
-      _periodKey: this.createPeriodKey(report),
-    }));
+    // Create normalized date keys for each report
+    const reportsWithKey = reports.map((report) => {
+      // Create a normalized date representation for comparison
+      const startDate = report.start_date
+        ? dayjs(report.start_date).startOf("day")
+        : null;
+      const endDate = report.end_date
+        ? dayjs(report.end_date).startOf("day")
+        : null;
+
+      // Generate a unique key for this date period
+      const periodKey =
+        startDate && endDate
+          ? `${startDate.format("YYYY-MM-DD")}_${endDate.format("YYYY-MM-DD")}`
+          : `${report.start_date ?? ""}_${report.end_date ?? ""}`;
+
+      return {
+        report,
+        periodKey,
+        createdAt: report.created_at ? dayjs(report.created_at) : null,
+      };
+    });
 
     // Group reports by their period key
-    const groupedByPeriod = _.groupBy(reportsWithKey, "_periodKey");
+    type ReportWithKey = (typeof reportsWithKey)[number];
+    const groupedByPeriod = reportsWithKey.reduce<
+      Record<string, ReportWithKey[]>
+    >((acc, item) => {
+      const key = item.periodKey;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(item);
+      return acc;
+    }, {});
 
     // For each group, keep only the report with the most recent created_at
     const deduplicated = Object.values(groupedByPeriod)
       .map((group) => {
-        // If no created_at dates available, just return the first one
-        if (!group[0]?.created_at) return group[0];
+        // If no created_at dates available or only one report, return the first one
+        if (group.length === 1 || !group[0]?.createdAt) return group[0]?.report;
 
-        // Otherwise find the latest created report in this group
-        return (
-          _.maxBy(group, (report) =>
-            report.created_at ? dayjs(report.created_at).valueOf() : 0,
-          ) || group[0]
-        );
+        // Find report with most recent created_at
+        const mostRecent = group.reduce<ReportWithKey>((latest, current) => {
+          if (!current.createdAt) return latest;
+          if (!latest.createdAt) return current;
+          return current.createdAt.isAfter(latest.createdAt) ? current : latest;
+        }, group[0]);
+
+        return mostRecent.report;
       })
       .filter(isTruthy);
 
     // Sort by start_date (or end_date if start_date is null)
-    const sorted = _.orderBy(
+    return _.orderBy(
       deduplicated,
       [
-        (r) => {
-          if (r.start_date) return dayjs(r.start_date).valueOf();
-          if (r.end_date) return dayjs(r.end_date).valueOf();
+        (report) => {
+          // Primary sort by start date
+          if (report.start_date) {
+            return dayjs(report.start_date).valueOf();
+          }
+          // Secondary sort by end date
+          if (report.end_date) {
+            return dayjs(report.end_date).valueOf();
+          }
+          // Fallback value for reports with no dates
           return 0;
         },
       ],
       ["asc"],
     );
-
-    // Remove the temporary _periodKey property we added
-    return sorted.map((report) =>
-      _.omit(report, "_periodKey" satisfies keyof typeof report),
-    );
   }
 
   /**
    * Get the report ID from a group report processing status ID
+   *
    * @param groupId - The group ID to fetch the report ID for
    * @returns The report ID
    */
-  public async getReportIdFromGroupReportProcessingStatusId(
+  public async getIdsFromGroupReportProcessingStatusId(
     groupId: string,
-  ): Promise<string> {
+  ): Promise<{
+    processing_status_id: string;
+    report_id: string;
+    skill_id: string | null;
+  }> {
     try {
-      const { data: reportProcessingStatus, error } = await this.supabase
+      const {
+        data: reportProcessingStatuses,
+        error: reportProcessingStatusesError,
+      } = await this.supabase
         .from("report_processing_status")
-        .select("report_id")
-        .eq("group_processing_status_id", groupId)
-        .limit(1)
-        .maybeSingle();
+        .select("id, report_id, created_at, report:reports!inner(skill_id)")
+        .eq("status", "completed")
+        .eq("group_processing_status_id", groupId);
 
-      if (error) {
+      if (reportProcessingStatusesError) {
         this.handleError(
-          error,
+          reportProcessingStatusesError,
           "fetching report id from group report processing status id",
           { groupId },
         );
       }
+
+      const reportProcessingStatus = _.last(
+        _.sortBy(reportProcessingStatuses, (status) =>
+          dayjs(status.created_at).valueOf(),
+        ),
+      );
 
       if (!reportProcessingStatus?.report_id) {
         throw new ReportError(
@@ -415,7 +499,11 @@ export class ReportsService {
         );
       }
 
-      return reportProcessingStatus.report_id;
+      return {
+        processing_status_id: reportProcessingStatus.id,
+        report_id: reportProcessingStatus.report_id,
+        skill_id: reportProcessingStatus.report?.skill_id ?? null,
+      };
     } catch (error) {
       if (error instanceof ReportError) throw error;
       this.handleError(
@@ -428,7 +516,9 @@ export class ReportsService {
 
   /**
    * Get a lightweight list of reports for a profile, sorted by date
+   *
    * @param profileId - The profile ID to fetch reports for
+   * @param filters - Optional filters for the query
    * @returns Array of report list items with basic info
    */
   public async getProfileHistoricalReportsList(
@@ -462,10 +552,10 @@ export class ReportsService {
           `,
         )
         .eq("profile_id", profileId)
-        .eq("processing_status.status", "completed")
+        .eq("processing_statuses.status", "completed")
         .order("start_date", { ascending: true, nullsFirst: true });
 
-      if (filters?.skillId) query.eq("skill.id", filters.skillId);
+      if (filters?.skillId) query.eq("skill_id", filters.skillId);
       if (filters?.startDate) query.gte("start_date", filters.startDate);
       if (filters?.endDate) query.lte("end_date", filters.endDate);
 
@@ -510,6 +600,7 @@ export class ReportsService {
 
   /**
    * Get detailed information for a specific report
+   *
    * @param reportId - The report ID to fetch
    * @returns Detailed report data including sections, goals, and visible moments
    */
@@ -584,6 +675,7 @@ export class ReportsService {
 
   /**
    * Get visible moments for a specific report
+   *
    * @param reportId - The report ID to fetch moments for
    * @param options - Optional pagination parameters
    * @returns Array of visible moments with their associated data
@@ -634,6 +726,7 @@ export class ReportsService {
 
   /**
    * Get all goals for a specific report with their signals
+   *
    * @param reportId - The report ID to fetch goals for
    * @returns Array of goals with their associated signals
    */
@@ -669,6 +762,7 @@ export class ReportsService {
 
   /**
    * Get comments for a specific report
+   *
    * @param reportId - The report ID to fetch comments for
    * @returns Array of comments with user information
    */
@@ -702,6 +796,7 @@ export class ReportsService {
 
   /**
    * Get adjacent reports for a profile
+   *
    * @param profileId - The profile ID to fetch reports for
    * @param currentGroupId - The current group ID to find adjacent reports for
    * @returns Object containing current, previous, and next reports
@@ -711,10 +806,12 @@ export class ReportsService {
     currentGroupId: string,
   ): Promise<AdjacentReports> {
     try {
-      const [reportId, allReports] = await Promise.all([
-        this.getReportIdFromGroupReportProcessingStatusId(currentGroupId),
-        this.getProfileHistoricalReportsList(profileId),
-      ]);
+      const { report_id: reportId, skill_id: skillId } =
+        await this.getIdsFromGroupReportProcessingStatusId(currentGroupId);
+
+      const allReports = await this.getProfileHistoricalReportsList(profileId, {
+        skillId: skillId ?? undefined,
+      });
 
       const currentReportIndex = allReports.findIndex(
         (report) => report.id === reportId,
@@ -751,6 +848,7 @@ export class ReportsService {
    * Calculate historical skill scores for a profile across multiple reports
    * Returns an array of report dates and their calculated scores
    *
+   * @deprecated Use calculateHistoricalSkillScoresBatched instead to avoid N+1 query issues
    * @param profileId - ID of the profile to calculate scores for
    * @param skillId - ID of the skill to calculate scores for
    * @returns Array of historical score data, ordered chronologically
@@ -788,7 +886,7 @@ export class ReportsService {
             id,
             start_date,
             end_date,
-            processing_status:report_processing_status!inner(status)
+            processing_status:report_processing_status!inner(status, group_processing_status_id)
           `,
         )
         .eq("profile_id", profileId)
@@ -806,11 +904,7 @@ export class ReportsService {
       if (!reports?.length) return [];
 
       // Deduplicate reports by their date periods
-      const dedupedReports = this.dedupeReports(
-        reports.map((report) =>
-          _.omit(report, "processing_status" satisfies keyof typeof report),
-        ),
-      );
+      const dedupedReports = this.dedupeReports(reports);
 
       // For each report, fetch the visible moments with their subtags
       const results = await Promise.all(
@@ -848,7 +942,9 @@ export class ReportsService {
 
           return {
             reportId: report.id,
-            date: report.end_date || report.start_date,
+            groupId: report.processing_status?.[0]?.group_processing_status_id,
+            startDate: report.start_date,
+            endDate: report.end_date,
             score: Math.round(score * 100), // Convert to percentage
             positiveTagCount: positiveTagCounts,
             negativeTagCount: negativeTagCounts,
@@ -859,7 +955,7 @@ export class ReportsService {
 
       // Sort results by date in ascending order
       return results.sort(
-        (a, b) => dayjs(a.date).valueOf() - dayjs(b.date).valueOf(),
+        (a, b) => dayjs(a.startDate).valueOf() - dayjs(b.startDate).valueOf(),
       );
     } catch (error) {
       if (error instanceof ReportError) throw error;
@@ -912,7 +1008,7 @@ export class ReportsService {
             id,
             start_date,
             end_date,
-            processing_status:report_processing_status!inner(status)
+            processing_status:report_processing_status!inner(status, group_processing_status_id)
           `,
         )
         .eq("profile_id", profileId)
@@ -930,11 +1026,7 @@ export class ReportsService {
       if (!reports?.length) return [];
 
       // Deduplicate reports by their date periods
-      const dedupedReports = this.dedupeReports(
-        reports.map((report) =>
-          _.omit(report, "processing_status" satisfies keyof typeof report),
-        ),
-      );
+      const dedupedReports = this.dedupeReports(reports);
 
       // Get report IDs
       const reportIds = dedupedReports.map((report) => report.id);
@@ -973,7 +1065,9 @@ export class ReportsService {
 
         return {
           reportId: report.id,
-          date: report.end_date || report.start_date,
+          groupId: report.processing_status?.[0]?.group_processing_status_id,
+          startDate: report.start_date,
+          endDate: report.end_date,
           score: Math.round(score * 100), // Convert to percentage
           positiveTagCount: positiveTagCounts,
           negativeTagCount: negativeTagCounts,
@@ -983,7 +1077,7 @@ export class ReportsService {
 
       // Sort results by date in ascending order
       return results.sort(
-        (a, b) => dayjs(a.date).valueOf() - dayjs(b.date).valueOf(),
+        (a, b) => dayjs(a.startDate).valueOf() - dayjs(b.startDate).valueOf(),
       );
     } catch (error) {
       if (error instanceof ReportError) throw error;
