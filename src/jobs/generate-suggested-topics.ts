@@ -5,7 +5,7 @@ import { z } from "zod";
 import { sendSuggestedTopicsEmail } from "~/lib/email";
 import { handleGetAllSessionsForUser } from "~/lib/sessions/queries";
 import { slack } from "~/lib/slack";
-import { generateSuggestedTopics as generateSuggestedTopicsCore } from "~/lib/suggested-topics";
+import { runBetweenSessions } from "~/lib/suggested-topics/run-between-sessions";
 import { __dangerouslyCreateAdminClient__ } from "~/lib/supabase/admin";
 
 // Schema for the generateTopicsForUser task
@@ -73,9 +73,7 @@ export const generateTopicsForUser = schemaTask({
         logger.info(
           `Generating suggested topics for user ${user.id}, session ${session.id}`,
         );
-        await generateSuggestedTopicsCore({
-          profileId: user.id,
-        });
+        await runBetweenSessions(user.id, supabase);
 
         const { data: suggestedTopics } = await supabase
           .from("session_annotations")
