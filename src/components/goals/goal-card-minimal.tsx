@@ -12,8 +12,6 @@ import { getReportScores } from "~/lib/reports/scoring";
 import { cn } from "~/lib/utils";
 import type { RouterOutputs } from "~/trpc/react";
 
-import { calculateSkillScore } from "./goal-card";
-
 // Enhanced animations
 const cardVariants = {
   hidden: { opacity: 0, scale: 0.95, y: 20 },
