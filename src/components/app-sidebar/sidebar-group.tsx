@@ -99,11 +99,7 @@ export function SidebarGroup({
                   key={item.href}
                   href={item.href}
                   onClick={(e) => {
-                    if (
-                      pathname === item.href ||
-                      (item.href === "/" && pathname.startsWith("/videos")) ||
-                      (pathname.startsWith(item.href) && item.href !== "/")
-                    ) {
+                    if (pathname === item.href) {
                       e.preventDefault();
                     }
                     onNavClick?.();
