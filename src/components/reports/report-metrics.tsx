@@ -3,7 +3,14 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { ChartGantt, ChartSpline } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ReferenceDot,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import {
   type ChartConfig,
@@ -27,6 +34,7 @@ export type ReportMetric = {
 export interface ReportMetricsProps {
   metrics: ReadonlyArray<ReportMetric>;
   selectedTab: "positive" | "negative";
+  currentReportDate: string;
 }
 
 // Enhanced animations matching goal-card-minimal
@@ -49,6 +57,7 @@ const cardVariants = {
 export function ReportMetrics({
   metrics,
   selectedTab,
+  currentReportDate,
 }: ReportMetricsProps): JSX.Element {
   const [metricTab, setMetricTab] = useState<"scales" | "timeline">("scales");
   const [isHovered, setIsHovered] = useState<boolean>(false);
@@ -221,6 +230,16 @@ export function ReportMetrics({
     }),
     [selectedTab],
   );
+
+  // Find the current report data point for highlighting
+  const currentReportDataPoint = useMemo(() => {
+    if (!globalSkillData || !currentReportDate) return null;
+
+    const dataPoint = globalSkillData.find(
+      (point) => point.date === currentReportDate,
+    );
+    return dataPoint || null;
+  }, [globalSkillData, currentReportDate]);
 
   return (
     <motion.div
@@ -415,6 +434,29 @@ export function ReportMetrics({
                       }}
                       connectNulls={false}
                     />
+
+                    {/* Highlight the current report date dot */}
+                    {currentReportDataPoint &&
+                      !Number.isNaN(currentReportDataPoint.value) && (
+                        <ReferenceDot
+                          x={currentReportDataPoint.date}
+                          y={currentReportDataPoint.value}
+                          r={6}
+                          fill="hsl(var(--background))"
+                          stroke="hsl(var(--primary))"
+                          strokeWidth={3}
+                          strokeOpacity={0.9}
+                          isFront={true}
+                        >
+                          <animate
+                            attributeName="r"
+                            from="6"
+                            to="8"
+                            dur="1.5s"
+                            repeatCount="indefinite"
+                          />
+                        </ReferenceDot>
+                      )}
                   </AreaChart>
                 </ChartContainer>
               </motion.div>
