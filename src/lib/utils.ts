@@ -3,6 +3,8 @@ import { clsx } from "clsx";
 import type { Falsey } from "lodash";
 import { twMerge } from "tailwind-merge";
 
+import { env } from "~/env";
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -59,6 +61,11 @@ export async function fetchWithTimeout(
     initialDelay = 1000,
     ...fetchOptions
   } = options;
+
+  // Skip timeout and retries in development environment
+  if (env.NODE_ENV === "development") {
+    return fetch(url, fetchOptions);
+  }
 
   return exponentialBackoff(
     async () => {

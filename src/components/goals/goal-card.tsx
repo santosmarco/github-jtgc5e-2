@@ -4,23 +4,14 @@ import dayjs from "dayjs";
 import { AnimatePresence, motion, useSpring } from "framer-motion";
 import _ from "lodash";
 import type { LucideProps } from "lucide-react";
-import {
-  AlertTriangle,
-  ArrowRight,
-  CheckCircle2,
-  Clock,
-  Eye,
-  FileWarning,
-  Loader2,
-  Trophy,
-} from "lucide-react";
+import { ArrowRight, Loader2, Trophy } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "~/components/ui/button";
-import type { Tables } from "~/lib/supabase/database.types";
+import { getReportScores } from "~/lib/reports/scoring";
 import { cn } from "~/lib/utils";
 import { api, type RouterOutputs } from "~/trpc/react";
 
@@ -194,7 +185,9 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
         return dayjs(latestAssessment.end_date)
           .add(2, "weeks")
           .format("MMM D, YYYY");
-      } else if (skill.goals.length > 0) {
+      }
+
+      if (skill.goals.length > 0) {
         const defaultGoal = skill.goals.find((goal) => goal.is_default);
         if (defaultGoal?.created_at) {
           return dayjs(defaultGoal.created_at)
@@ -202,61 +195,14 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
             .format("MMM D, YYYY");
         }
       }
+
       return "Soon";
     };
 
-    // Determine status for display
-    const getStatus = () => {
-      // Check if there's a processing status on the first goal
-      const processingStatus = _.maxBy(skill.statuses, (status) =>
-        dayjs(status.created_at).toDate(),
-      )?.status;
-
-      if (processingStatus === "pending") {
-        return "Processing";
-      }
-
-      if (processingStatus === "failed") {
-        return "Failed";
-      }
-
-      if (latestAssessment?.report_goals.every((rg) => rg.is_reviewed)) {
-        return "Reviewed";
-      }
-
-      if (latestAssessment?.report_goals.every((rg) => !rg.is_reviewed)) {
-        return "Pending Review";
-      }
-
-      return "In Review";
-    };
-
-    // Get status icon and color based on status
-    const getStatusIconAndColor = () => {
-      const status = getStatus();
-
-      switch (status) {
-        case "Processing":
-          return { icon: Clock, color: "text-chart-4" };
-        case "Failed":
-          return { icon: AlertTriangle, color: "text-destructive" };
-        case "Reviewed":
-          return { icon: CheckCircle2, color: "text-chart-2" };
-        case "Pending Review":
-          return { icon: FileWarning, color: "text-chart-4" };
-        case "In Review":
-          return { icon: Eye, color: "text-chart-1" };
-        default:
-          return { icon: ArrowRight, color: "text-primary" };
-      }
-    };
-
-    const { icon: StatusIcon, color: statusColor } = getStatusIconAndColor();
-
-    const skillScore = calculateSkillScore(
-      skill,
-      latestAssessment?.report_moments ?? [],
-    );
+    const skillScore = getReportScores({
+      skill: { scales: skill.scales },
+      report_moments: latestAssessment?.report_moments ?? [],
+    });
 
     const navigateToReport = () => {
       if (
@@ -425,7 +371,7 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
               className="relative z-20 h-48"
             >
               <SimplifiedGauge
-                value={skillScore.score * 100}
+                value={skillScore.finalScore * 100}
                 min={0}
                 max={100}
                 size="md"
@@ -775,53 +721,4 @@ function SimplifiedGauge({
       </motion.div>
     </div>
   );
-}
-
-export function calculateSkillScore(
-  skill: Tables<"skills"> & {
-    scales: Tables<"skill_scales">[];
-  },
-  reportMoments: (Tables<"report_moments"> & {
-    moment: Tables<"moments"> & {
-      subtags: Tables<"moment_subtags">[];
-    };
-  })[],
-) {
-  const filteredReportMoments = reportMoments.filter(
-    (rm) =>
-      (!rm.moment._internal_thumbs_down ||
-        rm.moment._internal_thumbs_down <= 0) &&
-      rm.is_visible &&
-      !rm.omission_reason,
-  );
-  const positiveTagCounts = _.sumBy(
-    filteredReportMoments,
-    (rm) =>
-      rm.moment.subtags.filter((s) =>
-        skill.scales.some((scale) =>
-          scale.positive_tag_title.split(",").includes(s.tag ?? ""),
-        ),
-      ).length,
-  );
-  const negativeTagCounts = _.sumBy(
-    filteredReportMoments,
-    (rm) =>
-      rm.moment.subtags.filter((s) =>
-        skill.scales.some((scale) =>
-          scale.negative_tag_title.split(",").includes(s.tag ?? ""),
-        ),
-      ).length,
-  );
-  const totalTagCounts = positiveTagCounts + negativeTagCounts;
-  const score =
-    totalTagCounts > 0
-      ? 0.5 + 0.5 * (1 - positiveTagCounts / totalTagCounts)
-      : 0;
-
-  return {
-    positiveTagCounts,
-    negativeTagCounts,
-    totalTagCounts,
-    score,
-  };
 }

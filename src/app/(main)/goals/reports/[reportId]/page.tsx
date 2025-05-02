@@ -30,6 +30,7 @@ import {
 import { useProfile } from "~/hooks/use-profile";
 import { transformMoment } from "~/lib/db/moments";
 import { checkUserFlags, Flag } from "~/lib/flags/flags";
+import { getReportScores } from "~/lib/reports/scoring";
 import { createClient } from "~/lib/supabase/client";
 import type { Tables } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
@@ -83,24 +84,13 @@ export default function ReportPage({
     api.reports.getReportsTimelineDataForUser.useQuery(
       {
         userId: selectedProfile?.id ?? user?.id ?? "",
-        skillId: groupReports?.group.skill_id ?? undefined,
-        includeScores: true,
+        skillId: groupReports?.group.skill_id ?? "",
       },
       {
         enabled:
           !!(selectedProfile?.id || user?.id) && !!groupReports?.group.skill_id,
       },
     );
-
-  // Fetch adjacent reports for navigation
-  const { data: adjacentReports } = api.reports.getAdjacentReports.useQuery(
-    {
-      groupId: params.reportId,
-    },
-    {
-      enabled: !isLoading && !!groupReports,
-    },
-  );
 
   const reviewGoal = api.reports.reviewGoal.useMutation();
 
@@ -391,21 +381,25 @@ export default function ReportPage({
     );
   };
 
+  const currentReportIndex =
+    timelineData?.timelineData.findIndex(
+      (t) =>
+        groupReports?.reports.find((r) => r.id === t.entry.reportId) !==
+        undefined,
+    ) ?? 0;
+  const previousReport =
+    timelineData?.timelineData[currentReportIndex - 1]?.entry;
+  const nextReport = timelineData?.timelineData[currentReportIndex + 1]?.entry;
+
   const navigateToPreviousReport = () => {
-    if (adjacentReports?.previous?.id) {
-      const url = goalId
-        ? `/goals/reports/${adjacentReports.previous.id}?goalId=${goalId}`
-        : `/goals/reports/${adjacentReports.previous.id}`;
-      router.push(url);
+    if (previousReport) {
+      router.push(`/goals/reports/${previousReport.groupId}`);
     }
   };
 
   const navigateToNextReport = () => {
-    if (adjacentReports?.next?.id) {
-      const url = goalId
-        ? `/goals/reports/${adjacentReports.next.id}?goalId=${goalId}`
-        : `/goals/reports/${adjacentReports.next.id}`;
-      router.push(url);
+    if (nextReport) {
+      router.push(`/goals/reports/${nextReport.groupId}`);
     }
   };
 
@@ -465,25 +459,19 @@ export default function ReportPage({
                   size="icon"
                   className={cn(
                     "text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground",
-                    !adjacentReports?.previous &&
-                      "cursor-not-allowed opacity-50",
+                    !previousReport && "cursor-not-allowed opacity-50",
                   )}
                   onClick={navigateToPreviousReport}
-                  disabled={!adjacentReports?.previous}
+                  disabled={!previousReport}
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              {adjacentReports?.previous && (
+              {previousReport && (
                 <TooltipContent side="bottom" sideOffset={5}>
                   <p className="text-sm">
-                    {dayjs(adjacentReports.previous.start_date ?? "").format(
-                      "MMM D",
-                    )}{" "}
-                    to{" "}
-                    {dayjs(adjacentReports.previous.end_date ?? "").format(
-                      "MMM D",
-                    )}
+                    {dayjs(previousReport?.startDate ?? "").format("MMM D")} to{" "}
+                    {dayjs(previousReport?.endDate ?? "").format("MMM D")}
                   </p>
                 </TooltipContent>
               )}
@@ -510,22 +498,19 @@ export default function ReportPage({
                   size="icon"
                   className={cn(
                     "text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground",
-                    !adjacentReports?.next && "cursor-not-allowed opacity-50",
+                    !nextReport && "cursor-not-allowed opacity-50",
                   )}
                   onClick={navigateToNextReport}
-                  disabled={!adjacentReports?.next}
+                  disabled={!nextReport}
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              {adjacentReports?.next && (
+              {nextReport && (
                 <TooltipContent side="bottom" sideOffset={5}>
                   <p className="text-sm">
-                    {dayjs(adjacentReports.next.start_date ?? "").format(
-                      "MMM D",
-                    )}{" "}
-                    to{" "}
-                    {dayjs(adjacentReports.next.end_date ?? "").format("MMM D")}
+                    {dayjs(nextReport?.startDate ?? "").format("MMM D")} to{" "}
+                    {dayjs(nextReport?.endDate ?? "").format("MMM D")}
                   </p>
                 </TooltipContent>
               )}
@@ -554,41 +539,8 @@ export default function ReportPage({
         );
         const goal = report.report_goals[0]?.goal;
         const isExpanded = !!(goal && expandedGoals[goal.id]);
-        const reportSkillPositiveScaleTags =
-          report.skill?.scales.map((s) => s.positive_tag_title) ?? [];
-        const reportSkillNegativeScaleTags =
-          report.skill?.scales.map((s) => s.negative_tag_title) ?? [];
-        const reportSkillScaleTags = [
-          ...reportSkillPositiveScaleTags.flatMap((t) => t.split(",")),
-          ...reportSkillNegativeScaleTags.flatMap((t) => t.split(",")),
-        ];
-        const momentSubtagFrequencies = _.countBy(
-          reportMoments.flatMap((rm) =>
-            rm.moment.subtags
-              .map((s) => s.tag)
-              .filter((t) => t && reportSkillScaleTags.includes(t)),
-          ),
-        );
-        const momentSubtagFrequenciesTotal = _.sum(
-          Object.values(momentSubtagFrequencies),
-        );
 
-        const metrics = reportSkillPositiveScaleTags.map((pt, i) => {
-          const nt = reportSkillNegativeScaleTags[i] ?? "";
-          const positiveCount = momentSubtagFrequencies[pt ?? ""] ?? 0;
-          const negativeCount = momentSubtagFrequencies[nt] ?? 0;
-          const total = positiveCount + negativeCount || 1;
-
-          return {
-            id: `${pt ?? ""}-${nt}`,
-            leftLabel: nt,
-            rightLabel: pt ?? "",
-            value:
-              positiveCount === 0 && negativeCount === 0
-                ? 50
-                : 100 * (negativeCount / total),
-          };
-        });
+        const reportMetrics = getReportScores(report);
 
         // Filter timeline data only for the current skill
         const skillTimelineHistory =
@@ -597,6 +549,7 @@ export default function ReportPage({
             .map((item) => ({
               date: item.x,
               value: item.y,
+              groupId: item.entry.groupId,
             })) ?? [];
 
         // Create a type-safe metrics array
@@ -607,7 +560,7 @@ export default function ReportPage({
           value: number;
           history?: Array<{ date: string; value: number }>;
         }> = [
-          ...metrics.map((metric) => ({
+          ...reportMetrics.metrics.map((metric) => ({
             ...metric,
             history: undefined,
           })),
@@ -690,6 +643,9 @@ export default function ReportPage({
                 <ReportMetrics
                   metrics={typeCheckedMetrics}
                   selectedTab={currentTab}
+                  currentReportDate={dayjs(report.end_date).format(
+                    "YYYY-MM-DD",
+                  )}
                 />
               </div>
 
