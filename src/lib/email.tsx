@@ -157,7 +157,7 @@ export async function sendSkillReportReadyEmail({
   const { data: report } = await supabase
     .from("reports")
     .select(
-      "*, skill:skills(*, scales:skill_scales(*)), report_moments(*, moment:moments(*, subtags:moment_subtags(*))), report_goals(*)",
+      "*, skill:skills(*, scales:skill_scales(*)), report_moments(*, moment:moments(*, subtags:moment_subtags(*))), report_goals(*), report_processing_status(*, group_report_processing_status(*))",
     )
     .eq("id", reportId)
     .single();
@@ -214,6 +214,9 @@ export async function sendSkillReportReadyEmail({
   // Compose the report object for the email template
   const reportWithScores = {
     ...report,
+    id:
+      report.report_processing_status[0]?.group_report_processing_status.id ??
+      report.id,
     score,
     previous_score: previousScore,
   };
