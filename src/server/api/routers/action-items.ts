@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import dayjs from "dayjs";
 import _ from "lodash";
 import { z } from "zod";
 
@@ -53,7 +54,16 @@ export const actionItemsRouter = createTRPCRouter({
         });
       }
 
-      const actionItems = data;
+      const actionItems = data.map((item) => ({
+        ...item,
+        due_date: item.due_date
+          ? dayjs(item.due_date).year() < 2025
+            ? dayjs(item.due_date)
+                .add(2025 - dayjs(item.due_date).year(), "year")
+                .toISOString()
+            : item.due_date
+          : null,
+      }));
       const meetings: Tables<"meetings">[] = [];
       const people: Tables<"entities">[] = [];
 
@@ -112,7 +122,16 @@ export const actionItemsRouter = createTRPCRouter({
         return null;
       }
 
-      return actionItems satisfies ActionItemWithAssignees[];
+      return (actionItems satisfies ActionItemWithAssignees[]).map((item) => ({
+        ...item,
+        due_date: item.due_date
+          ? dayjs(item.due_date).year() < 2025
+            ? dayjs(item.due_date)
+                .add(2025 - dayjs(item.due_date).year(), "year")
+                .toISOString()
+            : item.due_date
+          : null,
+      }));
     }),
 
   create: protectedProcedure
