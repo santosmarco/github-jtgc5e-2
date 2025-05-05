@@ -9,8 +9,6 @@ import type { Database, Tables } from "~/lib/supabase/database.types";
 import { transformJsonIntoXml } from "../suggested-topics/utils";
 import { formatReportToMarkdown } from "./formatting";
 
-export type ICPType = "manager" | "founder";
-
 export const ReportSections = z.object({
   strengthSections: z
     .array(
