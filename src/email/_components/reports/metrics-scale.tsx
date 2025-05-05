@@ -46,7 +46,7 @@ export function MetricsScale({
       }
       
       <!-- Indicator circle -->
-      <circle cx="${indicatorX}" cy="${svgHeight / 2}" r="${indicatorRadius}" fill="#4F46E5" />
+      <circle cx="${indicatorX}" cy="${svgHeight / 2}" r="${indicatorRadius}" fill="${value >= 50 ? "#4F46E5" : "#D97706"}" />
     </svg>
   `;
 
