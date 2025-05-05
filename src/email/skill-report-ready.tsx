@@ -9,6 +9,7 @@ import {
   Tailwind,
 } from "@react-email/components";
 
+import type { Tables } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
 
 import { CTAButtonSection } from "./_components/cta-button-section";
