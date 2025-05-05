@@ -1,4 +1,5 @@
 import { render } from "@react-email/components";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 
 import {
@@ -17,9 +18,10 @@ import SuggestedTopicsEmail, {
   type SuggestedTopicsEmailProps,
 } from "~/email/suggested-topics";
 import { env } from "~/env";
+import { generateReportSections } from "~/lib/reports/ai";
+import { ReportsService } from "~/lib/reports/queries";
 
-import { ReportsService } from "./reports/queries";
-import { getReportScores } from "./reports/scoring";
+import type { Database } from "./supabase/database.types";
 import { createClient } from "./supabase/server";
 
 const resend = new Resend(env.RESEND_API_KEY);
@@ -145,119 +147,177 @@ export async function sendSuggestedTopicsEmail({
   return data;
 }
 
-export async function sendSkillReportReadyEmail({
-  profileId,
-  reportId,
-}: {
-  profileId: string;
-  reportId: string;
-}) {
-  // Calculate current score using getReportScores
-  const supabase = await createClient();
-  const { data: report } = await supabase
-    .from("reports")
-    .select(
-      "*, skill:skills(*, scales:skill_scales(*)), report_moments(*, moment:moments(*, subtags:moment_subtags(*))), report_goals(*), report_processing_status(*, group_report_processing_status(*))",
-    )
-    .eq("id", reportId)
-    .single();
+export async function sendSkillReportReadyEmail(
+  reportId: string,
+  supabaseClient: SupabaseClient<Database>,
+) {
+  try {
+    // Create ReportsService instance
+    const reportsService = new ReportsService(supabaseClient);
 
-  if (!report) {
-    throw new Error("Report not found");
-  }
+    // Fetch the report data
+    const { data: report, error: reportError } = await supabaseClient
+      .from("reports")
+      .select(
+        `
+          *,
+          profile:profiles(*),
+          skill:skills(
+            *,
+            scales:skill_scales(*)
+          ),
+          report_goals(*),
+          report_moments(
+            *,
+            moment:moments!inner(
+              *,
+              subtags:moment_subtags(*)
+            )
+          )
+        `,
+      )
+      .eq("id", reportId)
+      .single();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", profileId)
-    .single();
-
-  if (!profile) {
-    throw new Error("Profile not found");
-  }
-
-  const currentScoreResult = getReportScores(report);
-  const score = Math.round((currentScoreResult.finalScore ?? 0) * 100);
-
-  // Calculate previous score using ReportsService
-  let previousScore: number | undefined = undefined;
-  if (profileId && report.skill?.id) {
-    const supabase = await createClient();
-    const reportsService = new ReportsService(supabase);
-    const historicalScores =
-      await reportsService.calculateHistoricalSkillScoresBatched(
-        profileId,
-        report.skill.id,
+    if (reportError || !report?.profile) {
+      console.error("Error fetching report:", reportError);
+      throw new Error(
+        reportError?.message || "Failed to fetch report or profile",
       );
-    // Find the previous score (last score before this report's start_date)
-    if (historicalScores.length > 0 && report.start_date) {
-      const reportStartDate = report.start_date
-        ? new Date(report.start_date)
-        : undefined;
-      const prev = historicalScores
-        .filter(
-          (r) =>
-            r.reportId !== report.id &&
-            r.startDate &&
-            reportStartDate &&
-            new Date(r.startDate) < reportStartDate,
-        )
-        .sort((a, b) => {
-          const aDate = a.startDate ? new Date(a.startDate).getTime() : 0;
-          const bDate = b.startDate ? new Date(b.startDate).getTime() : 0;
-          return bDate - aDate;
-        })[0];
-      if (prev) previousScore = prev.score;
     }
+
+    // Get user settings to determine which email template to use
+    const { data: userSettings, error: settingsError } = await supabaseClient
+      .from("user_settings")
+      .select("report_email_template")
+      .eq("profile_id", report.profile_id || "")
+      .single();
+
+    if (settingsError) {
+      console.error("Error fetching user settings:", settingsError);
+      // Default to founder template if there's an error
+    }
+
+    // Determine the variant based on user settings or default to founder
+    const variant: "manager" | "founder" =
+      userSettings?.report_email_template === "skill-report-ready-manager"
+        ? "manager"
+        : "founder";
+
+    // Calculate meeting minutes by fetching all meetings for this profile in the report date range
+    let meetingMinutes = 0;
+    if (report.start_date && report.end_date) {
+      const { data: meetings, error: meetingsError } = await supabaseClient
+        .from("meetings")
+        .select("duration_in_seconds")
+        .eq("profile_id", report.profile_id || "")
+        .gte("date", report.start_date)
+        .lte("date", report.end_date);
+
+      if (!meetingsError && meetings && meetings.length > 0) {
+        meetingMinutes = meetings.reduce((total, meeting) => {
+          return total + (meeting.duration_in_seconds || 0) / 60;
+        }, 0);
+      }
+    }
+
+    // Calculate current report score
+    const skillScore =
+      report.skill && report.report_moments
+        ? reportsService.calculateSkillScore(
+            {
+              scales: report.skill.scales || [],
+            },
+            report.report_moments,
+          )
+        : { score: 0.5 }; // Default score if no data
+
+    // Get historical scores
+    const historicalScores =
+      report.profile_id && report.skill?.id
+        ? await reportsService.calculateHistoricalSkillScoresBatched(
+            report.profile_id,
+            report.skill.id,
+          )
+        : [];
+
+    // Find previous report score
+    const previousScore =
+      historicalScores.length > 1
+        ? (historicalScores[historicalScores.length - 2]?.score ?? 0) * 100
+        : undefined;
+
+    // Generate the sections using AI
+    const generatedSections = await generateReportSections(
+      reportId,
+      supabaseClient,
+    );
+
+    // Format historical scores for the email template
+    const formattedHistoricalScores = historicalScores.map((score) => ({
+      score: score.score * 100, // Convert to percentage
+      reportId: score.reportId,
+      startDate: score.startDate || "",
+    }));
+
+    // Build the report data in the format expected by the email component
+    const reportData = {
+      id: report.id,
+      start_date: report.start_date,
+      end_date: report.end_date,
+      created_at: report.created_at,
+      skill: report.skill
+        ? {
+            id: report.skill.id,
+            title: report.skill.title,
+            description: report.skill.description || undefined,
+          }
+        : undefined,
+      report_goals: report.report_goals || [],
+      report_moments: report.report_moments || [],
+      // Include calculated scores
+      score: skillScore.score,
+      previous_score: previousScore,
+      historical_scores: formattedHistoricalScores,
+    };
+
+    // Prepare the email props
+    const emailProps = {
+      variant,
+      profile: {
+        nickname: report.profile.nickname || "",
+        email: report.profile.email,
+        coach_id: report.profile.coach_id,
+      },
+      report: reportData,
+      meetingMinutes: Math.round(meetingMinutes),
+      teaser: generatedSections.teaser,
+      generatedSections,
+    };
+
+    // Render the email
+    const emailHtml = await render(SkillReportReadyEmail(emailProps));
+
+    // Create a descriptive subject line
+    const skillTitle = report.skill?.title || "Leadership";
+    const subject = `Your ${skillTitle} Performance Report is Ready`;
+
+    // Send the email
+    const data = await resend.emails.send({
+      from: "Titan <onboarding@emails.withtitan.com>",
+      to: report.profile.email,
+      subject,
+      html: emailHtml,
+    });
+
+    if (!data || data.error) {
+      console.error("Resend API error:", data?.error);
+      throw new Error(data?.error?.message || "Failed to send email");
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error sending skill report email:", error);
+    throw error;
   }
-
-  // Compose the report object for the email template
-  const reportWithScores = {
-    ...report,
-    id:
-      report.report_processing_status[0]?.group_report_processing_status.id ??
-      report.id,
-    score,
-    previous_score: previousScore,
-  };
-
-  const emailHtml = await render(
-    SkillReportReadyEmail({ profile, report: reportWithScores }),
-  );
-
-  // Get skill name for the subject line if available
-  const skillName = report.skill?.title || "Skills";
-
-  // Calculate if score improved (if we have the data)
-  const hasScoreData = score !== undefined && previousScore !== undefined;
-  const scoreImproved = hasScoreData ? score > (previousScore ?? 0) : false;
-
-  // Create an intriguing subject line - using a variety of click-bait options
-  let subject = "";
-
-  // Choose a subject line based on whether we have score data
-  if (hasScoreData && scoreImproved) {
-    subject = `🚀 Surprising ${skillName} trends: See what's improved`;
-  } else if (hasScoreData && !scoreImproved) {
-    subject = `⚠️ Important ${skillName} alert: Critical patterns detected`;
-  } else {
-    // Pick a random intriguing subject line if we don't have score data
-    const subjectOptions = [
-      `🔎 Revealing: Hidden patterns in your ${skillName}`,
-      `👀 See what we uncovered in your ${skillName} analysis`,
-      `🔒 Exclusive: Your ${skillName} insights are ready`,
-    ];
-    subject =
-      subjectOptions[Math.floor(Math.random() * subjectOptions.length)] ??
-      `🔎 Revealing: Hidden patterns in your ${skillName}`;
-  }
-
-  const data = await resend.emails.send({
-    from: "Titan <onboarding@emails.withtitan.com>",
-    to: profile.email,
-    subject,
-    html: emailHtml,
-  });
-
-  return data;
 }
