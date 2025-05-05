@@ -1,0 +1,496 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { generateObject } from "ai";
+import { dedent } from "ts-dedent";
+import { z } from "zod";
+
+import { four_point_one } from "~/lib/ai/models/openai";
+import type { Database, Tables } from "~/lib/supabase/database.types";
+
+import { transformJsonIntoXml } from "../suggested-topics/utils";
+import { formatReportToMarkdown } from "./formatting";
+
+export type ICPType = "manager" | "founder";
+
+export const ReportSections = z.object({
+  strengthSections: z
+    .array(
+      z.object({
+        id: z.string().describe("A unique identifier for this section"),
+        title: z.string().describe("A clear title for this strength area"),
+        summary: z
+          .string()
+          .describe(
+            "A detailed explanation of this strength with specific examples or metrics",
+          ),
+        relatedThemes: z
+          .array(z.string())
+          .describe(
+            "Titles of development themes that relate to this strength",
+          ),
+      }),
+    )
+    .describe(
+      "Three evidence-based strength sections highlighting leadership behaviors the person excels at",
+    ),
+  growthSections: z
+    .array(
+      z.object({
+        id: z.string().describe("A unique identifier for this section"),
+        title: z.string().describe("A clear title for this growth opportunity"),
+        summary: z
+          .string()
+          .describe(
+            "A constructive explanation with specific improvement suggestions",
+          ),
+        relatedThemes: z
+          .array(z.string())
+          .describe(
+            "Titles of development themes that relate to this growth area",
+          ),
+      }),
+    )
+    .describe(
+      "Three constructive growth sections highlighting leadership behaviors the person could improve",
+    ),
+  keyMoments: z
+    .array(
+      z.object({
+        id: z.string().describe("A unique identifier for this moment"),
+        title: z
+          .string()
+          .describe("A clear title that summarizes this leadership moment"),
+        summary: z
+          .string()
+          .describe("A factual narrative of what happened and why it matters"),
+        people: z
+          .array(z.string())
+          .describe("Names of people involved in this moment"),
+        relatedThemes: z
+          .array(z.string())
+          .describe(
+            "Titles of development themes that this moment exemplifies",
+          ),
+      }),
+    )
+    .describe(
+      "Two or three pivotal leadership moments that demonstrate important behaviors or patterns",
+    ),
+});
+export type ReportSections = z.infer<typeof ReportSections>;
+
+export const ReportTeaser = z.object({
+  reportTeaser: z
+    .string()
+    .describe(
+      "A 1-3 sentence teaser that creates curiosity about the report's insights",
+    ),
+});
+export type ReportTeaser = z.infer<typeof ReportTeaser>;
+
+/**
+ * Formats development themes into an easy-to-read markdown format
+ *
+ * @param developmentThemes - Array of development themes
+ * @returns Formatted markdown string of development themes
+ */
+function formatDevelopmentThemesToMarkdown(
+  developmentThemes: Tables<"profile_development_themes">[],
+): string {
+  if (!developmentThemes?.length) {
+    return "No development themes available.";
+  }
+
+  return developmentThemes
+    .filter((theme) => theme.is_enabled)
+    .sort((a, b) => a.order - b.order)
+    .map(
+      (theme) => dedent`
+        ### ${theme.title}
+        ${theme.description}
+        
+        **Key Points:**
+        ${theme.key_points.map((point) => `- ${point}`).join("\n")}
+      `,
+    )
+    .join("\n\n");
+}
+
+/**
+ * Generates report sections including strengths, growth areas, and key moments.
+ *
+ * @param reportId - The unique identifier of the report
+ * @param supabaseClient - The authenticated Supabase client
+ * @param icpType - The type of ICP (Ideal Customer Profile) to generate sections for
+ * @returns A Promise resolving to an object containing strength sections, growth sections, key moments, and teaser
+ */
+export async function generateReportSections(
+  reportId: string,
+  supabaseClient: SupabaseClient<Database>,
+) {
+  const { data: report, error: reportError } = await supabaseClient
+    .from("reports")
+    .select(
+      `
+        *,
+        skill:skills(
+          *,
+          goals(*),
+          scales:skill_scales(*),
+          statuses:group_report_processing_status(*),
+          goal_templates:goal_templates(*)
+        ),
+        report_sections(*),
+        report_goals(
+          *,
+          goal:goals!inner(
+            *,
+            signals:goal_signals!inner(*)
+          )
+        ),
+        report_goal_signals(
+          *,
+          goal_signal:goal_signals!inner(*)
+        ),
+        report_moments(
+          *,
+          moment:moments!inner(
+            *,
+            subtags:moment_subtags(*),
+            meeting:meetings!inner(
+              video_api_id,
+              name,
+              summary,
+              clean_vtt_file,
+              date,
+              profile_id,
+              topics_discussed:meeting_topics(
+                id,
+                title,
+                summary,
+                vtt_start_segment_id,
+                vtt_end_segment_id,
+                server_deleted_at,
+                created_at
+              ),
+              action_items:meeting_action_items(
+                id,
+                text,
+                vtt_start_segment_id,
+                vtt_end_segment_id,
+                due_date,
+                completed_at,
+                deleted_at,
+                server_deleted_at,
+                created_at,
+                assignees:meeting_action_item_assignees(
+                  assignee:entities(
+                    id,
+                    name,
+                    type,
+                    attributes,
+                    is_test
+                  )
+                )
+              ),
+              topics:meeting_topics_v2(
+                id,
+                index,
+                title,
+                summary,
+                start_segment_id,
+                end_segment_id,
+                created_at,
+                latest,
+                events:meeting_topic_events_v2(
+                  id,
+                  event,
+                  timestamp,
+                  latest
+                ),
+                entities:meeting_entities_v2(
+                  id,
+                  name,
+                  type,
+                  description,
+                  latest,
+                  observations:meeting_entity_observations_v2(
+                    id,
+                    observation,
+                    latest
+                  )
+                ),
+                relationships:meeting_entity_relationships_v2(
+                  id,
+                  subject_entity_name,
+                  object_entity_name,
+                  relationship_type,
+                  latest,
+                  observations:meeting_entity_relationship_observations_v2(
+                    id,
+                    observation,
+                    latest
+                  )
+                ),
+                observations:meeting_observations_v2(
+                  id,
+                  observation,
+                  latest
+                )
+              )
+            )
+          )
+        ),
+        profile:profiles(
+          nickname,
+          development_themes:profile_development_themes(
+            id,
+            title,
+            description,
+            icon,
+            key_points,
+            is_enabled,
+            order,
+            parent_theme
+          )
+        )
+      `,
+    )
+    .eq("id", reportId)
+    .eq("report_moments.is_visible", true)
+    .is("report_moments.omission_reason", null)
+    .is(
+      "report_moments.moment.meeting.topics_discussed.server_deleted_at",
+      null,
+    )
+    .is("report_moments.moment.meeting.action_items.server_deleted_at", null)
+    .eq(
+      "report_moments.moment.meeting.action_items.assignees.assignee.is_test",
+      false,
+    )
+    .eq("report_moments.moment.meeting.topics.latest", true)
+    .eq("report_moments.moment.meeting.topics.events.latest", true)
+    .eq("report_moments.moment.meeting.topics.entities.latest", true)
+    .eq(
+      "report_moments.moment.meeting.topics.entities.observations.latest",
+      true,
+    )
+    .eq("report_moments.moment.meeting.topics.relationships.latest", true)
+    .eq(
+      "report_moments.moment.meeting.topics.relationships.observations.latest",
+      true,
+    )
+    .eq("report_moments.moment.meeting.topics.observations.latest", true)
+    .eq("report_moments.moment.latest", true)
+    .eq("report_moments.moment.relevant", true)
+    .eq("profile.development_themes.is_enabled", true)
+    .is("profile.development_themes.deleted_at", null)
+    .single();
+
+  if (reportError) {
+    throw reportError;
+  }
+
+  const developmentThemesMarkdown = formatDevelopmentThemesToMarkdown(
+    report.profile.development_themes,
+  );
+
+  // Generate the report sections using AI
+  const { object } = await generateObject({
+    model: four_point_one,
+    schemaName: "ReportSections",
+    schemaDescription:
+      "A structured collection of leadership sections for a performance report email, designed to highlight strengths, growth areas, and key leadership moments.",
+    schema: ReportSections,
+    prompt: dedent`
+      You're creating a factual, information-dense leadership report for a founder/CEO.
+      
+      Analyze this data and generate THREE types of sections:
+      1. STRENGTH SECTIONS: Areas where the leader excels
+      2. GROWTH SECTIONS: Areas where the leader can improve
+      3. KEY MOMENTS: Specific leadership moments that illustrate important patterns
+      
+      Here's the report data:
+      <report_data>
+      ${formatReportToMarkdown(report)}
+      </report_data>
+      
+      You are working for:
+      <profile_data>
+      Nickname: ${report.profile?.nickname || "User"}
+      </profile_data>
+      
+      The leader has the following DEVELOPMENT THEMES that should be prioritized in your analysis:
+      <development_themes>
+      ${developmentThemesMarkdown}
+      </development_themes>
+      
+      INSTRUCTIONS FOR STRENGTH SECTIONS:
+      - Create THREE distinct strength sections
+      - Use professional titles that clearly identify each strength area
+      - Include specific names, numbers and examples
+      - Prioritize strengths that align with the leader's development themes
+      - Use language that's positive and encouraging but not exaggerated
+      - Address the leader directly as "You" throughout the content
+      - Keep summaries under 100 words, clear and impactful
+      - Use <highlight> tags sparingly to emphasize key points (max 1 per section)
+      - Reference which development theme(s) each strength supports
+      
+      INSTRUCTIONS FOR GROWTH SECTIONS:
+      - Create THREE distinct growth sections
+      - Frame as opportunities for improvement, not criticisms
+      - Use titles that clearly identify the growth area
+      - Include specific evidence from the report
+      - Focus especially on growth areas that align with development themes
+      - Suggest ONE clear, actionable next step
+      - Use "You" and "Your" consistently throughout
+      - Keep summaries under 100 words, focused on key actions
+      - Use <highlight> tags sparingly to emphasize key points (max 1 per section)
+      - For each growth area, note which development theme(s) it relates to
+      
+      INSTRUCTIONS FOR KEY MOMENTS:
+      - Identify 2-3 leadership moments that clearly demonstrate important patterns
+      - Prioritize moments that exemplify the leader's development themes
+      - Focus on moments with measurable impact or clear lessons
+      - Always include WHO was involved by name
+      - Write straightforward, factual titles that describe what happened
+      - Provide detailed summaries (75-100 words) with comprehensive context
+      - List all people involved for reference
+      - Address the leader directly as "You" throughout
+      - Use <highlight> tags sparingly to emphasize key points (max 1 per section)
+      - Explicitly connect each moment to specific development themes
+      
+      For all sections:
+      - Use plain, direct language without jargon
+      - Focus on specific behaviors and outcomes, not personality traits
+      - Provide factual analysis without exaggeration
+      - Consistently use second-person "You" perspective
+      - Be thorough but clear
+      - Avoid marketing language, superlatives, or unnecessary drama
+      - Reference development themes consistently throughout your analysis
+      - Start all sentences with "You" or "Your" to maintain direct address
+      
+      Format your response as a structured JSON object conforming to the specified schema.
+    `,
+    temperature: 0.7,
+  });
+
+  /**
+   * Processes a section to generate a shortened summary
+   *
+   * @param section - The section to process
+   * @returns The section with a shortened summary added
+   */
+  async function processSection<T extends { summary: string }>(
+    section: T,
+  ): Promise<T & { shortenedSummary: string }> {
+    const {
+      object: { shortenedSummary },
+    } = await generateObject({
+      model: four_point_one,
+      schemaName: "ShortenedSummary",
+      schemaDescription: "A shortened summary of the section",
+      schema: z.object({
+        shortenedSummary: z
+          .string()
+          .describe("A shortened summary of the section"),
+      }),
+      prompt: dedent`
+        Input: "You consistently drive results by assigning tasks with laser-sharp clarity. Whether directing Marco to meet tough ship dates or guiding Divya through app testing, you make sure everyone knows what, when, and why. This <highlight>decisive delegation style</highlight> keeps your team moving fast and focused."
+        Output: "You consistently drive results by assigning tasks with <highlight>clear instructions</highlight>."
+
+        Input: "You turn every assignment into a roadmap for success. When you tasked Tim with building new daily metrics or mapped out the QA review with Margot, you paired detailed steps with clear expectations. This <highlight>precision in direction</highlight> means your team always knows exactly how to win."
+        Output: "You provide <highlight>detailed instructions</highlight> when delegating tasks, helping your team understand expectations."
+
+        Input: "You don't just assign tasks—you encourage ownership and creativity. By inviting Marvin to redesign his role or giving Alex the reins for the coaching program, you foster a culture where initiative thrives. Your <highlight>trust in others</highlight> sparks bold ideas and real growth."
+        Output: "You encourage <highlight>ownership and creativity</highlight> when delegating responsibilities."
+
+        Input: "Your ability to navigate difficult conversations sets you apart as a leader. When addressing Sarah's performance issues or mediating the conflict between engineering and design teams, you maintained composure while being direct. This <highlight>balanced communication approach</highlight> builds trust and resolves tensions effectively."
+        Output: "You excel at <highlight>difficult conversations</highlight>, maintaining both directness and respect."
+
+        Input: "You've created a culture where feedback flows naturally in all directions. From your weekly roundtables with department heads to your open-door policy with junior staff, you've made constructive criticism feel safe and valuable. This <highlight>feedback-rich environment</highlight> accelerates learning and prevents small issues from becoming major problems."
+        Output: "You've built a <highlight>feedback-rich culture</highlight> that promotes continuous improvement across the organization."
+
+        Input: "Your strategic vision consistently translates into actionable plans. When pivoting the product roadmap or restructuring the sales territory, you break down complex goals into clear milestones. This <highlight>strategic clarity</highlight> helps everyone understand how their daily work connects to the company's bigger mission."
+        Output: "You excel at translating <highlight>strategic vision</highlight> into clear, actionable plans for your team."
+
+        Input: "${section.summary}"
+        Output:
+      `,
+      temperature: 0.5,
+    });
+
+    return {
+      ...section,
+      shortenedSummary: shortenedSummary.replace(/^"|"$/g, ""),
+    };
+  }
+
+  // Process all sections in parallel for better performance
+  const [strengthSections, growthSections, keyMoments] = await Promise.all([
+    Promise.all(object.strengthSections.map(processSection)),
+    Promise.all(object.growthSections.map(processSection)),
+    Promise.all(object.keyMoments.map(processSection)),
+  ]);
+
+  const reportSections = {
+    strengthSections,
+    growthSections,
+    keyMoments,
+  };
+
+  // Generate teaser after producing report sections
+  const {
+    object: { reportTeaser },
+  } = await generateObject({
+    model: four_point_one,
+    schemaName: "ReportTeaser",
+    schemaDescription:
+      "A concise, engaging teaser for a leadership development report",
+    schema: ReportTeaser,
+    prompt: dedent`
+      Craft a compelling, curiosity-inducing teaser (1-3 sentences) for this leadership development report.
+      This teaser must hook the reader immediately and create anticipation about specific insights.
+
+      Here's the report data:
+      <report_data>
+      ${formatReportToMarkdown(report)}
+      </report_data>
+
+      ${transformJsonIntoXml(reportSections, "report_sections")}
+
+      Your teaser must:
+      <guidelines>
+      - Be 1-3 sentences (maximum 60 words)
+      - Address the reader directly using "you" or "your"
+      - Reference specific meetings, conversations, or interactions (e.g., "your strategy session with Alex" or "that critical product launch meeting")
+      - Mention actual people by name from the report (team members, stakeholders)
+      - Highlight one concrete strength and one specific growth opportunity
+      - Connect to at least one development theme
+      - Create genuine curiosity through specific, intriguing details
+      - Maintain a positive, forward-looking tone
+      - Avoid generic language, marketing speak, or hyperbole
+      - Wrap strengths in <highlight:strength> tags, growth areas in <highlight:growth> tags, and key moments in <highlight:moment> tags to emphasize them
+      </guidelines>
+
+      Structure your teaser as follows:
+      <structure>
+      - Start with "In this report," followed by specific facts and strengths
+      - Use "but" or "—but" to transition to growth opportunities
+      - End with a call to action
+      </structure>
+
+      Examples of exceptional teasers:
+      <examples>
+      - "In this report, we analyzed your interactions with Marco during the <highlight:moment>Zoom vulnerability project</highlight:moment> where your <highlight:strength>decisive delegation</highlight:strength> and clear expectations set the team up for success—but your <highlight:growth>follow-up process after rapid-fire assignments</highlight:growth> to Marvin and Tim revealed opportunities to strengthen accountability. Discover how small adjustments could significantly enhance your team's performance!"
+      - "In this report, your delegation meetings with Marco and Tim demonstrate your ability to provide <highlight:strength>clear, detailed instructions</highlight:strength> that drive results—but your <highlight:growth>overly informal communication style</highlight:growth> in certain contexts may be reducing clarity and undermining the urgency of important tasks. See how consistent communication can transform your team dynamics!"
+      - "In this report, your session with Marvin about <highlight:moment>redefining his role</highlight:moment> showcases your strength in <highlight:strength>empowering ownership and creativity</highlight:strength> among team members—but inconsistencies in <highlight:growth>ownership tracking and follow-up</highlight:growth> with Tim and Marco suggest an opportunity to prevent confusion and missed deadlines. Learn practical strategies to balance autonomy with accountability!"
+      </examples>
+    `,
+    temperature: 0.7,
+  });
+
+  return {
+    ...reportSections,
+    teaser: reportTeaser,
+  };
+}
