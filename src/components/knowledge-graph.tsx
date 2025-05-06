@@ -1,6 +1,6 @@
 "use client";
 
-import { Info, RefreshCw, ZoomIn, ZoomOut } from "lucide-react";
+import { Info, RefreshCw, X, ZoomIn, ZoomOut } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { Badge } from "~/components/ui/badge";
@@ -34,7 +34,23 @@ import {
 import { useProfile } from "~/hooks/use-profile";
 import { api } from "~/trpc/react";
 
-import ForceGraph from "./force-graph";
+import ForceGraph, { type ForceGraphLink } from "./force-graph";
+
+// Define constants for dropdown values to improve type safety
+const DisplayLimitMode = {
+  ALL: "all",
+  CONNECTED: "connected",
+  TOP: "top",
+} as const;
+type DisplayLimitModeValue =
+  (typeof DisplayLimitMode)[keyof typeof DisplayLimitMode];
+
+const LayoutMode = {
+  CLUSTERED: "clustered",
+  RADIAL: "radial",
+  FORCE: "force",
+} as const;
+type LayoutModeValue = (typeof LayoutMode)[keyof typeof LayoutMode];
 
 // Define the data structure
 interface Node {
@@ -55,9 +71,24 @@ interface Link {
   observations?: string[];
 }
 
+// Define raw data structures from API that might have string IDs for source/target
+interface RawLink {
+  id: string;
+  source: string | Node;
+  target: string | Node;
+  type: string;
+  meetingId?: string;
+  observations?: string[];
+}
+
 interface GraphData {
   nodes: Node[];
   links: Link[];
+}
+
+interface RawGraphData {
+  nodes: Node[];
+  links: RawLink[];
 }
 
 // Empty data for initial state
@@ -65,6 +96,399 @@ const emptyData: GraphData = {
   nodes: [],
   links: [],
 };
+
+// Selection details panel component
+interface SelectionDetailsPanelProps {
+  selectedNode: Node | null;
+  selectedLink: Link | null;
+  selectedTab: "entities" | "relationships";
+  setSelectedTab: (tab: "entities" | "relationships") => void;
+}
+
+function SelectionDetailsPanel({
+  selectedNode,
+  selectedLink,
+  selectedTab,
+  setSelectedTab,
+}: SelectionDetailsPanelProps) {
+  // Function to render meeting links
+  const renderMeetingLinks = (meetingIds?: string[]) => {
+    if (!meetingIds || meetingIds.length === 0) return null;
+
+    return (
+      <div className="mt-3 space-y-1">
+        <h4 className="text-xs font-medium text-muted-foreground">
+          Related Meetings:
+        </h4>
+        <div className="flex flex-wrap gap-2">
+          {meetingIds.map((id) => (
+            <a
+              key={id}
+              href={`/meetings/${id}`}
+              className="text-xs text-blue-500 hover:underline"
+            >
+              Meeting {id.substring(0, 6)}
+            </a>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Function to render observations
+  const renderObservations = (observations?: string[]) => {
+    if (!observations || observations.length === 0) return null;
+
+    return (
+      <div className="mt-3">
+        <h4 className="text-xs font-medium text-muted-foreground">
+          Observations:
+        </h4>
+        <ul className="mt-1 space-y-2">
+          {observations.map((observation, index) => {
+            // Create a deterministic key from observation content
+            const observationKey = `obs-${observation.substring(0, 20).replace(/\s+/g, "-")}-${index}`;
+            return (
+              <li
+                key={observationKey}
+                className="text-xs text-muted-foreground"
+              >
+                &bull; {observation}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    );
+  };
+
+  if (!selectedNode && !selectedLink) return null;
+
+  return (
+    <div className="mt-4">
+      <Tabs
+        value={selectedTab}
+        onValueChange={(value) =>
+          setSelectedTab(value as "entities" | "relationships")
+        }
+        className="w-full"
+      >
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="entities" disabled={!selectedNode}>
+            Entity
+          </TabsTrigger>
+          <TabsTrigger value="relationships" disabled={!selectedLink}>
+            Relationship
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="entities" className="mt-2">
+          {selectedNode && (
+            <div className="rounded-md border bg-muted/50 p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-medium">{selectedNode.name}</h3>
+                <Badge>{selectedNode.type}</Badge>
+              </div>
+
+              {selectedNode.descriptions &&
+                selectedNode.descriptions.length > 0 && (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {selectedNode.descriptions[0]}
+                  </p>
+                )}
+
+              {renderObservations(selectedNode.observations)}
+              {renderMeetingLinks(selectedNode.meetingIds)}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="relationships" className="mt-2">
+          {selectedLink && (
+            <div className="rounded-md border bg-muted/50 p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-medium">
+                  {selectedLink.source.name}
+                  {" → "}
+                  {selectedLink.target.name}
+                </h3>
+                <Badge>{selectedLink.type}</Badge>
+              </div>
+
+              {renderObservations(selectedLink.observations)}
+
+              {selectedLink.meetingId && (
+                <div className="mt-3">
+                  <a
+                    href={`/meetings/${selectedLink.meetingId}`}
+                    className="text-xs text-blue-500 hover:underline"
+                  >
+                    View related meeting
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+// Graph Controls Panel component
+interface GraphControlsPanelProps {
+  entityTypes: string[];
+  relationshipTypes: string[];
+  selectedEntityType: string;
+  setSelectedEntityType: (type: string) => void;
+  selectedRelationshipType: string;
+  setSelectedRelationshipType: (type: string) => void;
+  showLabels: boolean;
+  setShowLabels: (show: boolean) => void;
+  zoomLevel: number;
+  setZoomLevel: (level: number) => void;
+  layoutMode: LayoutModeValue;
+  setLayoutMode: (mode: LayoutModeValue) => void;
+  displayLimitMode: DisplayLimitModeValue;
+  setDisplayLimitMode: (mode: DisplayLimitModeValue) => void;
+  searchTerm: string;
+  setSearchTerm: (term: string) => void;
+  handleRelayout: () => void;
+  isLoading: boolean;
+}
+
+function GraphControlsPanel({
+  entityTypes,
+  relationshipTypes,
+  selectedEntityType,
+  setSelectedEntityType,
+  selectedRelationshipType,
+  setSelectedRelationshipType,
+  showLabels,
+  setShowLabels,
+  zoomLevel,
+  setZoomLevel,
+  layoutMode,
+  setLayoutMode,
+  displayLimitMode,
+  setDisplayLimitMode,
+  searchTerm,
+  setSearchTerm,
+  handleRelayout,
+  isLoading,
+}: GraphControlsPanelProps) {
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const handleClearSearch = () => {
+    setSearchTerm("");
+  };
+
+  const handleZoomIn = () => {
+    setZoomLevel(Math.min(zoomLevel + 0.2, 2.5));
+  };
+
+  const handleZoomOut = () => {
+    setZoomLevel(Math.max(zoomLevel - 0.2, 0.5));
+  };
+
+  const handleSliderChange = (value: number[]) => {
+    if (value.length > 0 && typeof value[0] === "number") {
+      setZoomLevel(value[0] / 100 || 1);
+    }
+  };
+
+  return (
+    <CardContent className="space-y-6">
+      <div className="space-y-2">
+        <Label htmlFor="search-entities">Search Entities</Label>
+        <div className="flex space-x-2">
+          <Input
+            id="search-entities"
+            value={searchTerm}
+            onChange={handleSearchChange}
+            placeholder="Search by name or description"
+            className="flex-1"
+          />
+          {searchTerm && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleClearSearch}
+              className="h-10 w-10"
+            >
+              <span className="sr-only">Clear search</span>
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <Separator />
+
+      <div className="space-y-2">
+        <Label htmlFor="entity-type">Entity Type</Label>
+        <Select
+          value={selectedEntityType}
+          onValueChange={setSelectedEntityType}
+          disabled={isLoading}
+        >
+          <SelectTrigger id="entity-type">
+            <SelectValue placeholder="Select entity type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Entities</SelectItem>
+            {entityTypes.map((type) => (
+              <SelectItem key={type} value={type}>
+                {type}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="relationship-type">Relationship Type</Label>
+        <Select
+          value={selectedRelationshipType}
+          onValueChange={setSelectedRelationshipType}
+          disabled={isLoading}
+        >
+          <SelectTrigger id="relationship-type">
+            <SelectValue placeholder="Select relationship type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Relationships</SelectItem>
+            {relationshipTypes.map((type) => (
+              <SelectItem key={type} value={type}>
+                {type}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Separator />
+
+      <div className="space-y-3">
+        <Label>Display Limit</Label>
+        <Select
+          value={displayLimitMode}
+          onValueChange={(value) =>
+            setDisplayLimitMode(value as DisplayLimitModeValue)
+          }
+          disabled={isLoading}
+        >
+          <SelectTrigger id="display-limit">
+            <SelectValue placeholder="Display limit mode" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={DisplayLimitMode.ALL}>
+              Show All Entities
+            </SelectItem>
+            <SelectItem value={DisplayLimitMode.CONNECTED}>
+              Only Connected Entities
+            </SelectItem>
+            <SelectItem value={DisplayLimitMode.TOP}>
+              Top 100 Most Connected
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-3">
+        <Label>Display Options</Label>
+
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="show-labels"
+            checked={showLabels}
+            onCheckedChange={setShowLabels}
+            disabled={isLoading}
+          />
+          <Label htmlFor="show-labels">Show Labels</Label>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label>Zoom</Label>
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleZoomOut}
+                className="h-8 w-8"
+                disabled={isLoading}
+              >
+                <ZoomOut className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleZoomIn}
+                className="h-8 w-8"
+                disabled={isLoading}
+              >
+                <ZoomIn className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <Slider
+            value={[zoomLevel * 100]}
+            min={50}
+            max={250}
+            step={10}
+            onValueChange={handleSliderChange}
+            disabled={isLoading}
+          />
+        </div>
+      </div>
+
+      <Separator />
+
+      <div className="space-y-3">
+        <Label>Layout</Label>
+        <Select
+          value={layoutMode}
+          onValueChange={(value) => setLayoutMode(value as LayoutModeValue)}
+          disabled={isLoading}
+        >
+          <SelectTrigger id="layout-mode">
+            <SelectValue placeholder="Layout mode" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={LayoutMode.CLUSTERED}>
+              Clustered by Type
+            </SelectItem>
+            <SelectItem value={LayoutMode.RADIAL}>Radial Layout</SelectItem>
+            <SelectItem value={LayoutMode.FORCE}>Force-Directed</SelectItem>
+          </SelectContent>
+        </Select>
+        <div className="flex gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  onClick={handleRelayout}
+                  disabled={isLoading}
+                  className="flex-1"
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Reorganize
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Apply a new layout to the graph</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </div>
+    </CardContent>
+  );
+}
 
 export default function KnowledgeGraph() {
   const { profile } = useProfile();
@@ -83,15 +507,14 @@ export default function KnowledgeGraph() {
   );
   const [refreshKey, setRefreshKey] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
-  const [displayLimitMode, setDisplayLimitMode] = useState<
-    "all" | "connected" | "top"
-  >("all");
+  const [displayLimitMode, setDisplayLimitMode] =
+    useState<DisplayLimitModeValue>(DisplayLimitMode.ALL);
   const [highlightedNodeIds, setHighlightedNodeIds] = useState<Set<string>>(
     new Set(),
   );
-  const [layoutMode, setLayoutMode] = useState<
-    "clustered" | "radial" | "force"
-  >("clustered");
+  const [layoutMode, setLayoutMode] = useState<LayoutModeValue>(
+    LayoutMode.CLUSTERED,
+  );
 
   // Fetch knowledge graph data from API
   const { data: graphData, isLoading } =
@@ -153,7 +576,7 @@ export default function KnowledgeGraph() {
             ...link,
             source: sourceNode,
             target: targetNode,
-          });
+          } as Link);
         }
       }
     }
@@ -182,18 +605,13 @@ export default function KnowledgeGraph() {
       const connectedNodes = new Set<string>(searchMatchNodeIds);
 
       // Add directly connected nodes if in "connected" mode
-      if (displayLimitMode === "connected") {
+      if (displayLimitMode === DisplayLimitMode.CONNECTED) {
         for (const link of processedLinks) {
-          const sourceId =
-            typeof link.source === "string" ? link.source : link.source.id;
-          const targetId =
-            typeof link.target === "string" ? link.target : link.target.id;
-
-          if (searchMatchNodeIds.has(sourceId)) {
-            connectedNodes.add(targetId);
+          if (searchMatchNodeIds.has(link.source.id)) {
+            connectedNodes.add(link.target.id);
           }
-          if (searchMatchNodeIds.has(targetId)) {
-            connectedNodes.add(sourceId);
+          if (searchMatchNodeIds.has(link.target.id)) {
+            connectedNodes.add(link.source.id);
           }
         }
 
@@ -208,13 +626,9 @@ export default function KnowledgeGraph() {
 
       // Filter links to only those connecting filtered nodes
       const nodeIds = new Set(filteredNodes.map((node) => node.id));
-      filteredLinks = processedLinks.filter((link) => {
-        const sourceId =
-          typeof link.source === "string" ? link.source : link.source.id;
-        const targetId =
-          typeof link.target === "string" ? link.target : link.target.id;
-        return nodeIds.has(sourceId) && nodeIds.has(targetId);
-      });
+      filteredLinks = processedLinks.filter(
+        (link) => nodeIds.has(link.source.id) && nodeIds.has(link.target.id),
+      );
     } else {
       setHighlightedNodeIds(new Set());
     }
@@ -226,13 +640,9 @@ export default function KnowledgeGraph() {
       );
       // Only keep links where both source and target nodes are in the filtered nodes
       const nodeIds = new Set(filteredNodes.map((node) => node.id));
-      filteredLinks = filteredLinks.filter((link) => {
-        const sourceId =
-          typeof link.source === "string" ? link.source : link.source.id;
-        const targetId =
-          typeof link.target === "string" ? link.target : link.target.id;
-        return nodeIds.has(sourceId) && nodeIds.has(targetId);
-      });
+      filteredLinks = filteredLinks.filter(
+        (link) => nodeIds.has(link.source.id) && nodeIds.has(link.target.id),
+      );
     }
 
     // Filter links by relationship type
@@ -244,12 +654,8 @@ export default function KnowledgeGraph() {
       // Only keep nodes that are connected by the filtered links
       const connectedNodeIds = new Set<string>();
       for (const link of filteredLinks) {
-        const sourceId =
-          typeof link.source === "string" ? link.source : link.source.id;
-        const targetId =
-          typeof link.target === "string" ? link.target : link.target.id;
-        connectedNodeIds.add(sourceId);
-        connectedNodeIds.add(targetId);
+        connectedNodeIds.add(link.source.id);
+        connectedNodeIds.add(link.target.id);
       }
 
       filteredNodes = filteredNodes.filter((node) =>
@@ -258,18 +664,33 @@ export default function KnowledgeGraph() {
     }
 
     // Check if we need to limit display by top connected nodes
-    if (displayLimitMode === "top" && filteredNodes.length > 100) {
-      // Calculate connection count for each node
-      const nodeConnectionCounts = filteredNodes.map((node) => {
-        const connections = filteredLinks.filter((link) => {
-          const sourceId =
-            typeof link.source === "string" ? link.source : link.source.id;
-          const targetId =
-            typeof link.target === "string" ? link.target : link.target.id;
-          return sourceId === node.id || targetId === node.id;
-        }).length;
-        return { node, connections };
-      });
+    if (
+      displayLimitMode === DisplayLimitMode.TOP &&
+      filteredNodes.length > 100
+    ) {
+      // Optimized connection count calculation
+      const connectionCounts = new Map<string, number>();
+      for (const node of filteredNodes) {
+        connectionCounts.set(node.id, 0);
+      }
+
+      // Count connections for each node
+      for (const link of filteredLinks) {
+        connectionCounts.set(
+          link.source.id,
+          (connectionCounts.get(link.source.id) || 0) + 1,
+        );
+        connectionCounts.set(
+          link.target.id,
+          (connectionCounts.get(link.target.id) || 0) + 1,
+        );
+      }
+
+      // Create node-connection pairs for sorting
+      const nodeConnectionCounts = filteredNodes.map((node) => ({
+        node,
+        connections: connectionCounts.get(node.id) || 0,
+      }));
 
       // Sort and get top 100 most connected nodes
       const topConnectedNodes = nodeConnectionCounts
@@ -282,13 +703,10 @@ export default function KnowledgeGraph() {
 
       // Update filtered links
       const topNodeIds = new Set(topConnectedNodes.map((node) => node.id));
-      filteredLinks = filteredLinks.filter((link) => {
-        const sourceId =
-          typeof link.source === "string" ? link.source : link.source.id;
-        const targetId =
-          typeof link.target === "string" ? link.target : link.target.id;
-        return topNodeIds.has(sourceId) && topNodeIds.has(targetId);
-      });
+      filteredLinks = filteredLinks.filter(
+        (link) =>
+          topNodeIds.has(link.source.id) && topNodeIds.has(link.target.id),
+      );
     }
 
     setFilteredData({
@@ -314,97 +732,21 @@ export default function KnowledgeGraph() {
     setSelectedTab("entities");
   };
 
-  const handleLinkClick = (link: Link) => {
-    setSelectedLink(link);
+  const handleLinkClick = (link: ForceGraphLink) => {
+    // We need to ensure the link is properly typed with our local Link interface
+    // The link from ForceGraph might have source/target as string | Node
+    if (typeof link.source === "string" || typeof link.target === "string") {
+      return; // Skip if not Node objects
+    }
+
+    setSelectedLink(link as Link);
     setSelectedNode(null);
     setSelectedTab("relationships");
-  };
-
-  const handleZoomIn = () => {
-    setZoomLevel((prev) => Math.min(prev + 0.2, 2.5));
-  };
-
-  const handleZoomOut = () => {
-    setZoomLevel((prev) => Math.max(prev - 0.2, 0.5));
-  };
-
-  const handleSliderChange = (value: number[]) => {
-    if (value.length > 0 && typeof value[0] === "number") {
-      setZoomLevel(value[0] / 100 || 1);
-    }
   };
 
   const handleRelayout = () => {
     // Force a complete re-rendering of the graph with new layout
     setRefreshKey((prev) => prev + 1);
-  };
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-  };
-
-  // Function to handle display mode changes
-  const handleDisplayModeChange = (mode: "all" | "connected" | "top") => {
-    setDisplayLimitMode(mode);
-  };
-
-  // Function to handle layout mode changes
-  const handleLayoutModeChange = (mode: "clustered" | "radial" | "force") => {
-    setLayoutMode(mode);
-    // Force relayout when changing mode
-    setRefreshKey((prev) => prev + 1);
-  };
-
-  const handleClearSearch = () => {
-    setSearchTerm("");
-    setHighlightedNodeIds(new Set());
-  };
-
-  // Function to render meeting links
-  const renderMeetingLinks = (meetingIds?: string[]) => {
-    if (!meetingIds || meetingIds.length === 0) return null;
-
-    return (
-      <div className="mt-3 space-y-1">
-        <h4 className="text-xs font-medium text-muted-foreground">
-          Related Meetings:
-        </h4>
-        <div className="flex flex-wrap gap-2">
-          {meetingIds.map((id, index) => (
-            <a
-              key={`meeting-${id}`}
-              href={`/meetings/${id}`}
-              className="text-xs text-blue-500 hover:underline"
-            >
-              Meeting {index + 1}
-            </a>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  // Function to render observations
-  const renderObservations = (observations?: string[]) => {
-    if (!observations || observations.length === 0) return null;
-
-    return (
-      <div className="mt-3">
-        <h4 className="text-xs font-medium text-muted-foreground">
-          Observations:
-        </h4>
-        <ul className="mt-1 space-y-2">
-          {observations.map((observation, index) => (
-            <li
-              key={`obs-${observation.substring(0, 20).replace(/\s+/g, "-")}-${index}`}
-              className="text-xs text-muted-foreground"
-            >
-              &bull; {observation}
-            </li>
-          ))}
-        </ul>
-      </div>
-    );
   };
 
   return (
@@ -416,262 +758,35 @@ export default function KnowledgeGraph() {
             Explore relationships between entities in your meetings
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="search-entities">Search Entities</Label>
-            <div className="flex space-x-2">
-              <Input
-                id="search-entities"
-                value={searchTerm}
-                onChange={handleSearchChange}
-                placeholder="Search by name or description"
-                className="flex-1"
-              />
-              {searchTerm && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleClearSearch}
-                  className="h-10 w-10"
-                >
-                  <span className="sr-only">Clear search</span>
-                  &times;
-                </Button>
-              )}
-            </div>
-          </div>
 
-          <Separator />
+        <GraphControlsPanel
+          entityTypes={entityTypes}
+          relationshipTypes={relationshipTypes}
+          selectedEntityType={selectedEntityType}
+          setSelectedEntityType={setSelectedEntityType}
+          selectedRelationshipType={selectedRelationshipType}
+          setSelectedRelationshipType={setSelectedRelationshipType}
+          showLabels={showLabels}
+          setShowLabels={setShowLabels}
+          zoomLevel={zoomLevel}
+          setZoomLevel={setZoomLevel}
+          layoutMode={layoutMode}
+          setLayoutMode={setLayoutMode}
+          displayLimitMode={displayLimitMode}
+          setDisplayLimitMode={setDisplayLimitMode}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          handleRelayout={handleRelayout}
+          isLoading={isLoading}
+        />
 
-          <div className="space-y-2">
-            <Label htmlFor="entity-type">Entity Type</Label>
-            <Select
-              value={selectedEntityType}
-              onValueChange={setSelectedEntityType}
-              disabled={isLoading}
-            >
-              <SelectTrigger id="entity-type">
-                <SelectValue placeholder="Select entity type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Entities</SelectItem>
-                {entityTypes.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="relationship-type">Relationship Type</Label>
-            <Select
-              value={selectedRelationshipType}
-              onValueChange={setSelectedRelationshipType}
-              disabled={isLoading}
-            >
-              <SelectTrigger id="relationship-type">
-                <SelectValue placeholder="Select relationship type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Relationships</SelectItem>
-                {relationshipTypes.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Separator />
-
-          <div className="space-y-3">
-            <Label>Display Limit</Label>
-            <Select
-              value={displayLimitMode}
-              onValueChange={(value) =>
-                handleDisplayModeChange(value as "all" | "connected" | "top")
-              }
-              disabled={isLoading}
-            >
-              <SelectTrigger id="display-limit">
-                <SelectValue placeholder="Display limit mode" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Show All Entities</SelectItem>
-                <SelectItem value="connected">
-                  Only Connected Entities
-                </SelectItem>
-                <SelectItem value="top">Top 100 Most Connected</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-3">
-            <Label>Display Options</Label>
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="show-labels"
-                checked={showLabels}
-                onCheckedChange={setShowLabels}
-                disabled={isLoading}
-              />
-              <Label htmlFor="show-labels">Show Labels</Label>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Zoom</Label>
-                <div className="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleZoomOut}
-                    className="h-8 w-8"
-                    disabled={isLoading}
-                  >
-                    <ZoomOut className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleZoomIn}
-                    className="h-8 w-8"
-                    disabled={isLoading}
-                  >
-                    <ZoomIn className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              <Slider
-                value={[zoomLevel * 100]}
-                min={50}
-                max={250}
-                step={10}
-                onValueChange={handleSliderChange}
-                disabled={isLoading}
-              />
-            </div>
-          </div>
-
-          <Separator />
-
-          <div className="space-y-3">
-            <Label>Layout</Label>
-            <Select
-              value={layoutMode}
-              onValueChange={(value) =>
-                handleLayoutModeChange(
-                  value as "clustered" | "radial" | "force",
-                )
-              }
-              disabled={isLoading}
-            >
-              <SelectTrigger id="layout-mode">
-                <SelectValue placeholder="Layout mode" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="clustered">Clustered by Type</SelectItem>
-                <SelectItem value="radial">Radial Layout</SelectItem>
-                <SelectItem value="force">Force-Directed</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="flex gap-2">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      onClick={handleRelayout}
-                      disabled={isLoading}
-                      className="flex-1"
-                    >
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Reorganize
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Apply a new layout to the graph</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          </div>
-
-          <Separator />
-
-          {(selectedNode || selectedLink) && (
-            <div className="mt-4">
-              <Tabs
-                value={selectedTab}
-                onValueChange={(value) =>
-                  setSelectedTab(value as "entities" | "relationships")
-                }
-                className="w-full"
-              >
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="entities" disabled={!selectedNode}>
-                    Entity
-                  </TabsTrigger>
-                  <TabsTrigger value="relationships" disabled={!selectedLink}>
-                    Relationship
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="entities" className="mt-2">
-                  {selectedNode && (
-                    <div className="rounded-md border bg-muted/50 p-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium">{selectedNode.name}</h3>
-                        <Badge>{selectedNode.type}</Badge>
-                      </div>
-
-                      {selectedNode.descriptions &&
-                        selectedNode.descriptions.length > 0 && (
-                          <p className="mt-2 text-sm text-muted-foreground">
-                            {selectedNode.descriptions[0]}
-                          </p>
-                        )}
-
-                      {renderObservations(selectedNode.observations)}
-                      {renderMeetingLinks(selectedNode.meetingIds)}
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="relationships" className="mt-2">
-                  {selectedLink && (
-                    <div className="rounded-md border bg-muted/50 p-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium">
-                          {selectedLink.source.name}
-                          {" → "}
-                          {selectedLink.target.name}
-                        </h3>
-                        <Badge>{selectedLink.type}</Badge>
-                      </div>
-
-                      {renderObservations(selectedLink.observations)}
-
-                      {selectedLink.meetingId && (
-                        <div className="mt-3">
-                          <a
-                            href={`/meetings/${selectedLink.meetingId}`}
-                            className="text-xs text-blue-500 hover:underline"
-                          >
-                            View related meeting
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
-            </div>
-          )}
+        <CardContent>
+          <SelectionDetailsPanel
+            selectedNode={selectedNode}
+            selectedLink={selectedLink}
+            selectedTab={selectedTab}
+            setSelectedTab={setSelectedTab}
+          />
         </CardContent>
       </Card>
 
@@ -717,7 +832,7 @@ export default function KnowledgeGraph() {
                 showLabels={showLabels}
                 zoomLevel={zoomLevel}
                 onNodeClick={handleNodeClick}
-                onLinkClick={handleLinkClick as any}
+                onLinkClick={handleLinkClick}
                 highlightedNodeIds={highlightedNodeIds}
                 layoutMode={layoutMode}
               />

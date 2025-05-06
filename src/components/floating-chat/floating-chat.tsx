@@ -15,6 +15,7 @@ import type { VideoOutput } from "~/lib/videos";
 import type { RouterOutputs } from "~/trpc/react";
 
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+import { ExportChatButton } from "../ui/export-chat-button";
 import { useChatContext } from "./chat-context-provider";
 import { useChatVisibility } from "./chat-visibility-provider";
 import { FloatingChatContainer } from "./floating-chat-container";
@@ -184,6 +185,9 @@ export const FloatingChat: React.FC<FloatingChatProps> = ({ className }) => {
       onReset={resetChat}
       isFullscreen={isFullscreen}
       onFullscreenToggle={toggleFullscreen}
+      exportChatButton={
+        messages.length > 0 ? <ExportChatButton messages={messages} /> : null
+      }
     >
       <AnimatePresence>
         <motion.div
