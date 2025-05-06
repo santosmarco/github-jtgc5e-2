@@ -182,10 +182,7 @@ async function handleSkillReportReadyEmail(
   }
 
   const { data: emailData, error: emailError } =
-    await sendSkillReportReadyEmail({
-      profileId: report.profile_id,
-      reportId: report.id,
-    });
+    await sendSkillReportReadyEmail(report.id, supabase);
 
   if (emailError) {
     logger.error("Failed to send skill report ready email", {
