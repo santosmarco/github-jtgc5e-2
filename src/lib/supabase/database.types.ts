@@ -2602,18 +2602,21 @@ export type Database = {
       }
       moment_profile_development_themes: {
         Row: {
+          connection_strength_score: number | null
           created_at: string
           id: string
           moment_id: string | null
           profile_development_theme_id: string | null
         }
         Insert: {
+          connection_strength_score?: number | null
           created_at?: string
           id?: string
           moment_id?: string | null
           profile_development_theme_id?: string | null
         }
         Update: {
+          connection_strength_score?: number | null
           created_at?: string
           id?: string
           moment_id?: string | null
@@ -4148,6 +4151,7 @@ export type Database = {
           created_at: string
           end_date: string | null
           id: string
+          is_hidden: boolean
           personality_badges: string[] | null
           personality_color: string | null
           personality_description: string | null
@@ -4163,6 +4167,7 @@ export type Database = {
           created_at?: string
           end_date?: string | null
           id?: string
+          is_hidden?: boolean
           personality_badges?: string[] | null
           personality_color?: string | null
           personality_description?: string | null
@@ -4178,6 +4183,7 @@ export type Database = {
           created_at?: string
           end_date?: string | null
           id?: string
+          is_hidden?: boolean
           personality_badges?: string[] | null
           personality_color?: string | null
           personality_description?: string | null
@@ -4955,6 +4961,7 @@ export type Database = {
           has_ai_coaching_enabled: boolean
           id: number
           profile_id: string
+          report_email_template: Database["public"]["Enums"]["email_template_type"]
           report_frequency_in_days: number
           should_join_external_meetings: boolean
           should_join_team_meetings: boolean
@@ -4968,6 +4975,7 @@ export type Database = {
           has_ai_coaching_enabled?: boolean
           id?: number
           profile_id: string
+          report_email_template?: Database["public"]["Enums"]["email_template_type"]
           report_frequency_in_days?: number
           should_join_external_meetings?: boolean
           should_join_team_meetings?: boolean
@@ -4981,6 +4989,7 @@ export type Database = {
           has_ai_coaching_enabled?: boolean
           id?: number
           profile_id?: string
+          report_email_template?: Database["public"]["Enums"]["email_template_type"]
           report_frequency_in_days?: number
           should_join_external_meetings?: boolean
           should_join_team_meetings?: boolean
@@ -5500,6 +5509,9 @@ export type Database = {
       }
     }
     Enums: {
+      email_template_type:
+        | "skill-report-ready-founder"
+        | "skill-report-ready-manager"
       event_type:
         | "meeting"
         | "coaching_session"
@@ -5715,6 +5727,10 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      email_template_type: [
+        "skill-report-ready-founder",
+        "skill-report-ready-manager",
+      ],
       event_type: [
         "meeting",
         "coaching_session",
