@@ -1,0 +1,914 @@
+---
+description: 
+globs: *.tsx
+alwaysApply: false
+---
+# React Component Best Practices and Guidelines
+
+This guide outlines the standardized patterns for creating and maintaining React components in our codebase.
+
+## Component Structure and Organization
+
+### Naming Conventions
+
+- Use PascalCase for component names (`UserProfile`, not `userProfile`)
+- Use descriptive, intention-revealing names
+- Prefix higher-order components with `with` (e.g., `withAuth`)
+- Suffix custom hooks with `use` (e.g., `useFormValidation`)
+- Suffix context providers with `Provider` (e.g., `ThemeProvider`)
+
+### File Structure
+
+- One component per file (except for tightly coupled helper components)
+- Place related components in a shared directory
+- Name files after the main component they export
+- Use index files for exporting multiple components from a directory
+- Store shadcn/ui components in `src/components/ui` directory
+
+## UI Component Library: shadcn/ui
+
+### shadcn/ui Principles
+
+- shadcn/ui is not a traditional component library but a collection of reusable components
+- Components are copied directly into your project, giving you full control of the code
+- Follows a "copy and paste" model rather than importing from a package
+- Built with Radix UI primitives and styled with Tailwind CSS
+- Fully customizable to match your design system
+
+### Adding shadcn/ui Components
+
+- Use the CLI to add components: `npx shadcn-ui@latest add <component-name>`
+- Each component is copied directly to your `src/components/ui` directory
+- Customize the component code after copying as needed
+- Use components that share consistent styling and accessibility patterns
+
+```tsx
+// ✅ Good: Using shadcn/ui Button component with variants
+import { Button } from "~/components/ui/button";
+
+function MyComponent() {
+  return (
+    <div>
+      <Button variant="default">Default Button</Button>
+      <Button variant="destructive">Destructive Button</Button>
+      <Button variant="outline">Outline Button</Button>
+    </div>
+  );
+}
+```
+
+### Customizing shadcn/ui Components
+
+- Modify the component source code directly to match your needs
+- Customize the Tailwind theme in your configuration file
+- Extend or modify the variants in component files
+- Create composition patterns with existing components
+
+```tsx
+// ✅ Good: Extending shadcn/ui Button with a new variant
+// In src/components/ui/button.tsx
+const buttonVariants = cva(
+  "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive:
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        outline:
+          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+        // Added custom variant
+        custom: "bg-purple-600 text-white hover:bg-purple-700",
+      },
+      // Other variants...
+    },
+  }
+);
+```
+
+### Advanced shadcn/ui Usage
+
+- Combine multiple components to build complex interfaces
+- Use Radix UI's composition model for accessible interactive components
+- Use the provided hooks and utilities for state management
+- Leverage the slot pattern for component polymorphism with `asChild` prop
+
+```tsx
+// ✅ Good: Using the asChild pattern with shadcn/ui
+import { Button } from "~/components/ui/button";
+import { Link } from "~/components/ui/link";
+
+function Navigation() {
+  return (
+    <Button asChild variant="ghost">
+      <Link href="/dashboard">Dashboard</Link>
+    </Button>
+  );
+}
+```
+
+## TypeScript Guidelines
+
+### Type Definitions
+
+- Always define types for component props
+- Export prop types for reuse and documentation
+- Use interfaces for props that will be extended
+- Use type aliases for complex union types
+- Prefer readonly arrays and properties when applicable
+- Use shadcn/ui's exported types when working with their components
+
+```tsx
+// ✅ Good: Explicit type definitions
+export type ButtonProps = {
+  readonly label: string;
+  readonly variant?: "primary" | "secondary" | "ghost";
+  readonly onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  readonly disabled?: boolean;
+  readonly children?: React.ReactNode;
+};
+
+export function Button({
+  label,
+  variant = "primary",
+  onClick,
+  disabled = false,
+  children,
+}: ButtonProps) {
+  // Component implementation
+}
+```
+
+### shadcn/ui Types
+
+- Import and use the provided type definitions from shadcn/ui components
+- Extend shadcn/ui component types for custom components
+- Leverage the `VariantProps` utility from `class-variance-authority` for variant props
+
+```tsx
+// ✅ Good: Using shadcn/ui types for extension
+import { Button, ButtonProps } from "~/components/ui/button";
+
+type CustomButtonProps = ButtonProps & {
+  isLoading?: boolean;
+};
+
+export function CustomButton({
+  isLoading,
+  children,
+  ...props
+}: CustomButtonProps) {
+  return (
+    <Button {...props}>
+      {isLoading ? <Spinner /> : null}
+      {children}
+    </Button>
+  );
+}
+```
+
+### Export Patterns
+
+- Always use named exports, avoid default exports
+- Export types alongside components
+- Export constants and utilities that are directly related to the component
+
+```tsx
+// ✅ Good: Named exports
+export const Button = ({ label, onClick }: ButtonProps) => {
+  // Implementation
+};
+
+export type ButtonProps = {
+  // Type definition
+};
+
+// ❌ Bad: Default exports
+export default function Button({ label, onClick }) {
+  // Implementation
+}
+```
+
+## Component Props
+
+### Prop Handling
+
+- Destructure props in the function signature
+- Define default values in the destructuring assignment
+- Use spread props sparingly and only when necessary
+- Document complex props with JSDoc comments
+
+```tsx
+// ✅ Good: Destructured props with defaults
+export function TextField({
+  label,
+  value,
+  onChange,
+  disabled = false,
+  maxLength = 100,
+}: TextFieldProps) {
+  // Implementation
+}
+```
+
+### Props Validation
+
+- Use TypeScript instead of PropTypes for validation
+- Be explicit about optional vs required props
+- Use union types for props with a finite set of values
+
+## Component Patterns
+
+### Functional Components
+
+- Always use functional components with hooks
+- Avoid class components unless absolutely necessary
+
+```tsx
+// ✅ Good: Functional component
+export function UserAvatar({ user, size }: UserAvatarProps) {
+  return (
+    <img src={user.avatarUrl} alt={user.name} width={size} height={size} />
+  );
+}
+
+// ❌ Bad: Class component
+export class UserAvatar extends React.Component<UserAvatarProps> {
+  render() {
+    return (
+      <img
+        src={this.props.user.avatarUrl}
+        alt={this.props.user.name}
+        width={this.props.size}
+        height={this.props.size}
+      />
+    );
+  }
+}
+```
+
+### Custom Hooks
+
+- Extract complex logic into custom hooks
+- Keep hooks focused on a single responsibility
+- Name hooks with the `use` prefix
+
+```tsx
+// ✅ Good: Custom hook for form handling
+export function useFormField(initialValue: string) {
+  const [value, setValue] = useState(initialValue);
+  const [touched, setTouched] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setValue(e.target.value);
+  };
+
+  const handleBlur = () => {
+    setTouched(true);
+  };
+
+  return { value, touched, handleChange, handleBlur };
+}
+```
+
+### Component Composition
+
+- Prefer composition over inheritance
+- Use the children prop for flexible component APIs
+- Create specialized components for different variants instead of complex if-else logic
+- Use shadcn/ui's composable components as building blocks
+
+```tsx
+// ✅ Good: Composition with children and shadcn/ui components
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+
+export function UserCard({ user, actions }: UserCardProps) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{user.name}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <UserDetails user={user} />
+        {actions}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Usage
+<UserCard
+  user={user}
+  actions={<Button variant="outline">View Profile</Button>}
+/>;
+```
+
+## State Management
+
+### Local State
+
+- Use the useState hook for simple local state
+- Use the useReducer hook for complex state logic
+- Keep state as close as possible to where it's used
+
+```tsx
+// ✅ Good: Simple state with useState
+export function Counter() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <button onClick={() => setCount(count + 1)}>Increment</button>
+    </div>
+  );
+}
+```
+
+### Global State
+
+- Use Context API for state shared between many components
+- Keep context providers high in the component tree
+- Split complex contexts into smaller, focused contexts
+
+## Performance Optimization
+
+### Memoization
+
+- Use React.memo for expensive component renders
+- Use useMemo for expensive calculations
+- Use useCallback for callback functions passed to child components
+
+```tsx
+// ✅ Good: Memoized component
+export const ExpensiveComponent = React.memo(function ExpensiveComponent({
+  data,
+}: Props) {
+  // Complex rendering logic
+});
+
+// ✅ Good: Memoized calculation
+export function DataAnalytics({ rawData }: Props) {
+  const processedData = useMemo(() => {
+    return expensiveProcessing(rawData);
+  }, [rawData]);
+
+  return <Chart data={processedData} />;
+}
+```
+
+### Lazy Loading
+
+- Use React.lazy and Suspense for code splitting
+- Lazy load large components or routes that aren't immediately needed
+
+```tsx
+// ✅ Good: Lazy loading components
+const LazyDetailView = React.lazy(() => import("../components/DetailView"));
+
+export function Main() {
+  return (
+    <Suspense fallback={<Spinner />}>
+      <LazyDetailView />
+    </Suspense>
+  );
+}
+```
+
+## Error Handling
+
+### Error Boundaries
+
+- Use error boundaries to catch and handle errors
+- Create specialized error UIs for different parts of the application
+
+```tsx
+// ✅ Good: Error boundary pattern
+export function UserProfile({ userId }: Props) {
+  return (
+    <ErrorBoundary fallback={<UserProfileError />}>
+      <UserProfileContent userId={userId} />
+    </ErrorBoundary>
+  );
+}
+```
+
+## Styling with Tailwind CSS
+
+### Tailwind Best Practices
+
+- Use utility classes for styling components
+- Use the `cn` utility function to conditionally apply classes
+- Follow a consistent order for utility classes
+- Use the `@apply` directive in CSS files sparingly
+
+```tsx
+// ✅ Good: Using cn utility with Tailwind classes
+import { cn } from "~/lib/utils";
+
+export function Badge({ variant, className, children }: BadgeProps) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
+        variant === "primary" && "bg-primary text-primary-foreground",
+        variant === "secondary" && "bg-secondary text-secondary-foreground",
+        className
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+```
+
+## Accessibility
+
+### WCAG Compliance
+
+- Strive for WCAG 2.1 AA compliance at minimum
+- Use automated testing tools like axe or Lighthouse to identify issues
+- Test with screen readers and keyboard navigation regularly
+
+### Semantic HTML
+
+- Use semantic HTML elements whenever possible
+- Prefer semantic elements over generic divs and spans
+- Use appropriate heading hierarchy (h1, h2, etc.)
+- Use React Fragments to avoid unnecessary divs that break HTML semantics
+
+```tsx
+// ❌ Bad: Non-semantic HTML
+export function Article({ title, content }) {
+  return (
+    <div className="article">
+      <div className="article-title">{title}</div>
+      <div className="article-content">{content}</div>
+    </div>
+  );
+}
+
+// ✅ Good: Semantic HTML
+export function Article({ title, content }) {
+  return (
+    <article>
+      <h2>{title}</h2>
+      <section>{content}</section>
+    </article>
+  );
+}
+```
+
+### ARIA Attributes
+
+- Use ARIA attributes only when necessary (semantic HTML is preferred)
+- Always use aria-label for elements without visible text
+- Set aria-hidden="true" on decorative elements
+- Maintain proper ARIA landmark roles
+- Use aria-live for dynamic content updates
+
+```tsx
+// ✅ Good: Appropriate ARIA usage
+export function IconButton({ icon, onClick, label }) {
+  return (
+    <button onClick={onClick} aria-label={label}>
+      <span aria-hidden="true">{icon}</span>
+    </button>
+  );
+}
+```
+
+### Keyboard Navigation
+
+- Ensure all interactive elements are keyboard accessible
+- Maintain logical tab order through tabindex
+- Implement keyboard shortcuts for common actions
+- Handle focus management for modals and dialogs
+- Use visually apparent focus indicators
+
+```tsx
+// ✅ Good: Focus management for modals
+export function Modal({ isOpen, onClose, title, children }) {
+  const modalRef = useRef(null);
+
+  // Focus the modal when it opens
+  useEffect(() => {
+    if (isOpen && modalRef.current) {
+      modalRef.current.focus();
+    }
+
+    // Return focus when modal closes
+    return () => {
+      if (isOpen && document.activeElement !== document.body) {
+        document.activeElement.blur();
+      }
+    };
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      ref={modalRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+      tabIndex={-1}
+      className="modal"
+    >
+      <h2 id="modal-title">{title}</h2>
+      <div>{children}</div>
+      <button onClick={onClose}>Close</button>
+    </div>
+  );
+}
+```
+
+### Forms Accessibility
+
+- Associate labels with form inputs using htmlFor and id
+- Group related form controls with fieldset and legend
+- Provide clear error messages with aria-invalid and aria-describedby
+- Use input types appropriate to the data (email, tel, etc.)
+- Implement validation feedback accessibly
+
+```tsx
+// ✅ Good: Accessible form controls
+export function AccessibleForm() {
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+
+  const validateEmail = (value) => {
+    if (!value.includes("@")) {
+      setError("Please enter a valid email address");
+      return false;
+    }
+    setError("");
+    return true;
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (validateEmail(email)) {
+      // Submit form
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div>
+        <label htmlFor="email-input">Email Address</label>
+        <input
+          id="email-input"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          onBlur={() => validateEmail(email)}
+          aria-invalid={!!error}
+          aria-describedby={error ? "email-error" : undefined}
+        />
+        {error && (
+          <div id="email-error" role="alert">
+            {error}
+          </div>
+        )}
+      </div>
+      <button type="submit">Submit</button>
+    </form>
+  );
+}
+```
+
+### Color and Visual Accessibility
+
+- Ensure sufficient color contrast (4.5:1 for normal text, 3:1 for large text)
+- Don't rely solely on color to convey information
+- Support reduced motion preferences
+- Implement responsive design for zoom and text scaling
+- Test with various color vision deficiencies
+
+```tsx
+// ✅ Good: Respecting user motion preferences
+const slideIn = {
+  hidden: { opacity: 0, x: -100 },
+  visible: { opacity: 1, x: 0 },
+};
+
+export function AnimatedElement({ children }) {
+  const prefersReducedMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)"
+  ).matches;
+
+  const animation = prefersReducedMotion
+    ? { hidden: { opacity: 0 }, visible: { opacity: 1 } }
+    : slideIn;
+
+  return (
+    <motion.div initial="hidden" animate="visible" variants={animation}>
+      {children}
+    </motion.div>
+  );
+}
+```
+
+## Performance Optimization
+
+### Component Rendering
+
+- Use React.memo for expensive components to prevent unnecessary re-renders
+- Use useMemo for expensive calculations to avoid recomputation
+- Use useCallback for event handlers passed to child components
+- Avoid inline function definitions in JSX when they cause re-renders
+
+```tsx
+// ✅ Good: Memoized component
+export const ExpensiveComponent = React.memo(function ExpensiveComponent({
+  data,
+}: Props) {
+  // Complex rendering logic
+});
+
+// ✅ Good: Memoized calculation
+export function DataAnalytics({ rawData }: Props) {
+  const processedData = useMemo(() => {
+    return expensiveProcessing(rawData);
+  }, [rawData]);
+
+  return <Chart data={processedData} />;
+}
+```
+
+### State Management Performance
+
+- Keep state as close as possible to where it's used
+- Split complex state into smaller, focused pieces
+- Avoid unnecessarily deep component trees that cause re-render cascades
+- Consider state management solutions (e.g., Zustand, Jotai) for performance-critical applications
+
+```tsx
+// ❌ Bad: Passing state through many levels
+<App>
+  <Header>
+    <Navigation>
+      <UserMenu user={user} />
+    </Navigation>
+  </Header>
+  <Content>
+    <UserSettings user={user} />
+  </Content>
+</App>;
+
+// ✅ Good: Using context for deeply shared state
+const UserContext = createContext(null);
+
+function App() {
+  const user = useUser();
+
+  return (
+    <UserContext.Provider value={user}>
+      <Header />
+      <Content />
+    </UserContext.Provider>
+  );
+}
+
+function UserMenu() {
+  const user = useContext(UserContext);
+  // Render user menu
+}
+```
+
+### Virtualization for Long Lists
+
+- Use virtualization libraries (e.g., react-window, react-virtualized) for large lists
+- Only render items currently in the viewport
+- Implement infinite scrolling instead of loading all items at once
+- Use pagination for large datasets
+
+```tsx
+// ✅ Good: Virtualized list rendering
+import { FixedSizeList } from "react-window";
+
+export function VirtualizedList({ items }) {
+  const Row = ({ index, style }) => (
+    <div style={style}>
+      <ListItem item={items[index]} />
+    </div>
+  );
+
+  return (
+    <FixedSizeList
+      height={500}
+      width="100%"
+      itemCount={items.length}
+      itemSize={50}
+    >
+      {Row}
+    </FixedSizeList>
+  );
+}
+```
+
+### Lazy Loading and Code Splitting
+
+- Use React.lazy and Suspense for code splitting
+- Lazy load components not needed for initial render
+- Use dynamic imports for large libraries or rarely used features
+- Consider route-based code splitting for multi-page applications
+
+```tsx
+// ✅ Good: Lazy loading components
+const LazyDetailView = React.lazy(() => import("../components/DetailView"));
+
+export function Main() {
+  return (
+    <Suspense fallback={<Spinner />}>
+      <LazyDetailView />
+    </Suspense>
+  );
+}
+```
+
+### Image and Asset Optimization
+
+- Use responsive images with srcset and sizes
+- Implement lazy loading for below-the-fold images
+- Optimize image formats (WebP, AVIF) and sizes
+- Consider using the next/image component with Next.js
+
+```tsx
+// ✅ Good: Responsive and lazy loaded image
+export function OptimizedImage({ src, alt }) {
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      srcSet={`${src}-small.webp 480w, ${src}-medium.webp 800w, ${src}-large.webp 1200w`}
+      sizes="(max-width: 600px) 480px, (max-width: 1000px) 800px, 1200px"
+      width="800"
+      height="600"
+    />
+  );
+}
+```
+
+### Bundle Size Optimization
+
+- Use import cost to monitor bundle size
+- Implement tree-shaking by using ES modules
+- Be careful with large dependencies and consider alternatives
+- Use bundle analyzer to identify large dependencies
+- Remove unused code and dependencies regularly
+
+### Network Performance
+
+- Implement proper data fetching strategies (SWR, React Query)
+- Use caching for frequently accessed data
+- Batch network requests where possible
+- Optimize API responses to include only needed data
+- Implement pagination and infinite scroll for large datasets
+
+```tsx
+// ✅ Good: Efficient data fetching with SWR
+import useSWR from "swr";
+
+export function UserProfile({ userId }) {
+  const { data, error, isLoading } = useSWR(`/api/users/${userId}`, fetcher);
+
+  if (isLoading) return <Spinner />;
+  if (error) return <Error message="Failed to load user" />;
+
+  return <ProfileCard user={data} />;
+}
+```
+
+## Styling with Tailwind CSS
+
+### Tailwind Best Practices
+
+- Use utility classes for styling components
+- Use the `cn` utility function to conditionally apply classes
+- Follow a consistent order for utility classes
+- Use the `@apply` directive in CSS files sparingly
+
+```tsx
+// ✅ Good: Using cn utility with Tailwind classes
+import { cn } from "~/lib/utils";
+
+export function Badge({ variant, className, children }: BadgeProps) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
+        variant === "primary" && "bg-primary text-primary-foreground",
+        variant === "secondary" && "bg-secondary text-secondary-foreground",
+        className
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+```
+
+## Error Handling
+
+### Error Boundaries
+
+- Use error boundaries to catch and handle errors
+- Create specialized error UIs for different parts of the application
+- Implement graceful degradation for component failures
+
+```tsx
+// ✅ Good: Error boundary pattern
+export function UserProfile({ userId }: Props) {
+  return (
+    <ErrorBoundary fallback={<UserProfileError />}>
+      <UserProfileContent userId={userId} />
+    </ErrorBoundary>
+  );
+}
+```
+
+## Anti-Patterns to Avoid
+
+- Never use `any` type unless absolutely necessary
+- Avoid inline function definitions in JSX when possible
+- Don't use index as a key for mapped arrays
+- Avoid deeply nested component structures
+- Don't mutate props or state directly
+- Avoid premature optimization
+- Don't modify shadcn/ui component source code without documentation
+- Don't remove focus styles without providing alternatives
+
+```tsx
+// ❌ Bad: Using index as key
+{
+  items.map((item, index) => <ListItem key={index} item={item} />);
+}
+
+// ✅ Good: Using unique identifier as key
+{
+  items.map((item) => <ListItem key={item.id} item={item} />);
+}
+```
+
+## Accessibility
+
+- Always use semantic HTML elements
+- Include alt text for images
+- Ensure keyboard navigation works
+- Use ARIA attributes when necessary
+- Test with screen readers
+- Leverage shadcn/ui's accessible components which are built on Radix UI primitives
+
+```tsx
+// ✅ Good: Using accessible shadcn/ui components
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "~/components/ui/dialog";
+
+function AccessibleDialog() {
+  return (
+    <Dialog>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Accessible Title</DialogTitle>
+          <DialogDescription>
+            This dialog is keyboard navigable and screen reader friendly.
+          </DialogDescription>
+        </DialogHeader>
+        <div>Dialog content here</div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+## Testing
+
+- Write tests for all components
+- Test component behavior, not implementation details
+- Use React Testing Library for interaction tests
+- Test accessibility with jest-axe
+- Write tests for custom shadcn/ui component extensions
+- Test keyboard navigation and screen reader compatibility
+
+```tsx
+// ✅ Good: Testing accessibility
+import { render } from "@testing-library/react";
+import { axe } from "jest-axe";
+
+test("Button component has no accessibility violations", async () => {
+  const { container } = render(<Button>Click me</Button>);
+  const results = await axe(container);
+  expect(results).toHaveNoViolations();
+});
+```
+
+These guidelines ensure consistency, maintainability and high quality across our React component codebase.

@@ -1,8 +1,10 @@
+import type { PartialDeep } from "type-fest";
+
 import type { RouterOutputs } from "~/trpc/shared";
 
 type Report = RouterOutputs["reports"]["getGroupReports"]["reports"][number];
 
-export function formatReportToMarkdown(report: Report): string {
+export function formatReportToMarkdown(report: PartialDeep<Report>): string {
   const formatMoment = (moment: Report["report_moments"][number]): string[] => {
     const lines: string[] = [
       `**Moment:** ${moment.moment.title}`,
@@ -32,7 +34,7 @@ export function formatReportToMarkdown(report: Report): string {
     section: Report["report_sections"][number],
     index: number,
   ): string[] => {
-    const sectionMoments = report.report_moments
+    const sectionMoments = (report.report_moments ?? [])
       .filter((rm) => rm.report_section_id === section.id)
       .flatMap(formatMoment);
 
@@ -79,10 +81,10 @@ export function formatReportToMarkdown(report: Report): string {
     return `${signalText}\n  - Matched Against Tag: ${tags}`;
   };
 
-  const sections = report.report_sections.map(formatSection);
+  const sections = (report.report_sections ?? []).map(formatSection);
 
-  const goals = report.report_goals.map((goal, index) => {
-    const goalSignals = report.report_goal_signals
+  const goals = (report.report_goals ?? []).map((goal, index) => {
+    const goalSignals = (report.report_goal_signals ?? [])
       .filter((rgs) => rgs.goal_signal.goal_id === goal.id)
       .map(formatGoalSignal)
       .join("\n");
@@ -120,7 +122,7 @@ export function formatReportToMarkdown(report: Report): string {
 
   const footer = [
     "## Report Sections",
-    ...report.report_sections.map((section) => `### ${section.title}`),
+    ...(report.report_sections ?? []).map((section) => `### ${section.title}`),
   ];
 
   return [...header, ...goals.flat(), ...footer]

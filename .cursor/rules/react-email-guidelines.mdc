@@ -1,0 +1,276 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# React Email Best Practices and Guidelines
+
+This guide outlines the standardized patterns for creating and maintaining React Email components in our codebase. React Email differs significantly from regular React components due to the constraints and peculiarities of email clients.
+
+## Key Differences from React Components
+
+Unlike standard React components (see [react-component-guidelines.mdc](mdc:.cursor/rules/react-component-guidelines.mdc)), React Email components:
+
+- Must be compatible with archaic email clients and their rendering engines
+- Are ultimately converted to HTML tables for layout stability
+- Cannot use many modern CSS features
+- Have limited or no JavaScript execution capability
+- Must follow strict rules for cross-client compatibility
+- Require special handling for responsive designs
+- Need rigorous testing across multiple email clients
+
+## Component Structure and Organization
+
+### Naming Conventions
+
+- Use PascalCase for email component names (`EmailConfirmation`, not `emailConfirmation`)
+- Use descriptive names that indicate the email type or purpose
+- Suffix email-specific templates with `Email` (e.g., `WelcomeEmail`, `OrderConfirmationEmail`)
+- Prefix email layout components with `Email` (e.g., `EmailSection`, `EmailHeader`)
+
+### File Structure
+
+- One email template per file
+- Organize emails by purpose or user journey
+- Create reusable email components for common elements (headers, footers, etc.)
+- Use an index file to export all email templates
+
+## Email-Specific Components
+
+### Using React Email Components
+
+- Always wrap emails with the `<Html>` component
+- Use `<Head>` for defining metadata and styles
+- Use `<Container>` for the main layout wrapper
+- Use semantic components like `<Text>`, `<Button>`, `<Section>` instead of raw HTML
+
+```tsx
+// ✅ Good: Proper React Email structure
+import { Html, Head, Container, Text, Button } from "@react-email/components";
+
+export const WelcomeEmail = ({ username }: { username: string }) => {
+  return (
+    <Html>
+      <Head />
+      <Container>
+        <Text>Hello {username}, welcome to our platform!</Text>
+        <Button href="https://example.com">Get Started</Button>
+      </Container>
+    </Html>
+  );
+};
+```
+
+### Layout Components
+
+- Use `<Section>`, `<Row>`, and `<Column>` for table-based layouts
+- Avoid custom CSS grid or flexbox (poor client support)
+- Set explicit widths on containers and elements
+- Use pixel values instead of relative units (rem/em have inconsistent support)
+
+```tsx
+// ✅ Good: Table-based layout with explicit dimensions
+import { Section, Row, Column } from "@react-email/components";
+
+<Section>
+  <Row>
+    <Column width="250px">Left Column</Column>
+    <Column width="250px">Right Column</Column>
+  </Row>
+</Section>;
+```
+
+## Styling for Email Clients
+
+### CSS Limitations
+
+- Use inline styles rather than external stylesheets
+- Avoid CSS features with limited support:
+  - No CSS Grid or Flexbox
+  - Limited support for positioning
+  - No CSS variables
+  - Limited media query support
+- Use pixel units (`px`) instead of relative units (`rem`, `em`)
+- Use basic web-safe fonts or specify font fallbacks
+
+### Responsive Design
+
+- Use simple mobile-responsive techniques
+- Set max-width for containers
+- Use percentage-based widths where appropriate
+- Consider using the `<Tailwind>` component for styling if needed, but be aware of limitations
+
+```tsx
+// ✅ Good: Email-safe responsive approach
+<Container style={{ maxWidth: "600px", width: "100%" }}>
+  <Section style={{ padding: "20px" }}>{/* Content here */}</Section>
+</Container>
+```
+
+### Using Tailwind with React Email
+
+- Wrap email content with the `<Tailwind>` component
+- Use a modified Tailwind config that uses pixels instead of relative units
+- Limit usage to widely supported CSS properties
+- Be aware that some Tailwind features may not work in all email clients
+- ALWAYS use the email-specific [tailwind.config.ts](mdc:src/email/tailwind.config.ts)
+
+```tsx
+// ✅ Good: Tailwind with modified config
+import { Tailwind, Button } from "@react-email/components";
+
+const EmailTemplate = () => {
+  return (
+    <Tailwind
+      config={{
+        theme: {
+          extend: {
+            spacing: {
+              // Using px instead of rem
+              1: "4px",
+              2: "8px",
+              4: "16px",
+              // etc.
+            },
+          },
+        },
+      }}
+    >
+      <Button className="bg-blue-500 px-4 py-2 font-medium text-white">
+        Click me
+      </Button>
+    </Tailwind>
+  );
+};
+```
+
+## Images and Content
+
+### Images
+
+- Always include alt text for images
+- Specify width and height attributes to prevent layout shifts
+- Use absolute URLs for images (not relative paths)
+- Keep image file sizes small
+- Consider using hosted images instead of embedded ones
+
+```tsx
+// ✅ Good: Email-safe image implementation
+import { Img } from "@react-email/components";
+
+<Img
+  src="https://example.com/images/logo.png"
+  width="200"
+  height="50"
+  alt="Company Logo"
+/>;
+```
+
+### Content Best Practices
+
+- Keep email content concise
+- Use clear and descriptive copy
+- Include plain-text alternative content
+- Use proper text hierarchy with headings
+- Include preview text for email clients that support it
+
+```tsx
+// ✅ Good: Using preview text
+import { Html, Head, Preview } from "@react-email/components";
+
+<Html>
+  <Head />
+  <Preview>Your order has been confirmed! Order #12345</Preview>
+  {/* Email content */}
+</Html>;
+```
+
+## Email Client Compatibility
+
+### Testing Across Clients
+
+- Test emails in multiple clients:
+  - Gmail
+  - Apple Mail
+  - Outlook (desktop and web)
+  - Yahoo! Mail
+  - Mobile clients (iOS Mail, Gmail app)
+- Consider using email testing services
+- Test responsive behavior across different screen sizes
+
+### Common Client Issues
+
+- Outlook: Limited CSS support, no background images in some versions
+- Gmail: Clips emails larger than 102KB, removes some CSS
+- Web clients: May have image blocking enabled by default
+- Mobile: Different rendering across iOS and Android
+
+### Fallback Strategies
+
+- Provide fallbacks for unsupported features
+- Use conditional HTML comments for Outlook-specific fixes
+- Design for progressive enhancement
+- Test with images disabled
+
+## Rendering and Sending
+
+### Rendering to HTML
+
+- Use the `render` utility to convert React components to HTML
+- Test the rendered HTML in email testing tools
+- Validate HTML for email compatibility
+
+```tsx
+// ✅ Good: Proper rendering approach
+import { render } from "@react-email/render";
+import { WelcomeEmail } from "./emails/WelcomeEmail";
+
+const html = render(<WelcomeEmail username="John" />);
+```
+
+### Integration with Email Providers
+
+- Integrate with email service providers:
+  - Resend
+  - Nodemailer
+  - SendGrid
+  - Postmark
+  - AWS SES
+  - MailerSend
+- Use typed API clients for email services
+- Implement proper error handling for email sending
+
+## Accessibility in Emails
+
+- Use semantic HTML elements
+- Provide alt text for all images
+- Maintain sufficient color contrast
+- Create logical reading order for screen readers
+- Test with email accessibility tools
+
+## Anti-Patterns to Avoid
+
+- Avoid complex layouts that will break in email clients
+- Don't rely on JavaScript functionality (won't work in most clients)
+- Don't use external stylesheets only (use inline styles)
+- Avoid using background images without fallbacks
+- Don't use web fonts without fallbacks
+- Never send emails without testing across clients
+- Avoid large unbroken blocks of text
+- Don't use relative (em/rem) units exclusively
+
+## Email Testing Checklist
+
+Before sending any email:
+
+- Verify rendering in major email clients
+- Check responsive behavior on mobile devices
+- Ensure all links are working correctly
+- Validate that images display properly and have alt text
+- Confirm personalization works correctly
+- Test with different content lengths
+- Check plain-text version
+- Scan for spam triggers
+- Test with images disabled
+
+These guidelines ensure consistent, compatible, and effective React Email templates across various email clients.
