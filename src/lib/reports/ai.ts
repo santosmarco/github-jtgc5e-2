@@ -130,154 +130,18 @@ export async function generateReportSections(
     .select(
       `
         *,
-        skill:skills(
-          *,
-          goals(*),
-          scales:skill_scales(*),
-          statuses:group_report_processing_status(*),
-          goal_templates:goal_templates(*)
-        ),
+        skill:skills(*, goal_templates(*), goals(*), reports(*, report_goals(*), report_moments!inner(*, moment:moments!inner(*, subtags:moment_subtags(*)), report_goal_signal:report_goal_signals!inner(*))), statuses:group_report_processing_status(*), scales:skill_scales(*)),
         report_sections(*),
-        report_goals(
-          *,
-          goal:goals!inner(
-            *,
-            signals:goal_signals!inner(*)
-          )
-        ),
-        report_goal_signals(
-          *,
-          goal_signal:goal_signals!inner(*)
-        ),
-        report_moments(
-          *,
-          moment:moments!inner(
-            *,
-            subtags:moment_subtags(*),
-            meeting:meetings!inner(
-              video_api_id,
-              name,
-              summary,
-              clean_vtt_file,
-              date,
-              profile_id,
-              topics_discussed:meeting_topics(
-                id,
-                title,
-                summary,
-                vtt_start_segment_id,
-                vtt_end_segment_id,
-                server_deleted_at,
-                created_at
-              ),
-              action_items:meeting_action_items(
-                id,
-                text,
-                vtt_start_segment_id,
-                vtt_end_segment_id,
-                due_date,
-                completed_at,
-                deleted_at,
-                server_deleted_at,
-                created_at,
-                assignees:meeting_action_item_assignees(
-                  assignee:entities(
-                    id,
-                    name,
-                    type,
-                    attributes,
-                    is_test
-                  )
-                )
-              ),
-              topics:meeting_topics_v2(
-                id,
-                index,
-                title,
-                summary,
-                start_segment_id,
-                end_segment_id,
-                created_at,
-                latest,
-                events:meeting_topic_events_v2(
-                  id,
-                  event,
-                  timestamp,
-                  latest
-                ),
-                entities:meeting_entities_v2(
-                  id,
-                  name,
-                  type,
-                  description,
-                  latest,
-                  observations:meeting_entity_observations_v2(
-                    id,
-                    observation,
-                    latest
-                  )
-                ),
-                relationships:meeting_entity_relationships_v2(
-                  id,
-                  subject_entity_name,
-                  object_entity_name,
-                  relationship_type,
-                  latest,
-                  observations:meeting_entity_relationship_observations_v2(
-                    id,
-                    observation,
-                    latest
-                  )
-                ),
-                observations:meeting_observations_v2(
-                  id,
-                  observation,
-                  latest
-                )
-              )
-            )
-          )
-        ),
-        profile:profiles(
-          nickname,
-          development_themes:profile_development_themes(
-            id,
-            title,
-            description,
-            icon,
-            key_points,
-            is_enabled,
-            order,
-            parent_theme
-          )
-        )
+        report_goals(*, goal:goals!inner(*, signals:goal_signals(*))),
+        report_goal_signals(*, goal_signal:goal_signals!inner(*)),
+        report_moments!inner(*, moment:moments!inner(*, subtags:moment_subtags(*)), report_goal_signal:report_goal_signals!inner(*)),
+        report_comments(*, user:profiles!inner(*)),
+        profile:profiles(nickname, development_themes:profile_development_themes(*))
       `,
     )
     .eq("id", reportId)
     .eq("report_moments.is_visible", true)
     .is("report_moments.omission_reason", null)
-    .is(
-      "report_moments.moment.meeting.topics_discussed.server_deleted_at",
-      null,
-    )
-    .is("report_moments.moment.meeting.action_items.server_deleted_at", null)
-    .eq(
-      "report_moments.moment.meeting.action_items.assignees.assignee.is_test",
-      false,
-    )
-    .eq("report_moments.moment.meeting.topics.latest", true)
-    .eq("report_moments.moment.meeting.topics.events.latest", true)
-    .eq("report_moments.moment.meeting.topics.entities.latest", true)
-    .eq(
-      "report_moments.moment.meeting.topics.entities.observations.latest",
-      true,
-    )
-    .eq("report_moments.moment.meeting.topics.relationships.latest", true)
-    .eq(
-      "report_moments.moment.meeting.topics.relationships.observations.latest",
-      true,
-    )
-    .eq("report_moments.moment.meeting.topics.observations.latest", true)
     .eq("report_moments.moment.latest", true)
     .eq("report_moments.moment.relevant", true)
     .eq("profile.development_themes.is_enabled", true)
@@ -288,9 +152,9 @@ export async function generateReportSections(
     throw reportError;
   }
 
-  const developmentThemesMarkdown = formatDevelopmentThemesToMarkdown(
-    report.profile.development_themes,
-  );
+  const developmentThemesMarkdown =
+    report.profile?.development_themes &&
+    formatDevelopmentThemesToMarkdown(report.profile.development_themes);
 
   // Generate the report sections using AI
   const { object } = await generateObject({
@@ -319,7 +183,7 @@ export async function generateReportSections(
       
       The leader has the following DEVELOPMENT THEMES that should be prioritized in your analysis:
       <development_themes>
-      ${developmentThemesMarkdown}
+      ${developmentThemesMarkdown ?? "No development themes available."}
       </development_themes>
       
       INSTRUCTIONS FOR STRENGTH SECTIONS:

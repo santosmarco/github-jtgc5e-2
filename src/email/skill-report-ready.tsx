@@ -224,9 +224,7 @@ export function SkillReportReadyEmail({
               )}
 
               {/* Teaser Section - Manager only */}
-              {isManager && (
-                <ReportTeaserSection teaser={teaser} reportUrl={reportUrl} />
-              )}
+              {isManager && <ReportTeaserSection teaser={teaser} />}
 
               {/* Areas of Strength and Growth Sections - Founder only */}
               {isFounder && generatedSections.growthSections.length > 0 && (
