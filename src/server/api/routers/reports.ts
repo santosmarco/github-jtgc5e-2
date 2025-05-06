@@ -1,16 +1,17 @@
 import { openai } from "@ai-sdk/openai";
 import { TRPCError } from "@trpc/server";
 import { generateObject, generateText } from "ai";
+import dayjs from "dayjs";
 import _ from "lodash";
 import dedent from "ts-dedent";
 import { z } from "zod";
 
 import { formatReportToMarkdown } from "~/lib/reports/formatting";
+import { ReportsService } from "~/lib/reports/queries";
 import { ReportPersonality } from "~/lib/reports/schemas";
 import { createClient } from "~/lib/supabase/server";
 
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
-import dayjs from "dayjs";
 
 export const reportsRouter = createTRPCRouter({
   getOne: publicProcedure
@@ -484,274 +485,30 @@ export const reportsRouter = createTRPCRouter({
       return { success: true };
     }),
 
-  getAdjacentReports: publicProcedure
+  getReportsTimelineDataForUser: publicProcedure
     .input(
       z.object({
-        groupId: z.string(),
+        userId: z.string(),
+        skillId: z.string(),
       }),
     )
     .query(async ({ input }) => {
       const supabase = await createClient();
+      const reportsService = new ReportsService(supabase);
 
-      // Get current group
-      const { data: currentGroup, error: currentGroupError } = await supabase
-        .from("group_report_processing_status")
-        .select("*, skill:skills(id, title)")
-        .eq("id", input.groupId)
-        .single();
-
-      if (currentGroupError) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: currentGroupError.message,
-          cause: currentGroupError,
-        });
-      }
-
-      if (!currentGroup) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Group report not found",
-        });
-      }
-
-      // Get current report's date range by first getting the report_id from report_processing_status
-      const { data: reportProcessingStatus, error: reportProcessingError } =
-        await supabase
-          .from("report_processing_status")
-          .select("report_id")
-          .eq("group_processing_status_id", currentGroup.id)
-          .limit(1)
-          .maybeSingle();
-
-      if (reportProcessingError) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: reportProcessingError.message,
-          cause: reportProcessingError,
-        });
-      }
-
-      // Now get the report details using the report_id
-      const { data: currentReport, error: currentReportError } = await supabase
-        .from("reports")
-        .select("start_date, end_date")
-        .eq("id", reportProcessingStatus?.report_id ?? "")
-        .limit(1)
-        .maybeSingle();
-
-      if (currentReportError) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: currentReportError.message,
-          cause: currentReportError,
-        });
-      }
-
-      // Safely handle the skill_id, profile_id, and date range which might be null
-      const skillId = currentGroup.skill_id;
-      const profileId = currentGroup.profile_id;
-      const currentStartDate = currentReport?.start_date;
-      const currentEndDate = currentReport?.end_date;
-
-      if (!skillId || !profileId || !currentStartDate || !currentEndDate) {
-        return {
-          current: currentGroup,
-          previous: null,
-          next: null,
-        };
-      }
-
-      // Create a period key for the current report
-      const currentPeriodKey = `${dayjs(currentStartDate).format("YYYY-MM-DD")}-${dayjs(currentEndDate).format("YYYY-MM-DD")}`;
-
-      // Get all completed group reports for this user and skill
-      const { data: allGroups, error: allGroupsError } = await supabase
-        .from("group_report_processing_status")
-        .select("id, created_at, skill:skills(id, title)")
-        .eq("profile_id", profileId)
-        .eq("skill_id", skillId)
-        .eq("status", "completed")
-        .order("created_at", { ascending: false });
-
-      if (allGroupsError) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: allGroupsError.message,
-          cause: allGroupsError,
-        });
-      }
-
-      if (!allGroups?.length) {
-        return {
-          current: currentGroup,
-          previous: null,
-          next: null,
-        };
-      }
-
-      // Get all group IDs
-      const groupIds = allGroups.map((group) => group.id);
-
-      // First get the report_ids from report_processing_status
-      const {
-        data: reportProcessingStatuses,
-        error: reportProcessingStatusesError,
-      } = await supabase
-        .from("report_processing_status")
-        .select("report_id, group_processing_status_id")
-        .in("group_processing_status_id", groupIds);
-
-      if (reportProcessingStatusesError) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: reportProcessingStatusesError.message,
-          cause: reportProcessingStatusesError,
-        });
-      }
-
-      // Create a map of group_id to report_id
-      const groupToReportMap = new Map<string, string>();
-      if (reportProcessingStatuses) {
-        for (const status of reportProcessingStatuses) {
-          if (status.report_id && status.group_processing_status_id) {
-            groupToReportMap.set(
-              status.group_processing_status_id,
-              status.report_id,
-            );
-          }
-        }
-      }
-
-      // Get report IDs
-      const reportIds = reportProcessingStatuses
-        ?.map((status) => status.report_id)
-        .filter(Boolean) as string[];
-
-      // Fetch all report dates
-      const { data: reportDates, error: reportDatesError } = await supabase
-        .from("reports")
-        .select("id, start_date, end_date")
-        .in("id", reportIds || []);
-
-      if (reportDatesError) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: reportDatesError.message,
-          cause: reportDatesError,
-        });
-      }
-
-      // Create a map for fast lookup
-      const reportDateMap = new Map();
-      if (reportDates) {
-        for (const report of reportDates) {
-          const groupId = Array.from(groupToReportMap.entries()).find(
-            ([, reportId]) => reportId === report.id,
-          )?.[0];
-
-          if (report.start_date && report.end_date && groupId) {
-            reportDateMap.set(groupId, {
-              start_date: report.start_date,
-              end_date: report.end_date,
-              periodKey: `${dayjs(report.start_date).format("YYYY-MM-DD")}-${dayjs(report.end_date).format("YYYY-MM-DD")}`,
-            });
-          }
-        }
-      }
-
-      // Add date information to groups
-      const groupsWithPeriods = allGroups
-        .map((group) => {
-          const reportDate = reportDateMap.get(group.id);
-          if (!reportDate) return null;
-
-          return {
-            ...group,
-            start_date: reportDate.start_date,
-            end_date: reportDate.end_date,
-            periodKey: reportDate.periodKey,
-          };
-        })
-        .filter(Boolean) as Array<
-        (typeof allGroups)[0] & {
-          start_date: string;
-          end_date: string;
-          periodKey: string;
-        }
-      >;
-
-      // Find unique periods and keep the most recent report for each period
-      const uniquePeriodGroups = new Map();
-
-      // Group by period key and keep the most recent one for each period
-      for (const group of groupsWithPeriods) {
-        const existingGroup = uniquePeriodGroups.get(group.periodKey);
-
-        // If this period doesn't exist yet or this group is more recent
-        if (
-          !existingGroup ||
-          new Date(group.created_at) > new Date(existingGroup.created_at)
-        ) {
-          uniquePeriodGroups.set(group.periodKey, group);
-        }
-      }
-
-      // Convert to array and sort by date (newest to oldest)
-      const sortedUniquePeriods = Array.from(uniquePeriodGroups.values()).sort(
-        (a, b) => {
-          // Sort by start_date (newest to oldest)
-          return (
-            dayjs(b.start_date).startOf("day").valueOf() -
-            dayjs(a.start_date).startOf("day").valueOf()
-          );
-        },
+      const scores = await reportsService.calculateHistoricalSkillScoresBatched(
+        input.userId,
+        input.skillId,
       );
-
-      // Find the index of the current period
-      const currentPeriodIndex = sortedUniquePeriods.findIndex(
-        (group) => group.periodKey === currentPeriodKey,
-      );
-
-      if (currentPeriodIndex === -1) {
-        return {
-          current: currentGroup,
-          previous: null,
-          next: null,
-        };
-      }
-
-      // Get previous and next period groups
-      const previousGroup =
-        currentPeriodIndex < sortedUniquePeriods.length - 1
-          ? sortedUniquePeriods[currentPeriodIndex + 1]
-          : null;
-
-      const nextGroup =
-        currentPeriodIndex > 0
-          ? sortedUniquePeriods[currentPeriodIndex - 1]
-          : null;
 
       return {
-        current: currentGroup,
-        previous: previousGroup
-          ? {
-              id: previousGroup.id,
-              created_at: previousGroup.created_at,
-              skill: previousGroup.skill,
-              start_date: previousGroup.start_date,
-              end_date: previousGroup.end_date,
-            }
-          : null,
-        next: nextGroup
-          ? {
-              id: nextGroup.id,
-              created_at: nextGroup.created_at,
-              skill: nextGroup.skill,
-              start_date: nextGroup.start_date,
-              end_date: nextGroup.end_date,
-            }
-          : null,
+        timelineData: _.sortBy(scores, (s) => dayjs(s.endDate).unix()).map(
+          (entry) => ({
+            entry,
+            x: dayjs(entry.endDate).format("YYYY-MM-DD"),
+            y: entry.score,
+          }),
+        ),
       };
     }),
 });

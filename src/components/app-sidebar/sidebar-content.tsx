@@ -15,6 +15,7 @@ import {
   TextQuote,
   TrendingUpIcon,
   User,
+  UserIcon,
   Users,
   UsersIcon,
   Video,
@@ -64,6 +65,8 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
   const { data: tasks } = api.onboarding.getTaskList.useQuery({
     profileId: selectedProfile?.id ?? user.id,
   });
+
+  const utils = api.useUtils();
 
   const { data: events, isLoading: isLoadingEvents } =
     api.calendar.getLiveEvents.useQuery(
@@ -127,6 +130,7 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
 
   const handleProfileChange = async (profile: Tables<"profiles">) => {
     setSelectedProfile(profile);
+    void utils.profile.getProfileEnhancements.invalidate();
   };
 
   const handleItemClick =
@@ -526,6 +530,12 @@ export function SidebarContent({ user, onNavClick }: SidebarContentProps) {
                     <DropdownMenuSeparator />
                   </>
                 )}
+                <Link href="/profile" onClick={handleItemClick("/profile")}>
+                  <DropdownMenuItem className="cursor-pointer gap-2">
+                    <UserIcon className="h-4 w-4" />
+                    My Profile
+                  </DropdownMenuItem>
+                </Link>
                 <Link
                   href="/integrations"
                   onClick={handleItemClick("/integrations")}

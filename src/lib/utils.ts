@@ -3,6 +3,8 @@ import { clsx } from "clsx";
 import type { Falsey } from "lodash";
 import { twMerge } from "tailwind-merge";
 
+import { env } from "~/env";
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -60,6 +62,11 @@ export async function fetchWithTimeout(
     ...fetchOptions
   } = options;
 
+  // Skip timeout and retries in development environment
+  if (env.NODE_ENV === "development") {
+    return fetch(url, fetchOptions);
+  }
+
   return exponentialBackoff(
     async () => {
       const controller = new AbortController();
@@ -96,4 +103,11 @@ export function formatDate(dateString: string): string {
   };
 
   return new Date(dateString).toLocaleDateString(undefined, options);
+}
+
+export function isKeyOf<T extends object>(
+  key: string,
+  obj: T,
+): key is Extract<keyof T, string> {
+  return key in obj;
 }

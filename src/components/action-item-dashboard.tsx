@@ -8,6 +8,10 @@ import { useMemo, useState } from "react";
 import { ActionItemFilters } from "~/components/action-item-filters";
 import { ActionItemForm } from "~/components/action-item-form";
 import { ActionItemList } from "~/components/action-item-list";
+import {
+  ActionItemSort,
+  type SortOptions,
+} from "~/components/action-item-sort";
 import { SpecialViews } from "~/components/special-views";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -90,6 +94,10 @@ export function ActionItemDashboard() {
     meetings: "all",
     status: "all",
   });
+  const [sortOptions, setSortOptions] = useState<SortOptions>({
+    field: "dueDate",
+    direction: "asc",
+  });
   const [optimisticDeletes, setOptimisticDeletes] = useState(new Set<string>());
   const [optimisticCompletions, setOptimisticCompletions] = useState(
     new Map<string, boolean>(),
@@ -121,12 +129,52 @@ export function ActionItemDashboard() {
           : item.completed_at,
       }));
 
-    return items.sort((a, b) => {
+    // First sort by completion status
+    const sortedItems = [...items].sort((a, b) => {
       if (a.completed_at === null && b.completed_at !== null) return -1;
       if (a.completed_at !== null && b.completed_at === null) return 1;
-      return 0;
+
+      // Then apply the selected sort
+      switch (sortOptions.field) {
+        case "dueDate":
+          // Handle null due dates (place them at the end for asc, beginning for desc)
+          if (!a.due_date && !b.due_date) return 0;
+          if (!a.due_date) return sortOptions.direction === "asc" ? 1 : -1;
+          if (!b.due_date) return sortOptions.direction === "asc" ? -1 : 1;
+          return sortOptions.direction === "asc"
+            ? dayjs(a.due_date).diff(dayjs(b.due_date))
+            : dayjs(b.due_date).diff(dayjs(a.due_date));
+
+        case "createdAt":
+          return sortOptions.direction === "asc"
+            ? dayjs(a.created_at).diff(dayjs(b.created_at))
+            : dayjs(b.created_at).diff(dayjs(a.created_at));
+
+        case "title":
+          return sortOptions.direction === "asc"
+            ? a.text.localeCompare(b.text)
+            : b.text.localeCompare(a.text);
+
+        case "meetingName": {
+          const aMeeting = a.meeting?.name || "";
+          const bMeeting = b.meeting?.name || "";
+          return sortOptions.direction === "asc"
+            ? aMeeting.localeCompare(bMeeting)
+            : bMeeting.localeCompare(aMeeting);
+        }
+
+        default:
+          return 0;
+      }
     });
-  }, [data?.actionItems, optimisticDeletes, optimisticCompletions]);
+
+    return sortedItems;
+  }, [
+    data?.actionItems,
+    optimisticDeletes,
+    optimisticCompletions,
+    sortOptions,
+  ]);
 
   const filteredItems = processedItems.filter((item) => {
     const personMatch =
@@ -168,7 +216,7 @@ export function ActionItemDashboard() {
 
       <motion.div
         variants={itemVariants}
-        className="relative mb-8 flex flex-col items-start justify-between gap-4 md:flex-row md:items-start"
+        className="relative mb-8 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center"
       >
         <div className="space-y-1">
           <h1 className="text-xl font-bold tracking-tight text-foreground">
@@ -178,10 +226,16 @@ export function ActionItemDashboard() {
             Track and manage your meeting action items
           </p>
         </div>
-        <Button onClick={() => setShowForm((curr) => !curr)} size="sm">
-          <PlusCircle className="size-3.5" />
-          New Action Item
-        </Button>
+        <div className="flex items-center gap-3">
+          <ActionItemSort
+            sortOptions={sortOptions}
+            onSortChange={setSortOptions}
+          />
+          <Button onClick={() => setShowForm((curr) => !curr)} size="sm">
+            <PlusCircle className="size-3.5" />
+            New Action Item
+          </Button>
+        </div>
       </motion.div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">

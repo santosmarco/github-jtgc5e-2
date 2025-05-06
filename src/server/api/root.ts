@@ -6,12 +6,14 @@ import { authRouter } from "./routers/auth";
 import { chatsRouter } from "./routers/chats";
 import { clientsRouter } from "./routers/clients";
 import { coachingFrameworksRouter } from "./routers/coaching-frameworks";
+import { entitiesRouter } from "./routers/entities";
 import { feedbacksRouter } from "./routers/feedbacks";
 import { goalsRouter } from "./routers/goals";
 import { meetingTopicsRouter } from "./routers/meeting-topics";
 import { meetingsRouter } from "./routers/meetings";
 import { momentsRouter } from "./routers/moments";
 import { onboardingRouter } from "./routers/onboarding";
+import { profileRouter } from "./routers/profile";
 import { reportsRouter } from "./routers/reports";
 import { sessionAnnotationsRouter } from "./routers/session-annotations";
 import { sessionsRouter } from "./routers/sessions";
@@ -36,12 +38,14 @@ export const appRouter = createTRPCRouter({
   calendar: calendarRouter,
   transcripts: transcriptsRouter,
   feedbacks: feedbacksRouter,
+  profile: profileRouter,
   reports: reportsRouter,
   actionItems: actionItemsRouter,
   meetingTopics: meetingTopicsRouter,
   skills: skillsRouter,
   sessions: sessionsRouter,
   sessionAnnotations: sessionAnnotationsRouter,
+  entities: entitiesRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -48,8 +48,9 @@ export const settingsRouter = createTRPCRouter({
           "should_not_join_owned_by_others_meetings",
           "should_not_join_coaching_sessions",
           "has_ai_coaching_enabled",
+          "report_frequency_in_days",
         ]) satisfies z.ZodType<keyof Tables<"user_settings">>,
-        value: z.union([z.string(), z.boolean()]),
+        value: z.union([z.string(), z.number(), z.boolean()]),
       }),
     )
     .mutation(async ({ input }) => {

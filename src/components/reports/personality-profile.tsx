@@ -1,5 +1,6 @@
 "use client";
 
+import type { Variants } from "framer-motion";
 import { motion } from "framer-motion";
 import type { LucideProps } from "lucide-react";
 import { Sparkles } from "lucide-react";
@@ -28,20 +29,7 @@ const cardVariants = {
       staggerChildren: 0.08,
     },
   },
-};
-
-const badgeVariants = {
-  hidden: { opacity: 0, y: 10 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: {
-      delay: i * 0.05 + 0.3,
-      duration: 0.5,
-      ease: [0.23, 1, 0.32, 1],
-    },
-  }),
-};
+} satisfies Variants;
 
 const fadeIn = {
   hidden: { opacity: 0, y: 15 },
@@ -50,7 +38,7 @@ const fadeIn = {
     y: 0,
     transition: { duration: 0.6, ease: [0.23, 1, 0.32, 1] },
   },
-};
+} satisfies Variants;
 
 export function PersonalityProfile({
   report,
@@ -164,8 +152,8 @@ export function PersonalityProfile({
           </motion.div>
         </motion.div>
 
-        <div className="flex flex-col pt-8 sm:pt-4">
-          {/* Title with animated underline */}
+        <div className="flex flex-col pt-8">
+          {/* Title */}
           <div className="relative mb-2.5">
             <motion.h2
               variants={fadeIn}
@@ -183,7 +171,7 @@ export function PersonalityProfile({
             />
           </div>
 
-          {/* Description with improved typography */}
+          {/* Description */}
           <motion.p
             variants={fadeIn}
             initial="hidden"
@@ -193,27 +181,6 @@ export function PersonalityProfile({
           >
             {report.personality_description}
           </motion.p>
-
-          {/* Badges with improved styling */}
-          {/* {report.personality_badges &&
-            report.personality_badges.length > 0 && (
-              <motion.div
-                variants={fadeIn}
-                className="mt-3 flex flex-wrap gap-1"
-              >
-                {report.personality_badges.map((badge, index) => (
-                  <motion.span
-                    key={badge}
-                    custom={index}
-                    variants={badgeVariants}
-                    whileHover={{ scale: 1.05, y: -2 }}
-                    className="rounded-full bg-gradient-to-r from-primary/20 to-primary/10 px-2 py-0.5 text-xs font-medium text-primary shadow-sm backdrop-blur-sm"
-                  >
-                    {badge}
-                  </motion.span>
-                ))}
-              </motion.div>
-            )} */}
         </div>
       </div>
     </motion.section>

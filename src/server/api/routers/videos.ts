@@ -51,7 +51,11 @@ function determineVideoTags(
     if (inputUserId) {
       const isPatient =
         user.patients.some((p) => p.id === inputUserId) ?? false;
-      return isPatient ? [inputUserId] : [];
+      return isPatient
+        ? [inputUserId]
+        : inputUserId === user.id
+          ? [...user.patients.map((p) => p.id), user.id]
+          : [];
     }
 
     return [user.id];
@@ -268,13 +272,38 @@ export const videosRouter = createTRPCRouter({
         // Determine which tags to filter by based on user role and input
         const tags = determineVideoTags(user, options?.user_id);
 
-        const videos = await listVideos({
-          pageSize: limit,
-          currentPage: cursor ? Math.floor(cursor / limit) + 1 : 1,
-          sortBy: "createdAt",
-          sortOrder: "desc",
-          tags,
-        });
+        const videos = (
+          await Promise.all(
+            tags
+              ? tags.length > 0
+                ? tags.map((t) =>
+                    listVideos({
+                      pageSize: limit,
+                      currentPage: cursor ? Math.floor(cursor / limit) + 1 : 1,
+                      sortBy: "createdAt",
+                      sortOrder: "desc",
+                      tags: [t],
+                    }),
+                  )
+                : [
+                    listVideos({
+                      pageSize: limit,
+                      currentPage: cursor ? Math.floor(cursor / limit) + 1 : 1,
+                      sortBy: "createdAt",
+                      sortOrder: "desc",
+                      tags: [],
+                    }),
+                  ]
+              : [
+                  listVideos({
+                    pageSize: limit,
+                    currentPage: cursor ? Math.floor(cursor / limit) + 1 : 1,
+                    sortBy: "createdAt",
+                    sortOrder: "desc",
+                  }),
+                ],
+          )
+        ).flat();
 
         const enrichedVideos = await Promise.all(
           videos.map(async (video) =>

@@ -531,141 +531,174 @@ export type Database = {
           },
         ]
       }
-      entity_events: {
+      entity_profile_entities: {
         Row: {
-          attributes: Json | null
-          embedding: string | null
-          end_time: string
-          event_text: string
-          event_type: string
-          id: string
-          meeting_id: string
-          start_time: string
+          entity_id: string
+          entity_profile_id: string
         }
         Insert: {
-          attributes?: Json | null
-          embedding?: string | null
-          end_time: string
-          event_text: string
-          event_type: string
-          id?: string
-          meeting_id: string
-          start_time: string
+          entity_id: string
+          entity_profile_id: string
         }
         Update: {
-          attributes?: Json | null
-          embedding?: string | null
-          end_time?: string
-          event_text?: string
-          event_type?: string
-          id?: string
-          meeting_id?: string
-          start_time?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "entity_events_meeting_id_fkey"
-            columns: ["meeting_id"]
-            isOneToOne: false
-            referencedRelation: "meeting_processing_status_view"
-            referencedColumns: ["meeting_video_api_id"]
-          },
-          {
-            foreignKeyName: "entity_events_meeting_id_fkey"
-            columns: ["meeting_id"]
-            isOneToOne: false
-            referencedRelation: "meetings"
-            referencedColumns: ["video_api_id"]
-          },
-          {
-            foreignKeyName: "entity_events_meeting_id_fkey"
-            columns: ["meeting_id"]
-            isOneToOne: false
-            referencedRelation: "meetings_with_profile"
-            referencedColumns: ["video_api_id"]
-          },
-          {
-            foreignKeyName: "entity_events_meeting_id_fkey"
-            columns: ["meeting_id"]
-            isOneToOne: false
-            referencedRelation: "upcoming_meetings_with_action_items"
-            referencedColumns: ["meeting_id"]
-          },
-        ]
-      }
-      entity_observations: {
-        Row: {
-          created_at: string
-          entity_id: string
-          id: string
-          is_test: boolean
-          text: string
-        }
-        Insert: {
-          created_at?: string
-          entity_id: string
-          id?: string
-          is_test?: boolean
-          text: string
-        }
-        Update: {
-          created_at?: string
           entity_id?: string
-          id?: string
-          is_test?: boolean
-          text?: string
+          entity_profile_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "entity_observations_entity_id_fkey"
+            foreignKeyName: "entity_profile_entities_entity_id_fkey"
             columns: ["entity_id"]
             isOneToOne: false
-            referencedRelation: "entities"
+            referencedRelation: "meeting_entities_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_profile_entities_entity_profile_id_fkey"
+            columns: ["entity_profile_id"]
+            isOneToOne: false
+            referencedRelation: "entity_profiles"
             referencedColumns: ["id"]
           },
         ]
       }
-      entity_relationships: {
+      entity_profiles: {
         Row: {
-          attributes: Json | null
+          alliance_structure: string[]
+          communication_architecture: string[]
+          conflict_patterns: string[]
+          conversational_system_prompt: string | null
           created_at: string
+          decision_making_style: string[]
+          entity_description: string
+          entity_name: string
+          environment: string[]
+          goals: string[]
+          guardrails: string[]
           id: string
-          is_test: boolean
-          object_id: string
-          predicate: string
-          subject_id: string
+          interpersonal_effectiveness: string[]
+          organizational_influence: string[]
+          performance_issues: string[]
+          personality: string[]
+          professional_network: string[]
+          profile_id: string
+          profile_version: number
+          project_portfolio: string[]
+          psychological_framework: string[]
+          raw_business_profile: Json | null
+          raw_personal_profile: Json | null
+          raw_relationships_profile: Json | null
+          relationship_health: string[]
+          relationship_with_user: string[]
+          relationships: string[]
+          role_and_responsibilities: string[]
+          source_data_hash: string
+          speech_patterns: string[]
+          stress_responses: string[]
+          tone: string[]
+          tools: string[]
+          traits: string[]
+          typical_phrases: string[]
+          updated_at: string
+          value_creation: string[]
         }
         Insert: {
-          attributes?: Json | null
+          alliance_structure: string[]
+          communication_architecture: string[]
+          conflict_patterns: string[]
+          conversational_system_prompt?: string | null
           created_at?: string
+          decision_making_style: string[]
+          entity_description: string
+          entity_name: string
+          environment: string[]
+          goals: string[]
+          guardrails: string[]
           id?: string
-          is_test?: boolean
-          object_id: string
-          predicate: string
-          subject_id: string
+          interpersonal_effectiveness: string[]
+          organizational_influence: string[]
+          performance_issues: string[]
+          personality: string[]
+          professional_network: string[]
+          profile_id: string
+          profile_version?: number
+          project_portfolio: string[]
+          psychological_framework: string[]
+          raw_business_profile?: Json | null
+          raw_personal_profile?: Json | null
+          raw_relationships_profile?: Json | null
+          relationship_health: string[]
+          relationship_with_user: string[]
+          relationships: string[]
+          role_and_responsibilities: string[]
+          source_data_hash: string
+          speech_patterns: string[]
+          stress_responses: string[]
+          tone: string[]
+          tools: string[]
+          traits: string[]
+          typical_phrases: string[]
+          updated_at?: string
+          value_creation: string[]
         }
         Update: {
-          attributes?: Json | null
+          alliance_structure?: string[]
+          communication_architecture?: string[]
+          conflict_patterns?: string[]
+          conversational_system_prompt?: string | null
           created_at?: string
+          decision_making_style?: string[]
+          entity_description?: string
+          entity_name?: string
+          environment?: string[]
+          goals?: string[]
+          guardrails?: string[]
           id?: string
-          is_test?: boolean
-          object_id?: string
-          predicate?: string
-          subject_id?: string
+          interpersonal_effectiveness?: string[]
+          organizational_influence?: string[]
+          performance_issues?: string[]
+          personality?: string[]
+          professional_network?: string[]
+          profile_id?: string
+          profile_version?: number
+          project_portfolio?: string[]
+          psychological_framework?: string[]
+          raw_business_profile?: Json | null
+          raw_personal_profile?: Json | null
+          raw_relationships_profile?: Json | null
+          relationship_health?: string[]
+          relationship_with_user?: string[]
+          relationships?: string[]
+          role_and_responsibilities?: string[]
+          source_data_hash?: string
+          speech_patterns?: string[]
+          stress_responses?: string[]
+          tone?: string[]
+          tools?: string[]
+          traits?: string[]
+          typical_phrases?: string[]
+          updated_at?: string
+          value_creation?: string[]
         }
         Relationships: [
           {
-            foreignKeyName: "relationships_object_id_fkey"
-            columns: ["object_id"]
+            foreignKeyName: "entity_profiles_profile_id_fkey"
+            columns: ["profile_id"]
             isOneToOne: false
-            referencedRelation: "entities"
-            referencedColumns: ["id"]
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
           },
           {
-            foreignKeyName: "relationships_subject_id_fkey"
-            columns: ["subject_id"]
+            foreignKeyName: "entity_profiles_profile_id_fkey"
+            columns: ["profile_id"]
             isOneToOne: false
-            referencedRelation: "entities"
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "entity_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2567,6 +2600,52 @@ export type Database = {
           },
         ]
       }
+      moment_profile_development_themes: {
+        Row: {
+          connection_strength_score: number | null
+          created_at: string
+          id: string
+          moment_id: string | null
+          profile_development_theme_id: string | null
+        }
+        Insert: {
+          connection_strength_score?: number | null
+          created_at?: string
+          id?: string
+          moment_id?: string | null
+          profile_development_theme_id?: string | null
+        }
+        Update: {
+          connection_strength_score?: number | null
+          created_at?: string
+          id?: string
+          moment_id?: string | null
+          profile_development_theme_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moment_profile_development_th_profile_development_theme_id_fkey"
+            columns: ["profile_development_theme_id"]
+            isOneToOne: false
+            referencedRelation: "profile_development_themes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moment_profile_development_themes_moment_id_fkey"
+            columns: ["moment_id"]
+            isOneToOne: false
+            referencedRelation: "moments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moment_profile_development_themes_moment_id_fkey"
+            columns: ["moment_id"]
+            isOneToOne: false
+            referencedRelation: "moments_with_score"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       moment_reactions: {
         Row: {
           created_at: string
@@ -2693,6 +2772,72 @@ export type Database = {
           },
         ]
       }
+      moment_subtags_qa: {
+        Row: {
+          created_at: string
+          decision: boolean | null
+          id: string
+          moment_id: string | null
+          note: string | null
+          profile_id: string | null
+          tag: string | null
+        }
+        Insert: {
+          created_at?: string
+          decision?: boolean | null
+          id?: string
+          moment_id?: string | null
+          note?: string | null
+          profile_id?: string | null
+          tag?: string | null
+        }
+        Update: {
+          created_at?: string
+          decision?: boolean | null
+          id?: string
+          moment_id?: string | null
+          note?: string | null
+          profile_id?: string | null
+          tag?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moment_subtags_qa_moment_id_fkey"
+            columns: ["moment_id"]
+            isOneToOne: false
+            referencedRelation: "moments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moment_subtags_qa_moment_id_fkey"
+            columns: ["moment_id"]
+            isOneToOne: false
+            referencedRelation: "moments_with_score"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moment_subtags_qa_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "moment_subtags_qa_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "moment_subtags_qa_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       moment_types: {
         Row: {
           color: string | null
@@ -2732,6 +2877,8 @@ export type Database = {
           altitude_score_reasoning_not_higher: string | null
           altitude_score_reasoning_not_lower: string | null
           altitude_type: string | null
+          coaching_theme_summary: string | null
+          coaching_themes_analyses: string | null
           created_at: string
           final_score: number | null
           id: string
@@ -2785,6 +2932,8 @@ export type Database = {
           altitude_score_reasoning_not_higher?: string | null
           altitude_score_reasoning_not_lower?: string | null
           altitude_type?: string | null
+          coaching_theme_summary?: string | null
+          coaching_themes_analyses?: string | null
           created_at?: string
           final_score?: number | null
           id: string
@@ -2838,6 +2987,8 @@ export type Database = {
           altitude_score_reasoning_not_higher?: string | null
           altitude_score_reasoning_not_lower?: string | null
           altitude_type?: string | null
+          coaching_theme_summary?: string | null
+          coaching_themes_analyses?: string | null
           created_at?: string
           final_score?: number | null
           id?: string
@@ -2938,169 +3089,75 @@ export type Database = {
       }
       moments_qa: {
         Row: {
-          _internal_comment: string | null
-          _internal_thumbs_down: number
-          _internal_thumbs_up: number
-          activity: string | null
-          activity_reasoning: string | null
+          activity: boolean | null
+          activity_borderline: boolean | null
+          activity_borderline_note: string | null
+          activity_note: string | null
           activity_type: string | null
-          activity_type_confidence: number | null
-          altitude_reasoning: string | null
+          activity_type_note: string | null
+          altitude_note: string | null
           altitude_score: number | null
-          altitude_score_reasoning: string | null
-          altitude_score_reasoning_not_higher: string | null
-          altitude_score_reasoning_not_lower: string | null
-          altitude_type: string | null
-          created_at: string
-          final_score: number | null
+          created_at: string | null
           id: string
-          intensity: number | null
-          interestingness_reasoning: string | null
-          interestingness_reasoning_not_higher: string | null
-          interestingness_reasoning_not_lower: string | null
-          interestingness_score: number | null
-          latest: boolean
-          moment_url: string | null
-          profile_id: string | null
-          qa_profile_id: string | null
-          qa_reasoning: string | null
-          qa_reasoning_not_higher: string | null
-          qa_reasoning_not_lower: string | null
-          qa_score: number | null
-          relevant: boolean
-          search_vector: unknown | null
-          segment_end_timestamp: string | null
-          segment_end_timestamp_in_seconds: number | null
-          segment_id_sequence_end: number | null
-          segment_id_sequence_start: number | null
-          segment_id_sequence_start_ideal: number | null
-          segment_id_sequence_start_ideal_algorithm: number | null
-          segment_start_timestamp: string | null
-          segment_start_timestamp_in_seconds: number | null
-          segment_start_timestamp_in_seconds_ideal: number | null
-          segment_start_timestamp_in_seconds_ideal_algorithm: number | null
-          summary: string | null
-          target_person_confidence: number | null
-          target_person_reasoning: string | null
-          target_person_score: number | null
-          target_person_type: string | null
-          title: string | null
-          topic_id: string | null
-          updated_at: string | null
-          version: number | null
-          video_api_id: string | null
-          vtt: string | null
+          ideal_time_stamp_index: number | null
+          moment_id: string | null
+          profile_id: string
+          skip_flag: boolean | null
+          target_person: string | null
+          target_person_note: string | null
         }
         Insert: {
-          _internal_comment?: string | null
-          _internal_thumbs_down?: number
-          _internal_thumbs_up?: number
-          activity?: string | null
-          activity_reasoning?: string | null
+          activity?: boolean | null
+          activity_borderline?: boolean | null
+          activity_borderline_note?: string | null
+          activity_note?: string | null
           activity_type?: string | null
-          activity_type_confidence?: number | null
-          altitude_reasoning?: string | null
+          activity_type_note?: string | null
+          altitude_note?: string | null
           altitude_score?: number | null
-          altitude_score_reasoning?: string | null
-          altitude_score_reasoning_not_higher?: string | null
-          altitude_score_reasoning_not_lower?: string | null
-          altitude_type?: string | null
-          created_at?: string
-          final_score?: number | null
-          id: string
-          intensity?: number | null
-          interestingness_reasoning?: string | null
-          interestingness_reasoning_not_higher?: string | null
-          interestingness_reasoning_not_lower?: string | null
-          interestingness_score?: number | null
-          latest?: boolean
-          moment_url?: string | null
-          profile_id?: string | null
-          qa_profile_id?: string | null
-          qa_reasoning?: string | null
-          qa_reasoning_not_higher?: string | null
-          qa_reasoning_not_lower?: string | null
-          qa_score?: number | null
-          relevant?: boolean
-          search_vector?: unknown | null
-          segment_end_timestamp?: string | null
-          segment_end_timestamp_in_seconds?: number | null
-          segment_id_sequence_end?: number | null
-          segment_id_sequence_start?: number | null
-          segment_id_sequence_start_ideal?: number | null
-          segment_id_sequence_start_ideal_algorithm?: number | null
-          segment_start_timestamp?: string | null
-          segment_start_timestamp_in_seconds?: number | null
-          segment_start_timestamp_in_seconds_ideal?: number | null
-          segment_start_timestamp_in_seconds_ideal_algorithm?: number | null
-          summary?: string | null
-          target_person_confidence?: number | null
-          target_person_reasoning?: string | null
-          target_person_score?: number | null
-          target_person_type?: string | null
-          title?: string | null
-          topic_id?: string | null
-          updated_at?: string | null
-          version?: number | null
-          video_api_id?: string | null
-          vtt?: string | null
+          created_at?: string | null
+          id?: string
+          ideal_time_stamp_index?: number | null
+          moment_id?: string | null
+          profile_id?: string
+          skip_flag?: boolean | null
+          target_person?: string | null
+          target_person_note?: string | null
         }
         Update: {
-          _internal_comment?: string | null
-          _internal_thumbs_down?: number
-          _internal_thumbs_up?: number
-          activity?: string | null
-          activity_reasoning?: string | null
+          activity?: boolean | null
+          activity_borderline?: boolean | null
+          activity_borderline_note?: string | null
+          activity_note?: string | null
           activity_type?: string | null
-          activity_type_confidence?: number | null
-          altitude_reasoning?: string | null
+          activity_type_note?: string | null
+          altitude_note?: string | null
           altitude_score?: number | null
-          altitude_score_reasoning?: string | null
-          altitude_score_reasoning_not_higher?: string | null
-          altitude_score_reasoning_not_lower?: string | null
-          altitude_type?: string | null
-          created_at?: string
-          final_score?: number | null
+          created_at?: string | null
           id?: string
-          intensity?: number | null
-          interestingness_reasoning?: string | null
-          interestingness_reasoning_not_higher?: string | null
-          interestingness_reasoning_not_lower?: string | null
-          interestingness_score?: number | null
-          latest?: boolean
-          moment_url?: string | null
-          profile_id?: string | null
-          qa_profile_id?: string | null
-          qa_reasoning?: string | null
-          qa_reasoning_not_higher?: string | null
-          qa_reasoning_not_lower?: string | null
-          qa_score?: number | null
-          relevant?: boolean
-          search_vector?: unknown | null
-          segment_end_timestamp?: string | null
-          segment_end_timestamp_in_seconds?: number | null
-          segment_id_sequence_end?: number | null
-          segment_id_sequence_start?: number | null
-          segment_id_sequence_start_ideal?: number | null
-          segment_id_sequence_start_ideal_algorithm?: number | null
-          segment_start_timestamp?: string | null
-          segment_start_timestamp_in_seconds?: number | null
-          segment_start_timestamp_in_seconds_ideal?: number | null
-          segment_start_timestamp_in_seconds_ideal_algorithm?: number | null
-          summary?: string | null
-          target_person_confidence?: number | null
-          target_person_reasoning?: string | null
-          target_person_score?: number | null
-          target_person_type?: string | null
-          title?: string | null
-          topic_id?: string | null
-          updated_at?: string | null
-          version?: number | null
-          video_api_id?: string | null
-          vtt?: string | null
+          ideal_time_stamp_index?: number | null
+          moment_id?: string | null
+          profile_id?: string
+          skip_flag?: boolean | null
+          target_person?: string | null
+          target_person_note?: string | null
         }
         Relationships: [
           {
+            foreignKeyName: "moments_qa_moment_id_fkey"
+            columns: ["moment_id"]
+            isOneToOne: false
+            referencedRelation: "moments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moments_qa_moment_id_fkey"
+            columns: ["moment_id"]
+            isOneToOne: false
+            referencedRelation: "moments_with_score"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "moments_qa_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
@@ -3120,62 +3177,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "moments_qa_qa_profile_id_fkey"
-            columns: ["qa_profile_id"]
-            isOneToOne: false
-            referencedRelation: "meeting_processing_status_view"
-            referencedColumns: ["profile_id"]
-          },
-          {
-            foreignKeyName: "moments_qa_qa_profile_id_fkey"
-            columns: ["qa_profile_id"]
-            isOneToOne: false
-            referencedRelation: "meetings_with_profile"
-            referencedColumns: ["profile_id"]
-          },
-          {
-            foreignKeyName: "moments_qa_qa_profile_id_fkey"
-            columns: ["qa_profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "moments_qa_topic_id_fkey"
-            columns: ["topic_id"]
-            isOneToOne: false
-            referencedRelation: "meeting_topics_v2"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "moments_qa_video_api_id_fkey"
-            columns: ["video_api_id"]
-            isOneToOne: false
-            referencedRelation: "meeting_processing_status_view"
-            referencedColumns: ["meeting_video_api_id"]
-          },
-          {
-            foreignKeyName: "moments_qa_video_api_id_fkey"
-            columns: ["video_api_id"]
-            isOneToOne: false
-            referencedRelation: "meetings"
-            referencedColumns: ["video_api_id"]
-          },
-          {
-            foreignKeyName: "moments_qa_video_api_id_fkey"
-            columns: ["video_api_id"]
-            isOneToOne: false
-            referencedRelation: "meetings_with_profile"
-            referencedColumns: ["video_api_id"]
-          },
-          {
-            foreignKeyName: "moments_qa_video_api_id_fkey"
-            columns: ["video_api_id"]
-            isOneToOne: false
-            referencedRelation: "upcoming_meetings_with_action_items"
-            referencedColumns: ["meeting_id"]
           },
         ]
       }
@@ -3418,6 +3419,80 @@ export type Database = {
           },
         ]
       }
+      profile_development_themes: {
+        Row: {
+          created_at: string | null
+          deleted_at: string | null
+          description: string
+          icon: string
+          id: string
+          is_enabled: boolean
+          key_points: string[]
+          order: number
+          parent_theme: string | null
+          profile_id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          deleted_at?: string | null
+          description: string
+          icon: string
+          id?: string
+          is_enabled: boolean
+          key_points: string[]
+          order: number
+          parent_theme?: string | null
+          profile_id: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          deleted_at?: string | null
+          description?: string
+          icon?: string
+          id?: string
+          is_enabled?: boolean
+          key_points?: string[]
+          order?: number
+          parent_theme?: string | null
+          profile_id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_development_themes_parent_theme_fkey"
+            columns: ["parent_theme"]
+            isOneToOne: false
+            referencedRelation: "profile_development_themes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_development_themes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "profile_development_themes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "profile_development_themes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profile_enhancements: {
         Row: {
           created_at: string
@@ -3457,6 +3532,58 @@ export type Database = {
           },
           {
             foreignKeyName: "profile_enhancements_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profile_signals: {
+        Row: {
+          created_at: string
+          direction: Database["public"]["Enums"]["goal_signal_direction_type"]
+          id: string
+          is_enabled: boolean
+          profile_id: string
+          text: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          direction: Database["public"]["Enums"]["goal_signal_direction_type"]
+          id?: string
+          is_enabled?: boolean
+          profile_id: string
+          text: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          direction?: Database["public"]["Enums"]["goal_signal_direction_type"]
+          id?: string
+          is_enabled?: boolean
+          profile_id?: string
+          text?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_signals_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "profile_signals_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "profile_signals_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -3681,35 +3808,6 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      relationship_observations: {
-        Row: {
-          created_at: string
-          id: string
-          relationship_id: string
-          text: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          relationship_id: string
-          text: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          relationship_id?: string
-          text?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "relationship_observations_relationship_id_fkey"
-            columns: ["relationship_id"]
-            isOneToOne: false
-            referencedRelation: "entity_relationships"
             referencedColumns: ["id"]
           },
         ]
@@ -4053,6 +4151,7 @@ export type Database = {
           created_at: string
           end_date: string | null
           id: string
+          is_hidden: boolean
           personality_badges: string[] | null
           personality_color: string | null
           personality_description: string | null
@@ -4068,6 +4167,7 @@ export type Database = {
           created_at?: string
           end_date?: string | null
           id?: string
+          is_hidden?: boolean
           personality_badges?: string[] | null
           personality_color?: string | null
           personality_description?: string | null
@@ -4083,6 +4183,7 @@ export type Database = {
           created_at?: string
           end_date?: string | null
           id?: string
+          is_hidden?: boolean
           personality_badges?: string[] | null
           personality_color?: string | null
           personality_description?: string | null
@@ -4603,6 +4704,7 @@ export type Database = {
           description: string | null
           icon: string | null
           id: string
+          internal_title: string | null
           title: string
         }
         Insert: {
@@ -4610,6 +4712,7 @@ export type Database = {
           description?: string | null
           icon?: string | null
           id?: string
+          internal_title?: string | null
           title: string
         }
         Update: {
@@ -4617,6 +4720,7 @@ export type Database = {
           description?: string | null
           icon?: string | null
           id?: string
+          internal_title?: string | null
           title?: string
         }
         Relationships: []
@@ -4857,6 +4961,8 @@ export type Database = {
           has_ai_coaching_enabled: boolean
           id: number
           profile_id: string
+          report_email_template: Database["public"]["Enums"]["email_template_type"]
+          report_frequency_in_days: number
           should_join_external_meetings: boolean
           should_join_team_meetings: boolean
           should_not_join_coaching_sessions: boolean
@@ -4869,6 +4975,8 @@ export type Database = {
           has_ai_coaching_enabled?: boolean
           id?: number
           profile_id: string
+          report_email_template?: Database["public"]["Enums"]["email_template_type"]
+          report_frequency_in_days?: number
           should_join_external_meetings?: boolean
           should_join_team_meetings?: boolean
           should_not_join_coaching_sessions?: boolean
@@ -4881,6 +4989,8 @@ export type Database = {
           has_ai_coaching_enabled?: boolean
           id?: number
           profile_id?: string
+          report_email_template?: Database["public"]["Enums"]["email_template_type"]
+          report_frequency_in_days?: number
           should_join_external_meetings?: boolean
           should_join_team_meetings?: boolean
           should_not_join_coaching_sessions?: boolean
@@ -5365,6 +5475,10 @@ export type Database = {
         Args: { "": unknown[] }
         Returns: number
       }
+      sql_query_runner: {
+        Args: { query: string }
+        Returns: string
+      }
       update_profile_id_on_moments: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -5395,6 +5509,9 @@ export type Database = {
       }
     }
     Enums: {
+      email_template_type:
+        | "skill-report-ready-founder"
+        | "skill-report-ready-manager"
       event_type:
         | "meeting"
         | "coaching_session"
@@ -5610,6 +5727,10 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      email_template_type: [
+        "skill-report-ready-founder",
+        "skill-report-ready-manager",
+      ],
       event_type: [
         "meeting",
         "coaching_session",

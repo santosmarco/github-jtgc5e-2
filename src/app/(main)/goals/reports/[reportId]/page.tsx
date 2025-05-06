@@ -27,8 +27,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
+import { useProfile } from "~/hooks/use-profile";
 import { transformMoment } from "~/lib/db/moments";
 import { checkUserFlags, Flag } from "~/lib/flags/flags";
+import { getReportScores } from "~/lib/reports/scoring";
 import { createClient } from "~/lib/supabase/client";
 import type { Tables } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
@@ -71,20 +73,24 @@ export default function ReportPage({
 
   const utils = api.useUtils();
   const { data: user } = api.auth.getUser.useQuery();
+  const { profile: selectedProfile } = useProfile();
   const { data: groupReports, isLoading } =
     api.reports.getGroupReports.useQuery({
       groupId: params.reportId,
     });
 
-  // Fetch adjacent reports for navigation
-  const { data: adjacentReports } = api.reports.getAdjacentReports.useQuery(
-    {
-      groupId: params.reportId,
-    },
-    {
-      enabled: !isLoading && !!groupReports,
-    },
-  );
+  // Fetch timeline data for the skill when we have the group reports
+  const { data: timelineData } =
+    api.reports.getReportsTimelineDataForUser.useQuery(
+      {
+        userId: selectedProfile?.id ?? user?.id ?? "",
+        skillId: groupReports?.group.skill_id ?? "",
+      },
+      {
+        enabled:
+          !!(selectedProfile?.id || user?.id) && !!groupReports?.group.skill_id,
+      },
+    );
 
   const reviewGoal = api.reports.reviewGoal.useMutation();
 
@@ -375,23 +381,36 @@ export default function ReportPage({
     );
   };
 
+  const currentReportIndex =
+    timelineData?.timelineData.findIndex(
+      (t) =>
+        groupReports?.reports.find(
+          (r) => dayjs(r.end_date).format("YYYY-MM-DD") === t.x,
+        ) !== undefined,
+    ) ?? 0;
+  const previousReport =
+    timelineData?.timelineData[currentReportIndex - 1]?.entry;
+  const nextReport = timelineData?.timelineData[currentReportIndex + 1]?.entry;
+
   const navigateToPreviousReport = () => {
-    if (adjacentReports?.previous?.id) {
-      const url = goalId
-        ? `/goals/reports/${adjacentReports.previous.id}?goalId=${goalId}`
-        : `/goals/reports/${adjacentReports.previous.id}`;
-      router.push(url);
+    if (previousReport) {
+      router.push(`/goals/reports/${previousReport.groupId}`);
     }
   };
 
   const navigateToNextReport = () => {
-    if (adjacentReports?.next?.id) {
-      const url = goalId
-        ? `/goals/reports/${adjacentReports.next.id}?goalId=${goalId}`
-        : `/goals/reports/${adjacentReports.next.id}`;
-      router.push(url);
+    if (nextReport) {
+      router.push(`/goals/reports/${nextReport.groupId}`);
     }
   };
+
+  useEffect(() => {
+    if (!timelineData) return;
+
+    for (const { entry } of timelineData.timelineData) {
+      router.prefetch(`/goals/reports/${entry.groupId}`);
+    }
+  }, [timelineData, router]);
 
   if (isLoading) {
     return (
@@ -429,122 +448,87 @@ export default function ReportPage({
     <div className="-mx-4 min-h-screen shadow-sm backdrop-blur-sm sm:-mx-8 sm:-mt-12">
       {/* Date Range Navigation */}
       <div className="sticky top-0 z-40 mb-6 flex items-center justify-between border-b border-border bg-background/60 px-2 py-2 backdrop-blur-xl sm:-mx-4 sm:min-h-0">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <motion.div
-                whileHover={{ x: adjacentReports?.previous ? -5 : 0 }}
-                whileTap={{ scale: adjacentReports?.previous ? 0.95 : 1 }}
-                className="flex w-24 justify-start"
-              >
+        <div className="w-[73px]">
+          <Button
+            variant="ghost"
+            className="hidden items-center gap-2 text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground sm:flex"
+            onClick={() => router.push("/goals")}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span>Back</span>
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
+                  size="icon"
                   className={cn(
-                    "flex items-center gap-2 text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground",
-                    !adjacentReports?.previous &&
-                      "cursor-not-allowed opacity-50",
+                    "text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground",
+                    !previousReport && "cursor-not-allowed opacity-50",
                   )}
                   onClick={navigateToPreviousReport}
-                  disabled={!adjacentReports?.previous}
+                  disabled={!previousReport}
                 >
-                  <motion.div
-                    initial={{ x: 0 }}
-                    animate={
-                      adjacentReports?.previous ? { x: [0, -4, 0] } : { x: 0 }
-                    }
-                    transition={{
-                      repeat: adjacentReports?.previous
-                        ? Number.POSITIVE_INFINITY
-                        : 0,
-                      repeatType: "reverse",
-                      duration: 1.5,
-                      ease: "easeInOut",
-                      repeatDelay: 1,
-                    }}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </motion.div>
-                  <span>Previous</span>
+                  <ChevronLeft className="h-4 w-4" />
                 </Button>
-              </motion.div>
-            </TooltipTrigger>
-            {adjacentReports?.previous && (
-              <TooltipContent side="bottom" align="start" sideOffset={5}>
-                <p className="text-sm">
-                  {dayjs(adjacentReports.previous.start_date ?? "").format(
-                    "MMM D",
-                  )}{" "}
-                  to{" "}
-                  {dayjs(adjacentReports.previous.end_date ?? "").format(
-                    "MMM D",
-                  )}
-                </p>
-              </TooltipContent>
-            )}
-          </Tooltip>
-        </TooltipProvider>
+              </TooltipTrigger>
+              {previousReport && (
+                <TooltipContent side="bottom" sideOffset={5}>
+                  <p className="text-sm">
+                    {dayjs(previousReport?.startDate ?? "").format("MMM D")} to{" "}
+                    {dayjs(previousReport?.endDate ?? "").format("MMM D")}
+                  </p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
 
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="flex flex-col items-center gap-1"
-        >
-          <h2 className="text-base font-medium tracking-tight">
-            {dayjs(groupReports?.reports[0]?.start_date).format("MMM D")} to{" "}
-            {dayjs(groupReports?.reports[0]?.end_date).format("MMM D")}
-          </h2>
-        </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="flex flex-col items-center"
+          >
+            <h2 className="text-base font-medium tracking-tight">
+              {dayjs(groupReports?.reports[0]?.start_date).format("MMM D")} to{" "}
+              {dayjs(groupReports?.reports[0]?.end_date).format("MMM D")}
+            </h2>
+          </motion.div>
 
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <motion.div
-                whileHover={{ x: adjacentReports?.next ? 5 : 0 }}
-                whileTap={{ scale: adjacentReports?.next ? 0.95 : 1 }}
-                className="flex w-24 justify-end"
-              >
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
+                  size="icon"
                   className={cn(
-                    "flex h-10 items-center justify-center gap-2 text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground sm:h-auto sm:justify-start",
-                    !adjacentReports?.next && "cursor-not-allowed opacity-50",
+                    "text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground",
+                    !nextReport && "cursor-not-allowed opacity-50",
                   )}
                   onClick={navigateToNextReport}
-                  disabled={!adjacentReports?.next}
+                  disabled={!nextReport}
                 >
-                  <span>Next</span>
-                  <motion.div
-                    initial={{ x: 0 }}
-                    animate={
-                      adjacentReports?.next ? { x: [0, 4, 0] } : { x: 0 }
-                    }
-                    transition={{
-                      repeat: adjacentReports?.next
-                        ? Number.POSITIVE_INFINITY
-                        : 0,
-                      repeatType: "reverse",
-                      duration: 1.5,
-                      ease: "easeInOut",
-                      repeatDelay: 1,
-                    }}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </motion.div>
+                  <ChevronRight className="h-4 w-4" />
                 </Button>
-              </motion.div>
-            </TooltipTrigger>
-            {adjacentReports?.next && (
-              <TooltipContent side="bottom" align="end" sideOffset={5}>
-                <p className="text-sm">
-                  {dayjs(adjacentReports.next.start_date ?? "").format("MMM D")}{" "}
-                  to{" "}
-                  {dayjs(adjacentReports.next.end_date ?? "").format("MMM D")}
-                </p>
-              </TooltipContent>
-            )}
-          </Tooltip>
-        </TooltipProvider>
+              </TooltipTrigger>
+              {nextReport && (
+                <TooltipContent side="bottom" sideOffset={5}>
+                  <p className="text-sm">
+                    {dayjs(nextReport?.startDate ?? "").format("MMM D")} to{" "}
+                    {dayjs(nextReport?.endDate ?? "").format("MMM D")}
+                  </p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+
+        {/* Empty div to balance the layout */}
+        <div className="w-[73px]" />
       </div>
 
       {groupReports.reports.map((report) => {
@@ -564,38 +548,39 @@ export default function ReportPage({
         );
         const goal = report.report_goals[0]?.goal;
         const isExpanded = !!(goal && expandedGoals[goal.id]);
-        const reportSkillPositiveScaleTags =
-          report.skill?.scales.map((s) => s.positive_tag_title) ?? [];
-        const reportSkillNegativeScaleTags =
-          report.skill?.scales.map((s) => s.negative_tag_title) ?? [];
-        const reportSkillScaleTags = [
-          ...reportSkillPositiveScaleTags.flatMap((t) => t.split(",")),
-          ...reportSkillNegativeScaleTags.flatMap((t) => t.split(",")),
+
+        const reportMetrics = getReportScores(report);
+
+        // Filter timeline data only for the current skill
+        const skillTimelineHistory =
+          timelineData?.timelineData
+            .filter((item) => item.x !== "" && item.y !== undefined)
+            .map((item) => ({
+              date: item.x,
+              value: item.y,
+              groupId: item.entry.groupId,
+            })) ?? [];
+
+        // Create a type-safe metrics array
+        const typeCheckedMetrics: ReadonlyArray<{
+          id: string;
+          leftLabel: string;
+          rightLabel: string;
+          value: number;
+          history?: Array<{ date: string; value: number }>;
+        }> = [
+          ...reportMetrics.metrics.map((metric) => ({
+            ...metric,
+            history: undefined,
+          })),
+          {
+            id: "global-skill-score",
+            leftLabel: "Lower Skill Score",
+            rightLabel: "Higher Skill Score",
+            value: 50, // Default value doesn't matter for timeline view
+            history: skillTimelineHistory,
+          },
         ];
-        const momentSubtagFrequencies = _.countBy(
-          reportMoments.flatMap((rm) =>
-            rm.moment.subtags
-              .map((s) => s.tag)
-              .filter((t) => t && reportSkillScaleTags.includes(t)),
-          ),
-        );
-        const momentSubtagFrequenciesTotal = _.sum(
-          Object.values(momentSubtagFrequencies),
-        );
-
-        const metrics = reportSkillPositiveScaleTags.map((pt, i) => {
-          const nt = reportSkillNegativeScaleTags[i] ?? "";
-          const positiveCount = momentSubtagFrequencies[pt ?? ""] ?? 0;
-          const negativeCount = momentSubtagFrequencies[nt] ?? 0;
-          const total = positiveCount + negativeCount || 1;
-
-          return {
-            id: `${pt ?? ""}-${nt}`,
-            leftLabel: nt,
-            rightLabel: pt ?? "",
-            value: 100 * (positiveCount / total),
-          };
-        });
 
         // Calculate section scores
         const sectionScores = report.report_sections.map((section) => {
@@ -664,7 +649,13 @@ export default function ReportPage({
 
               {/* Score Card */}
               <div className="h-full sm:col-span-2">
-                <ReportMetrics metrics={metrics} selectedTab={currentTab} />
+                <ReportMetrics
+                  metrics={typeCheckedMetrics}
+                  selectedTab={currentTab}
+                  currentReportDate={dayjs(report.end_date).format(
+                    "YYYY-MM-DD",
+                  )}
+                />
               </div>
 
               <PersonalityProfile report={report} />

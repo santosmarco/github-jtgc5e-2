@@ -8,10 +8,9 @@ import { ArrowUp } from "lucide-react";
 import dynamic from "next/dynamic";
 import React, { useEffect, useMemo, useState } from "react";
 
+import { getReportScores } from "~/lib/reports/scoring";
 import { cn } from "~/lib/utils";
 import type { RouterOutputs } from "~/trpc/react";
-
-import { calculateSkillScore } from "./goal-card";
 
 // Enhanced animations
 const cardVariants = {
@@ -94,10 +93,10 @@ export const GoalCardMinimal = React.forwardRef<HTMLDivElement, SkillCardProps>(
           )[0]
         : null;
 
-    const skillScore = calculateSkillScore(
-      skill,
-      latestAssessment?.report_moments ?? [],
-    );
+    const skillScore = getReportScores({
+      skill: { scales: skill.scales },
+      report_moments: latestAssessment?.report_moments ?? [],
+    });
 
     return (
       <motion.div
@@ -173,7 +172,7 @@ export const GoalCardMinimal = React.forwardRef<HTMLDivElement, SkillCardProps>(
 
           {/* Content */}
           <SimplifiedGauge
-            value={skillScore.score * 100}
+            value={skillScore.finalScore * 100}
             min={0}
             max={100}
             size="md"

@@ -12,6 +12,7 @@ import { ScrollArea } from "~/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
+  SelectItem,
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
@@ -100,6 +101,10 @@ export function ActionItemFilters({
     }
   };
 
+  const handleStatusChange = (value: string) => {
+    setFilters({ ...filters, status: value });
+  };
+
   const sortedMeetings = _.orderBy(
     meetings,
     [
@@ -142,7 +147,7 @@ export function ActionItemFilters({
     >
       <Card className="group overflow-hidden border-border bg-gradient-to-br from-background/90 to-background/70 shadow-lg transition-all duration-500 hover:border-primary/20">
         <CardContent className="p-6">
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             <motion.div variants={selectVariants} className="space-y-2.5">
               <Label
                 htmlFor="assignee-filter"
@@ -289,6 +294,34 @@ export function ActionItemFilters({
                       ))}
                     </div>
                   </ScrollArea>
+                </SelectContent>
+              </Select>
+            </motion.div>
+
+            <motion.div variants={selectVariants} className="space-y-2.5">
+              <Label
+                htmlFor="status-filter"
+                className="text-xs font-medium text-foreground"
+              >
+                Filter by Status
+              </Label>
+              <Select value={filters.status} onValueChange={handleStatusChange}>
+                <SelectTrigger
+                  id="status-filter"
+                  className="w-full bg-background/50 text-xs backdrop-blur-sm"
+                >
+                  <SelectValue placeholder="Filter by status">
+                    {filters.status === "all"
+                      ? "All statuses"
+                      : filters.status === "completed"
+                        ? "Completed"
+                        : "Incomplete"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="incomplete">Incomplete</SelectItem>
                 </SelectContent>
               </Select>
             </motion.div>

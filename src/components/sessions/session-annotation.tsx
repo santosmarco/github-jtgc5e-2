@@ -324,6 +324,18 @@ function SourceGroup({
   );
 }
 
+// Helper function to extract parts of the description
+const extractDescriptionParts = (description: string | null) => {
+  if (!description) return { summary: "", pastContext: "", whyDiscuss: "" };
+
+  const sentences = description.split(". ");
+  const whyDiscuss = sentences.pop() || "";
+  const summary = sentences[0] || "";
+  const pastContext = sentences.slice(1).join(". ");
+
+  return { summary, pastContext, whyDiscuss };
+};
+
 // Component for annotation content
 interface AnnotationContentProps {
   annotation: SessionAnnotation;
@@ -340,9 +352,13 @@ function AnnotationContent({
   renderSourceIcon,
   formatSourceType,
 }: AnnotationContentProps): JSX.Element {
-  const hasDescription = Boolean(annotation.description);
   const hasSources = annotation.sources && annotation.sources.length > 0;
   const groupedSources = groupSourcesByType(annotation.sources || []);
+
+  // Extract description parts
+  const { summary, pastContext, whyDiscuss } = extractDescriptionParts(
+    annotation.description,
+  );
 
   return (
     <motion.div
@@ -356,14 +372,45 @@ function AnnotationContent({
       }}
       transition={{ duration: 0.3 }}
     >
-      {hasDescription && (
+      {annotation.description && (
         <motion.div
-          className="mb-4 rounded-lg p-3.5 text-sm leading-relaxed shadow-sm"
+          className="mb-4 space-y-4 rounded-lg p-3.5 text-sm leading-relaxed shadow-sm"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          {annotation.description}
+          {summary && (
+            <div>
+              <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Summary
+              </div>
+              <div className="text-pretty text-sm leading-6 text-foreground">
+                {summary.replace(/\s*\[.*?\]\s*/g, "")}.
+              </div>
+            </div>
+          )}
+
+          {pastContext && (
+            <div>
+              <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Past Context
+              </div>
+              <div className="text-pretty text-sm leading-6 text-foreground">
+                {pastContext.replace(/\s*\[.*?\]\s*/g, "")}.
+              </div>
+            </div>
+          )}
+
+          {whyDiscuss && (
+            <div>
+              <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Why Discuss
+              </div>
+              <div className="text-pretty text-sm leading-6 text-foreground">
+                {whyDiscuss.replace(/\s*\[.*?\]\s*/g, "")}
+              </div>
+            </div>
+          )}
         </motion.div>
       )}
 
@@ -657,7 +704,11 @@ function AnnotationItem({
             {/* Title row with badge moved to the right */}
             <div className="flex items-center justify-between gap-2">
               <motion.div className="flex-1 text-left text-sm font-medium text-foreground">
-                {annotation.title_summarized || annotation.title || "Untitled"}
+                {(
+                  annotation.title_summarized ||
+                  annotation.title ||
+                  "Untitled"
+                ).replace(/\s*\[.*?\]\s*/g, "")}
               </motion.div>
 
               <div className="flex items-center gap-2">
@@ -670,7 +721,7 @@ function AnnotationItem({
                       circleColor,
                     )}
                   >
-                    {_.startCase(annotation.type)}
+                    {_.startCase(annotation.type.replace("_v2", ""))}
                   </motion.div>
                 )}
 
@@ -701,11 +752,11 @@ function AnnotationItem({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="mt-1.5 line-clamp-2 text-sm text-muted-foreground">
-                    {annotation.title}
+                    {annotation.title.replace(/\s*\[.*?\]\s*/g, "")}
                   </div>
                 </TooltipTrigger>
-                <TooltipContent className="max-w-[20rem]">
-                  <p>{annotation.title}</p>
+                <TooltipContent className="max-w-[40rem]">
+                  <p>{annotation.title.replace(/\s*\[.*?\]\s*/g, "")}</p>
                   <p className="mt-2 text-xs font-medium italic">
                     Click for more details
                   </p>
@@ -738,17 +789,29 @@ export default function SessionAnnotation({
   // Source icon mapping
   const sourceIcons: SourceIconMap = useMemo(
     () => ({
-      goal: Goal,
-      moment: Bookmark,
-      meeting: Calendar,
-      topic: MessageSquare,
-      topic_discussed: MessageSquare,
-      entity: Bookmark,
-      relationship: Bookmark,
-      entity_observation: MessageSquare,
-      relationship_observation: MessageSquare,
-      topic_observation: MessageSquare,
       action_item: CheckSquare,
+      entities: Bookmark,
+      entity_observation: MessageSquare,
+      entity: Bookmark,
+      goal: Goal,
+      meeting_action_items: CheckSquare,
+      meeting_entities_v2: Bookmark,
+      meeting_entity_observations_v2: MessageSquare,
+      meeting_entity_relationship_observations_v2: MessageSquare,
+      meeting_entity_relationships_v2: Bookmark,
+      meeting_observations_v2: MessageSquare,
+      meeting_topic_events_v2: MessageSquare,
+      meeting_topics_v2: MessageSquare,
+      meeting_topics: MessageSquare,
+      meeting: Calendar,
+      meetings: Calendar,
+      moment: Bookmark,
+      moments: Bookmark,
+      relationship_observation: MessageSquare,
+      relationship: Bookmark,
+      topic_discussed: MessageSquare,
+      topic_observation: MessageSquare,
+      topic: MessageSquare,
     }),
     [],
   );
@@ -770,7 +833,7 @@ export default function SessionAnnotation({
     (sources: AnnotationSource[]): Record<string, AnnotationSource[]> => {
       return sources.reduce<Record<string, AnnotationSource[]>>(
         (grouped, source) => {
-          const type = source.source_type;
+          const type = source.source_type.replace("_v2", "");
           if (!grouped[type]) {
             grouped[type] = [];
           }
@@ -799,7 +862,7 @@ export default function SessionAnnotation({
 
   // Function to format source type for display
   const formatSourceType = useCallback((sourceType: string): string => {
-    return _.startCase(sourceType.replace(/_/g, " "));
+    return _.startCase(sourceType.replace("_v2", "").replace(/_/g, " "));
   }, []);
 
   // Toggle expanded state for an annotation

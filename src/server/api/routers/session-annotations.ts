@@ -17,7 +17,8 @@ export const sessionAnnotationsRouter = createTRPCRouter({
       const supabase = await createClient();
 
       switch (sourceType) {
-        case "moment": {
+        case "moment":
+        case "moments": {
           const { data, error } = await supabase
             .from("moments")
             .select("*")
@@ -46,7 +47,8 @@ export const sessionAnnotationsRouter = createTRPCRouter({
           };
         }
 
-        case "entity": {
+        case "entity":
+        case "meeting_entities_v2": {
           const { data, error } = await supabase
             .from("meeting_entities_v2")
             .select("*")
@@ -71,7 +73,8 @@ export const sessionAnnotationsRouter = createTRPCRouter({
           };
         }
 
-        case "relationship": {
+        case "relationship":
+        case "meeting_entity_relationships_v2": {
           const { data, error } = await supabase
             .from("meeting_entity_relationships_v2")
             .select("*")
@@ -96,7 +99,8 @@ export const sessionAnnotationsRouter = createTRPCRouter({
           };
         }
 
-        case "entity_observation": {
+        case "entity_observation":
+        case "meeting_entity_observations_v2": {
           const { data, error } = await supabase
             .from("meeting_entity_observations_v2")
             .select("*, entity:meeting_entities_v2(*)")
@@ -124,7 +128,8 @@ export const sessionAnnotationsRouter = createTRPCRouter({
           };
         }
 
-        case "relationship_observation": {
+        case "relationship_observation":
+        case "meeting_entity_relationship_observations_v2": {
           const { data, error } = await supabase
             .from("meeting_entity_relationship_observations_v2")
             .select("*, relationship:meeting_entity_relationships_v2(*)")
@@ -153,7 +158,8 @@ export const sessionAnnotationsRouter = createTRPCRouter({
           };
         }
 
-        case "topic_observation": {
+        case "topic_observation":
+        case "meeting_observations_v2": {
           const { data, error } = await supabase
             .from("meeting_observations_v2")
             .select("*, topic:meeting_topics_v2(*)")
@@ -181,7 +187,8 @@ export const sessionAnnotationsRouter = createTRPCRouter({
           };
         }
 
-        case "topic": {
+        case "topic":
+        case "meeting_topics_v2": {
           const { data, error } = await supabase
             .from("meeting_topics_v2")
             .select("*")
@@ -205,7 +212,8 @@ export const sessionAnnotationsRouter = createTRPCRouter({
           };
         }
 
-        case "action_item": {
+        case "action_item":
+        case "meeting_action_items": {
           const { data, error } = await supabase
             .from("meeting_action_items")
             .select("*, assignees:meeting_action_item_assignees(*)")
@@ -236,7 +244,8 @@ export const sessionAnnotationsRouter = createTRPCRouter({
           };
         }
 
-        case "topic_discussed": {
+        case "topic_discussed":
+        case "meeting_topics": {
           const { data, error } = await supabase
             .from("meeting_topics")
             .select("*")
@@ -260,7 +269,8 @@ export const sessionAnnotationsRouter = createTRPCRouter({
           };
         }
 
-        case "meeting": {
+        case "meeting":
+        case "meetings": {
           const { data, error } = await supabase
             .from("meetings")
             .select("*")
@@ -281,6 +291,60 @@ export const sessionAnnotationsRouter = createTRPCRouter({
               name: data.name,
               summary: data.summary,
               date: data.date,
+            },
+          };
+        }
+
+        case "entities": {
+          const { data, error } = await supabase
+            .from("entities")
+            .select("*")
+            .eq("id", sourceId)
+            .single();
+
+          if (error) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "Entity not found",
+            });
+          }
+
+          return {
+            type: "entity" as const,
+            data: {
+              id: data.id,
+              name: data.name,
+              type: data.type,
+              attributes: data.attributes,
+            },
+          };
+        }
+
+        case "meeting_topic_events_v2": {
+          const { data, error } = await supabase
+            .from("meeting_topic_events_v2")
+            .select("*, topic:meeting_topics_v2(*)")
+            .eq("id", sourceId)
+            .single();
+
+          if (error) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "Topic event not found",
+            });
+          }
+
+          return {
+            type: "topic_event" as const,
+            data: {
+              id: data.id,
+              event: data.event,
+              timestamp: data.timestamp,
+              topic: {
+                id: data.topic.id,
+                title: data.topic.title,
+                summary: data.topic.summary,
+              },
             },
           };
         }

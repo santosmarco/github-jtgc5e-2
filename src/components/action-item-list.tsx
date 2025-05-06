@@ -13,7 +13,8 @@ import {
   Trash2,
   VideoIcon,
 } from "lucide-react";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
+import { Virtuoso } from "react-virtuoso";
 import { z } from "zod";
 
 import { Button } from "~/components/ui/button";
@@ -193,6 +194,7 @@ export function ActionItemList({ items, people }: ActionItemListProps) {
     null,
   );
   const utils = api.useUtils();
+  const virtuosoRef = useRef(null);
 
   const optimisticUpdate = async (callback: () => void) => {
     await utils.actionItems.getByProfileId.cancel();
@@ -401,207 +403,213 @@ export function ActionItemList({ items, people }: ActionItemListProps) {
     );
   }
 
+  const ActionItemCard = React.memo(
+    ({ item, index }: { item: ActionItem; index: number }) => (
+      <motion.div
+        custom={index}
+        variants={animations.card}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        layout
+        className="py-1.5"
+      >
+        <Card
+          className={cn(
+            "group relative overflow-hidden transition-all duration-500",
+            item.completed_at
+              ? "border-emerald-500/30 bg-emerald-50/10 hover:border-emerald-500/50 hover:bg-emerald-50/20 dark:bg-emerald-950/10 dark:hover:bg-emerald-950/20"
+              : "bg-gradient-to-br from-background/90 to-background/70 hover:shadow-lg",
+          )}
+        >
+          <motion.div
+            className="pointer-events-none absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-emerald-500/0 to-emerald-500/5"
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileHover={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4 }}
+          />
+
+          <CardHeader className="pb-2 pt-4">
+            <CardTitle className="flex items-start justify-between gap-2">
+              <div className="flex items-start gap-2">
+                <motion.div
+                  variants={animations.checkbox}
+                  initial={false}
+                  animate={item.completed_at ? "checked" : "unchecked"}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="pl-0.5"
+                >
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="mt-0.5 h-4 w-4 shrink-0"
+                    onClick={() =>
+                      toggleComplete({
+                        id: item.id,
+                        completed: !item.completed_at,
+                      })
+                    }
+                  >
+                    {item.completed_at ? (
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    ) : (
+                      <Circle className="h-3 w-3" />
+                    )}
+                  </Button>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className={cn(
+                    "text-sm font-medium",
+                    item.completed_at &&
+                      "text-emerald-500/50 line-through decoration-emerald-500/50",
+                  )}
+                >
+                  {item.text}
+                </motion.div>
+              </div>
+
+              <div className="flex gap-2">
+                <motion.div
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  className="pr-0.5"
+                >
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      "mt-0.5 h-4 w-4 shrink-0 opacity-0 transition-opacity hover:text-primary group-hover:opacity-100",
+                      item.completed_at && "hover:text-emerald-500",
+                    )}
+                    onClick={() =>
+                      setEditingItem({
+                        id: item.id,
+                        text: item.text,
+                        dueDate: item.due_date
+                          ? dayjs(item.due_date).startOf("day").toDate()
+                          : null,
+                        assigneeIds: item.assignees.map((a) => a.assignee.id),
+                      })
+                    }
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </Button>
+                </motion.div>
+
+                <motion.div
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  className="pr-0.5"
+                >
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="mt-0.5 h-4 w-4 shrink-0 text-destructive-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+                    onClick={() => deleteActionItem({ id: item.id })}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </motion.div>
+              </div>
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent className="ml-6 pb-4">
+            <div className="flex items-center justify-between gap-4">
+              <motion.div
+                variants={animations.indicators.container}
+                initial="hidden"
+                animate="visible"
+                className="flex items-center gap-4"
+              >
+                {item.due_date && (
+                  <motion.div variants={animations.indicators.item}>
+                    <ActionItemCardIndicator
+                      Icon={ClockIcon}
+                      text={`Due: ${formatDate(
+                        dayjs(item.due_date).startOf("day").toISOString(),
+                      )}`}
+                      isCompleted={!!item.completed_at}
+                    />
+                  </motion.div>
+                )}
+
+                {item.assignees.length > 0 && (
+                  <motion.div variants={animations.indicators.item}>
+                    <ActionItemCardIndicator
+                      Icon={PersonIcon}
+                      text={`Assigned to: ${item.assignees
+                        .map((assignee) => assignee.assignee.name)
+                        .join(", ")}`}
+                      isCompleted={!!item.completed_at}
+                    />
+                  </motion.div>
+                )}
+
+                {item.meeting?.name && (
+                  <motion.div variants={animations.indicators.item}>
+                    <ActionItemCardIndicator
+                      Icon={VideoIcon}
+                      text={
+                        <Link
+                          href={`/videos/${item.meeting.video_api_id}`}
+                          className="no-underline transition-colors duration-100 hover:text-primary group-hover:underline group-hover:underline-offset-4"
+                        >
+                          {item.meeting.name.length > 20
+                            ? `${item.meeting.name.slice(0, 20)}...`
+                            : item.meeting.name}
+                        </Link>
+                      }
+                      isCompleted={!!item.completed_at}
+                    />
+                  </motion.div>
+                )}
+              </motion.div>
+
+              <motion.div variants={animations.indicators.item}>
+                <ActionItemCardIndicator
+                  text={`Created at ${formatDate(item.created_at)}`}
+                  isCompleted={!!item.completed_at}
+                />
+              </motion.div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    ),
+  );
+
   return (
     <>
-      <AnimatePresence mode="popLayout">
-        <motion.div
-          className="space-y-3"
-          initial="hidden"
-          animate="visible"
-          variants={{
-            visible: {
-              transition: {
-                staggerChildren: 0.12,
-              },
+      <motion.div
+        className="space-y-3"
+        initial="hidden"
+        animate="visible"
+        variants={{
+          visible: {
+            transition: {
+              staggerChildren: 0.12,
             },
-          }}
-        >
-          {_.orderBy(
-            items,
-            [(x) => dayjs(x.created_at).isBefore(dayjs())],
-            ["desc"],
-          ).map((item, index) => (
-            <motion.div
-              key={item.id}
-              custom={index}
-              variants={animations.card}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              layout
-            >
-              <Card
-                className={cn(
-                  "group relative overflow-hidden transition-all duration-500",
-                  item.completed_at
-                    ? "border-emerald-500/30 bg-emerald-50/10 hover:border-emerald-500/50 hover:bg-emerald-50/20 dark:bg-emerald-950/10 dark:hover:bg-emerald-950/20"
-                    : "bg-gradient-to-br from-background/90 to-background/70 hover:shadow-lg",
-                )}
-              >
-                <motion.div
-                  className="pointer-events-none absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-emerald-500/0 to-emerald-500/5"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  whileHover={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.4 }}
-                />
-
-                <CardHeader className="pb-2 pt-4">
-                  <CardTitle className="flex items-start justify-between gap-2">
-                    <div className="flex items-start gap-2">
-                      <motion.div
-                        variants={animations.checkbox}
-                        initial={false}
-                        animate={item.completed_at ? "checked" : "unchecked"}
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="pl-0.5"
-                      >
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="mt-0.5 h-4 w-4 shrink-0"
-                          onClick={() =>
-                            toggleComplete({
-                              id: item.id,
-                              completed: !item.completed_at,
-                            })
-                          }
-                        >
-                          {item.completed_at ? (
-                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                          ) : (
-                            <Circle className="h-3 w-3" />
-                          )}
-                        </Button>
-                      </motion.div>
-
-                      <motion.div
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className={cn(
-                          "text-sm font-medium",
-                          item.completed_at &&
-                            "text-emerald-500/50 line-through decoration-emerald-500/50",
-                        )}
-                      >
-                        {item.text}
-                      </motion.div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <motion.div
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.95 }}
-                        transition={{ duration: 0.2 }}
-                        className="pr-0.5"
-                      >
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className={cn(
-                            "mt-0.5 h-4 w-4 shrink-0 opacity-0 transition-opacity hover:text-primary group-hover:opacity-100",
-                            item.completed_at && "hover:text-emerald-500",
-                          )}
-                          onClick={() =>
-                            setEditingItem({
-                              id: item.id,
-                              text: item.text,
-                              dueDate: item.due_date
-                                ? dayjs(item.due_date).startOf("day").toDate()
-                                : null,
-                              assigneeIds: item.assignees.map(
-                                (a) => a.assignee.id,
-                              ),
-                            })
-                          }
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </Button>
-                      </motion.div>
-
-                      <motion.div
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.95 }}
-                        transition={{ duration: 0.2 }}
-                        className="pr-0.5"
-                      >
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="mt-0.5 h-4 w-4 shrink-0 text-destructive-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
-                          onClick={() => deleteActionItem({ id: item.id })}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </motion.div>
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-
-                <CardContent className="ml-6 pb-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <motion.div
-                      variants={animations.indicators.container}
-                      initial="hidden"
-                      animate="visible"
-                      className="flex items-center gap-4"
-                    >
-                      {item.due_date && (
-                        <motion.div variants={animations.indicators.item}>
-                          <ActionItemCardIndicator
-                            Icon={ClockIcon}
-                            text={`Due: ${formatDate(dayjs(item.due_date).startOf("day").toISOString())}`}
-                            isCompleted={!!item.completed_at}
-                          />
-                        </motion.div>
-                      )}
-
-                      {item.assignees.length > 0 && (
-                        <motion.div variants={animations.indicators.item}>
-                          <ActionItemCardIndicator
-                            Icon={PersonIcon}
-                            text={`Assigned to: ${item.assignees
-                              .map((assignee) => assignee.assignee.name)
-                              .join(", ")}`}
-                            isCompleted={!!item.completed_at}
-                          />
-                        </motion.div>
-                      )}
-
-                      {item.meeting.name && (
-                        <motion.div variants={animations.indicators.item}>
-                          <ActionItemCardIndicator
-                            Icon={VideoIcon}
-                            text={
-                              <Link
-                                href={`/videos/${item.meeting.video_api_id}`}
-                                className="no-underline transition-colors duration-100 hover:text-primary group-hover:underline group-hover:underline-offset-4"
-                              >
-                                {item.meeting.name.length > 20
-                                  ? `${item.meeting.name.slice(0, 20)}...`
-                                  : item.meeting.name}
-                              </Link>
-                            }
-                            isCompleted={!!item.completed_at}
-                          />
-                        </motion.div>
-                      )}
-                    </motion.div>
-
-                    <motion.div variants={animations.indicators.item}>
-                      <ActionItemCardIndicator
-                        text={`Created at ${formatDate(item.created_at)}`}
-                        isCompleted={!!item.completed_at}
-                      />
-                    </motion.div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </motion.div>
-      </AnimatePresence>
+          },
+        }}
+      >
+        <Virtuoso
+          ref={virtuosoRef}
+          style={{ height: "100vh", minHeight: "400px" }}
+          totalCount={items.length}
+          overscan={10}
+          itemContent={(index) => (
+            <ActionItemCard item={items[index]!} index={index} />
+          )}
+        />
+      </motion.div>
 
       <Dialog open={!!editingItem} onOpenChange={() => setEditingItem(null)}>
         <DialogContent>
