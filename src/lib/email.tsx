@@ -1,5 +1,6 @@
 import { render } from "@react-email/components";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import _ from "lodash";
 import { Resend } from "resend";
 
 import {
@@ -23,6 +24,8 @@ import { ReportsService } from "~/lib/reports/queries";
 
 import type { Database } from "./supabase/database.types";
 import { createClient } from "./supabase/server";
+
+const IS_TESTING_REPORT_READY_EMAIL = true;
 
 const resend = new Resend(env.RESEND_API_KEY);
 
@@ -305,7 +308,9 @@ export async function sendSkillReportReadyEmail(
     // Send the email
     const data = await resend.emails.send({
       from: "Titan <onboarding@emails.withtitan.com>",
-      to: report.profile.email,
+      to: IS_TESTING_REPORT_READY_EMAIL
+        ? `marco+${_.camelCase(emailProps.profile.nickname)}@withtitan.com`
+        : report.profile.email,
       subject,
       html: emailHtml,
     });
