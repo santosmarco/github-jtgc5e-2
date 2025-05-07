@@ -204,8 +204,7 @@ export function NotEnoughDataContent({ className }: ContentProps) {
         }}
         className="max-w-xs text-center text-sm text-foreground"
       >
-        Additional coaching sessions are needed to generate an accurate skill
-        report
+        Additional meetings are needed to generate an accurate skill report
       </motion.p>
     </motion.div>
   );

@@ -25,15 +25,7 @@ export function PercentageChangeIndicator({
 
   // No previous data
   if (isZero && !previousDate) {
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="text-sm text-muted-foreground"
-      >
-        No previous data
-      </motion.div>
-    );
+    return null;
   }
 
   return (

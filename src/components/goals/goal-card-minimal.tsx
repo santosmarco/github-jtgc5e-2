@@ -90,18 +90,20 @@ export const GoalCardMinimal = React.forwardRef<
           min={0}
           max={100}
           size="md"
-          className="sm:h-48"
+          className={previousScore ? "sm:h-48" : "sm:h-48 sm:pt-9"}
         />
 
         {/* Percentage change indicator */}
-        <div className="absolute bottom-0 left-0 right-0 flex w-full items-center justify-between">
-          <div className="w-full rounded-lg bg-gradient-to-t from-background to-transparent p-4 pt-8">
-            <PercentageChangeIndicator
-              percentageChange={percentageChange}
-              previousDate={previousScore?.date}
-            />
+        {previousScore && (
+          <div className="absolute bottom-0 left-0 right-0 flex w-full items-center justify-between">
+            <div className="w-full rounded-lg bg-gradient-to-t from-background to-transparent p-4 pt-8">
+              <PercentageChangeIndicator
+                percentageChange={percentageChange}
+                previousDate={previousScore.date}
+              />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </motion.div>
   );

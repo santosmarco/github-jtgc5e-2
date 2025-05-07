@@ -72,7 +72,10 @@ export function SimplifiedGauge({
       const progress = Math.min(elapsedTime / duration, 1);
       const easedProgress = easeOutQuart(progress);
 
-      const currentValue = startValue + (endValue - startValue) * easedProgress;
+      const currentValue = Math.max(
+        startValue + (endValue - startValue) * easedProgress,
+        min,
+      );
       setDisplayValue(currentValue);
 
       if (progress < 1) {
@@ -91,7 +94,7 @@ export function SimplifiedGauge({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [normalizedValue, value, displayValue]);
+  }, [normalizedValue, value, displayValue, min]);
 
   return (
     <div className={cn("flex flex-col items-center justify-center", className)}>
