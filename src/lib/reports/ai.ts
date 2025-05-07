@@ -1,4 +1,4 @@
-import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateObject } from "ai";
 import { dedent } from "ts-dedent";
 import { z } from "zod";
@@ -186,11 +186,40 @@ export async function generateReportSections(
   reportId: string,
   supabaseClient: SupabaseClient<Database>,
 ) {
-  const { data: report, error: reportError } = (await supabaseClient
+  // First query to get the basic report data
+  const { data: reportBasic, error: reportBasicError } = await supabaseClient
     .from("reports")
     .select(
       `
-        *,
+      *,
+      profile:profiles(
+        id,
+        nickname,
+        development_themes:profile_development_themes(
+          id,
+          title,
+          description,
+          key_points,
+          is_enabled,
+          order
+        )
+      )
+    `,
+    )
+    .eq("id", reportId)
+    .eq("profile.development_themes.is_enabled", true)
+    .is("profile.development_themes.deleted_at", null)
+    .single();
+
+  if (reportBasicError) {
+    throw reportBasicError;
+  }
+
+  // Second query to get skill-related data
+  const { data: reportSkills, error: reportSkillsError } = await supabaseClient
+    .from("reports")
+    .select(
+      `
         skill:skills!inner(
           id,
           title,
@@ -236,88 +265,114 @@ export async function generateReportSections(
             created_at,
             skill_id
           )
-        ),
-        report_sections(*),
-        report_goals(
-          *,
-          goal:goals(
-            *,
-            signals:goal_signals(*)
-          )
-        ),
-        report_goal_signals(
-          *,
-          goal_signal:goal_signals(
-            *,
-            goal_id
-          ),
-          direction
-        ),
-        report_moments(
-          *,
-          moment:moments!inner(
-            id,
-            vtt,
-            title,
-            summary,
-            version,
-            activity,
-            relevant,
-            topic_id,
-            intensity,
-            created_at,
-            video_api_id,
-            _internal_thumbs_down,
-            segment_end_timestamp_in_seconds,
-            segment_start_timestamp_in_seconds,
-            segment_start_timestamp_in_seconds_ideal,
-            subtags:moment_subtags(
-              id,
-              tag,
-              moment_id,
-              profile_id,
-              reasoning,
-              confidence,
-              created_at
-            )
-          ),
-          report_goal_signal:report_goal_signals(
-            *,
-            goal_signal:goal_signals(
-              *,
-              goal_id
-            )
-          )
-        ),
-        report_comments(*, user:profiles(*)),
-        profile:profiles(
-          id,
-          nickname,
-          development_themes:profile_development_themes(
-            id,
-            title,
-            description,
-            key_points,
-            is_enabled,
-            order
-          )
         )
       `,
     )
     .eq("id", reportId)
-    .eq("report_moments.is_visible", true)
-    .is("report_moments.omission_reason", null)
-    .eq("report_moments.moment.latest", true)
-    .eq("report_moments.moment.relevant", true)
-    .eq("profile.development_themes.is_enabled", true)
-    .is("profile.development_themes.deleted_at", null)
-    .single()) as
-    | { data: ReportForAI; error: null }
-    | { data: null; error: PostgrestError };
+    .single();
 
-  if (reportError) {
-    throw reportError;
+  if (reportSkillsError) {
+    throw reportSkillsError;
   }
+
+  // Third query to get report sections and goals
+  const { data: reportSectionsAndGoals, error: reportSectionsError } =
+    await supabaseClient
+      .from("reports")
+      .select(
+        `
+          report_sections(*),
+          report_goals(
+            *,
+            goal:goals(
+              *,
+              signals:goal_signals(*)
+            )
+          ),
+          report_goal_signals(
+            *,
+            goal_signal:goal_signals(
+              *,
+              goal_id
+            ),
+            direction
+          )
+        `,
+      )
+      .eq("id", reportId)
+      .single();
+
+  if (reportSectionsError) {
+    throw reportSectionsError;
+  }
+
+  // Fourth query to get report moments
+  const { data: reportMoments, error: reportMomentsError } =
+    await supabaseClient
+      .from("reports")
+      .select(
+        `
+          report_moments(
+            *,
+            moment:moments!inner(
+              id,
+              vtt,
+              title,
+              latest,
+              summary,
+              version,
+              activity,
+              relevant,
+              topic_id,
+              intensity,
+              created_at,
+              video_api_id,
+              _internal_thumbs_down,
+              segment_end_timestamp_in_seconds,
+              segment_start_timestamp_in_seconds,
+              segment_start_timestamp_in_seconds_ideal,
+              subtags:moment_subtags(
+                id,
+                tag,
+                moment_id,
+                profile_id,
+                reasoning,
+                confidence,
+                created_at
+              )
+            ),
+            report_goal_signal:report_goal_signals(
+              *,
+              goal_signal:goal_signals(
+                *,
+                goal_id
+              )
+            )
+          ),
+          report_comments(*, user:profiles(*))
+        `,
+      )
+      .eq("id", reportId)
+      .eq("report_moments.is_visible", true)
+      .is("report_moments.omission_reason", null)
+      .eq("report_moments.moment.latest", true)
+      .eq("report_moments.moment.relevant", true)
+      .single();
+
+  if (reportMomentsError) {
+    throw reportMomentsError;
+  }
+
+  // Combine all the data into a single report object
+  const report = {
+    ...reportBasic,
+    skill: reportSkills.skill,
+    report_sections: reportSectionsAndGoals.report_sections,
+    report_goals: reportSectionsAndGoals.report_goals,
+    report_goal_signals: reportSectionsAndGoals.report_goal_signals,
+    report_moments: reportMoments.report_moments,
+    report_comments: reportMoments.report_comments,
+  };
 
   const developmentThemesMarkdown =
     report.profile?.development_themes &&
@@ -340,7 +395,7 @@ export async function generateReportSections(
       
       Here's the report data:
       <report_data>
-      ${formatReportToMarkdown(report as any)}
+      ${formatReportToMarkdown(report)}
       </report_data>
       
       You are working for:
@@ -482,7 +537,7 @@ export async function generateReportSections(
 
       Here's the report data:
       <report_data>
-      ${formatReportToMarkdown(report as any)}
+      ${formatReportToMarkdown(report)}
       </report_data>
 
       ${transformJsonIntoXml(reportSections, "report_sections")}
