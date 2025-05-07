@@ -642,7 +642,7 @@ export default function ReportPage({
               </div>
 
               {/* Video Player */}
-              <div className="hidden sm:col-span-2 sm:block">
+              <div className="hidden pt-0 sm:col-span-2 sm:block sm:pt-3">
                 <MomentsPlayer
                   reportMoments={filteredReportMoments.map((rm, idx) => ({
                     ...rm,
