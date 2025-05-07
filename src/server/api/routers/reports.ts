@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { generateObject, generateText } from "ai";
 import dayjs from "dayjs";
 import _ from "lodash";
+import { isTruthy } from "remeda";
 import dedent from "ts-dedent";
 import { z } from "zod";
 
@@ -32,10 +33,13 @@ export const reportsRouter = createTRPCRouter({
             *,
             report_goals(*, goal:goals!inner(*, signals:goal_signals(*))),
             report_goal_signals(*, goal_signal:goal_signals!inner(*)),
-            report_moments(*, moment:moments!inner(*, subtags:moment_subtags(*)))
+            report_moments!inner(*, moment:moments!inner(*, subtags:moment_subtags(*)))
           `,
         )
         .eq("id", reportId)
+        .eq("is_hidden", false)
+        .eq("report_moments.is_visible", true)
+        .is("report_moments.omission_reason", null)
         .maybeSingle();
 
       if (reportError) {
@@ -155,10 +159,11 @@ export const reportsRouter = createTRPCRouter({
     )
     .query(async ({ input }) => {
       const supabase = await createClient();
+      const reportsService = new ReportsService(supabase);
 
       const { data: group, error: groupError } = await supabase
         .from("group_report_processing_status")
-        .select("*")
+        .select("*, skill:skills(id, title, icon)")
         .eq("id", input.groupId)
         .single();
 
@@ -182,8 +187,10 @@ export const reportsRouter = createTRPCRouter({
         error: reportProcessingStatusesError,
       } = await supabase
         .from("report_processing_status")
-        .select("*")
-        .eq("group_processing_status_id", group.id);
+        .select("report_id")
+        .eq("group_processing_status_id", group.id)
+        .eq("status", "completed")
+        .not("report_id", "is", null);
 
       if (reportProcessingStatusesError) {
         throw new TRPCError({
@@ -193,25 +200,127 @@ export const reportsRouter = createTRPCRouter({
         });
       }
 
+      const reportIds = reportProcessingStatuses
+        .map((rps) => rps.report_id)
+        .filter(isTruthy);
+
+      if (reportIds.length === 0) {
+        return {
+          group,
+          reports: [],
+        };
+      }
+
       const { data: reports, error: reportsError } = await supabase
         .from("reports")
         .select(
           `
             *,
-            skill:skills(*, goal_templates(*), goals(*), reports(*, report_goals(*), report_moments!inner(*, moment:moments!inner(*, subtags:moment_subtags(*)), report_goal_signal:report_goal_signals!inner(*))), statuses:group_report_processing_status(*), scales:skill_scales(*)),
+            skill:skills!inner(
+              id,
+              title,
+              icon,
+              description,
+              internal_title,
+              created_at,
+              goals!inner(
+                id,
+                text,
+                progress,
+                is_current,
+                is_default,
+                hidden_text,
+                user_provided_context,
+                completed_at,
+                previous_goal_id,
+                created_at,
+                deleted_at,
+                profile_id,
+                skill_id
+              ),
+              scales:skill_scales(
+                id,
+                positive_tag_title,
+                negative_tag_title,
+                positive_tag_description,
+                negative_tag_description
+              ),
+              statuses:group_report_processing_status(
+                id,
+                status,
+                goal_ids,
+                created_at,
+                profile_id,
+                skill_id
+              ),
+              goal_templates(
+                id,
+                text,
+                context,
+                is_current,
+                created_at,
+                skill_id
+              )
+            ),
             report_sections(*),
-            report_goals(*, goal:goals!inner(*, signals:goal_signals(*))),
-            report_goal_signals(*, goal_signal:goal_signals!inner(*)),
-            report_moments!inner(*, moment:moments!inner(*, subtags:moment_subtags(*)), report_goal_signal:report_goal_signals!inner(*)),
-            report_comments(*, user:profiles!inner(*))
+            report_goals(
+              *,
+              goal:goals(
+                *,
+                signals:goal_signals(*)
+              )
+            ),
+            report_goal_signals(
+              *,
+              goal_signal:goal_signals(
+                *,
+                goal_id
+              ),
+              direction
+            ),
+            report_moments(
+              *,
+              moment:moments!inner(
+                id,
+                vtt,
+                title,
+                summary,
+                version,
+                activity,
+                relevant,
+                topic_id,
+                intensity,
+                created_at,
+                video_api_id,
+                _internal_thumbs_down,
+                segment_end_timestamp_in_seconds,
+                segment_start_timestamp_in_seconds,
+                segment_start_timestamp_in_seconds_ideal,
+                subtags:moment_subtags(
+                  id,
+                  tag,
+                  moment_id,
+                  profile_id,
+                  reasoning,
+                  confidence,
+                  created_at
+                )
+              ),
+              report_goal_signal:report_goal_signals(
+                *,
+                goal_signal:goal_signals(
+                  *,
+                  goal_id
+                )
+              )
+            ),
+            report_comments(*, user:profiles(*))
           `,
         )
-        .in(
-          "id",
-          reportProcessingStatuses
-            .map((r) => r.report_id)
-            .filter((r): r is NonNullable<typeof r> => r !== null),
-        );
+        .in("id", reportIds)
+        .eq("is_hidden", false)
+        .eq("report_moments.is_visible", true)
+        .is("report_moments.omission_reason", null);
 
       if (reportsError) {
         throw new TRPCError({
@@ -221,8 +330,10 @@ export const reportsRouter = createTRPCRouter({
         });
       }
 
+      const dedupedReports = reportsService.dedupeReports(reports);
+
       const updatedReports = await Promise.all(
-        reports.map(async (report) => {
+        dedupedReports.map(async (report) => {
           if (report.personality_text) return report;
 
           const reportData = formatReportToMarkdown(report);
@@ -357,7 +468,7 @@ export const reportsRouter = createTRPCRouter({
           return {
             ...report,
             ...updatedReport,
-            report_moments: report.report_moments.filter((rm) => rm.is_visible),
+            report_moments: report.report_moments,
           };
         }),
       );
@@ -370,7 +481,7 @@ export const reportsRouter = createTRPCRouter({
             report.report_sections,
             (rs) => rs.index ?? 0,
           ),
-          report_moments: report.report_moments.filter((rm) => rm.is_visible),
+          report_moments: report.report_moments,
         })),
       };
     }),

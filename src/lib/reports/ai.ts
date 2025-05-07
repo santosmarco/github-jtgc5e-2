@@ -92,7 +92,10 @@ export type ReportTeaser = z.infer<typeof ReportTeaser>;
  * @returns Formatted markdown string of development themes
  */
 function formatDevelopmentThemesToMarkdown(
-  developmentThemes: Tables<"profile_development_themes">[],
+  developmentThemes: Pick<
+    Tables<"profile_development_themes">,
+    "id" | "title" | "description" | "key_points" | "is_enabled" | "order"
+  >[],
 ): string {
   if (!developmentThemes?.length) {
     return "No development themes available.";
@@ -130,13 +133,117 @@ export async function generateReportSections(
     .select(
       `
         *,
-        skill:skills(*, goal_templates(*), goals(*), reports(*, report_goals(*), report_moments!inner(*, moment:moments!inner(*, subtags:moment_subtags(*)), report_goal_signal:report_goal_signals!inner(*))), statuses:group_report_processing_status(*), scales:skill_scales(*)),
+        skill:skills!inner(
+          id,
+          title,
+          icon,
+          description,
+          internal_title,
+          created_at,
+          goals!inner(
+            id,
+            text,
+            progress,
+            is_current,
+            is_default,
+            hidden_text,
+            user_provided_context,
+            completed_at,
+            previous_goal_id,
+            created_at,
+            deleted_at,
+            profile_id,
+            skill_id
+          ),
+          scales:skill_scales(
+            id,
+            positive_tag_title,
+            negative_tag_title,
+            positive_tag_description,
+            negative_tag_description
+          ),
+          statuses:group_report_processing_status(
+            id,
+            status,
+            goal_ids,
+            created_at,
+            profile_id,
+            skill_id
+          ),
+          goal_templates(
+            id,
+            text,
+            context,
+            is_current,
+            created_at,
+            skill_id
+          )
+        ),
         report_sections(*),
-        report_goals(*, goal:goals!inner(*, signals:goal_signals(*))),
-        report_goal_signals(*, goal_signal:goal_signals!inner(*)),
-        report_moments!inner(*, moment:moments!inner(*, subtags:moment_subtags(*)), report_goal_signal:report_goal_signals!inner(*)),
-        report_comments(*, user:profiles!inner(*)),
-        profile:profiles(nickname, development_themes:profile_development_themes(*))
+        report_goals(
+          *,
+          goal:goals(
+            *,
+            signals:goal_signals(*)
+          )
+        ),
+        report_goal_signals(
+          *,
+          goal_signal:goal_signals(
+            *,
+            goal_id
+          ),
+          direction
+        ),
+        report_moments(
+          *,
+          moment:moments!inner(
+            id,
+            vtt,
+            title,
+            summary,
+            version,
+            activity,
+            relevant,
+            topic_id,
+            intensity,
+            created_at,
+            video_api_id,
+            _internal_thumbs_down,
+            segment_end_timestamp_in_seconds,
+            segment_start_timestamp_in_seconds,
+            segment_start_timestamp_in_seconds_ideal,
+            subtags:moment_subtags(
+              id,
+              tag,
+              moment_id,
+              profile_id,
+              reasoning,
+              confidence,
+              created_at
+            )
+          ),
+          report_goal_signal:report_goal_signals(
+            *,
+            goal_signal:goal_signals(
+              *,
+              goal_id
+            )
+          )
+        ),
+        report_comments(*, user:profiles(*)),
+        profile:profiles(
+          id,
+          nickname,
+          development_themes:profile_development_themes(
+            id,
+            title,
+            description,
+            key_points,
+            is_enabled,
+            order
+          )
+        )
       `,
     )
     .eq("id", reportId)

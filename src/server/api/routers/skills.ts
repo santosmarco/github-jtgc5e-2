@@ -67,9 +67,52 @@ export const skillsRouter = createTRPCRouter({
       const { data: reports, error: reportsError } = await supabase
         .from("reports")
         .select(
-          "*, report_goals(*), report_moments!inner(*, moment:moments!inner(*, subtags:moment_subtags(*)), report_goal_signal:report_goal_signals!inner(*))",
+          `
+            *,
+            report_goals(*),
+            report_moments!inner(
+              *,
+              moment:moments(
+                id,
+                vtt,
+                title,
+                summary,
+                version,
+                activity,
+                relevant,
+                topic_id,
+                intensity,
+                created_at,
+                video_api_id,
+                _internal_thumbs_down,
+                segment_end_timestamp_in_seconds,
+                segment_start_timestamp_in_seconds,
+                segment_start_timestamp_in_seconds_ideal,
+                subtags:moment_subtags(
+                  id,
+                  tag,
+                  moment_id,
+                  profile_id,
+                  reasoning,
+                  confidence,
+                  created_at
+                )
+              ),
+              report_goal_signal:report_goal_signals!inner(
+                *,
+                goal_signal:goal_signals(
+                  *,
+                  goal_id
+                )
+              )
+            )
+          `,
         )
-        .eq("profile_id", input.profileId);
+        .eq("profile_id", input.profileId)
+        .eq("is_hidden", false)
+        .eq("report_moments.is_visible", true)
+        .is("report_moments.omission_reason", null)
+        .order("start_date", { ascending: true });
 
       if (reportsError) {
         throw new TRPCError({

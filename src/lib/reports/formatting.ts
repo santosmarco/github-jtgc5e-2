@@ -239,7 +239,6 @@ export function extractOnlyUsefulReportData(
           topic_id: rm.moment.topic_id,
           intensity: rm.moment.intensity,
           created_at: rm.moment.created_at,
-          moment_url: rm.moment.moment_url,
           subtags: rm.moment.subtags.map((st) => ({
             id: st.id,
             tag: st.tag,
