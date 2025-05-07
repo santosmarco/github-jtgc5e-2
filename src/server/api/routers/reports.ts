@@ -18,7 +18,20 @@ import { createClient } from "~/lib/supabase/server";
 
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
 
+const SARRA_REDIRECTS: Record<string, string> = {
+  "d525bf95-83d7-4066-bd91-187ab795eb9e":
+    "fa079ee7-7cac-4125-af0c-45a3bf81ce01", // Decision Making
+  "6071ae97-3ce7-4494-94c9-20a787cc0bc7":
+    "566a8b6b-3bad-4972-9941-dc3718a4cde8", // Delegation
+  "46d7b6af-a1e4-4c96-91f8-e861d4c398a8":
+    "80fd6f95-23f9-43e1-b572-5d6dcd58efbb", // Communication
+};
+
 async function getGroupReports(groupId: string, reportId?: string) {
+  if (SARRA_REDIRECTS[groupId]) {
+    return getGroupReports(SARRA_REDIRECTS[groupId], reportId);
+  }
+
   const supabase = await createClient();
 
   const { data: group, error: groupError } = await supabase
