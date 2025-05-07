@@ -18,11 +18,10 @@ export type SkillsGridProps = {
 
 const containerVariants = {
   hidden: { opacity: 0 },
-  show: {
+  visible: {
     opacity: 1,
     transition: {
       staggerChildren: 0.05,
-      delayChildren: 0.2,
     },
   },
   exit: {
@@ -36,7 +35,7 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
-  show: {
+  visible: {
     opacity: 1,
     y: 0,
     transition: {
@@ -64,7 +63,7 @@ export function SkillsGrid({
     <motion.div
       variants={containerVariants}
       initial="hidden"
-      animate="show"
+      animate="visible"
       exit="exit"
       className="grid auto-rows-max grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
     >
@@ -101,7 +100,13 @@ export function SkillsGrid({
             const hasValidAssessment = !_.isNil(latestValidAssessment);
 
             // Sort by valid assessment existence (valid assessments first)
-            if (!hasValidAssessment) return 0;
+            if (!hasValidAssessment) {
+              // If no valid assessment but has any assessment, sort by latest assessment date
+              if (latestAssessment) {
+                return -dayjs(latestAssessment.created_at).valueOf() * 0.5; // Use a multiplier to keep these below valid assessments but still sorted by date
+              }
+              return 0; // No assessments at all
+            }
 
             // Sort by assessment date (most recent first)
             return -dayjs(latestValidAssessment.created_at).valueOf();

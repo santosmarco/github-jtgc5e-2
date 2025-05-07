@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { ArrowUpRight, Target, TrendingUp } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useIsMobile } from "~/hooks/use-mobile";
@@ -63,6 +63,10 @@ export const SectionsList = ({
     "positive",
   );
   const isMobile = useIsMobile();
+
+  const handleTabChange = useCallback((value: string) => {
+    setActiveTab(value === "positive" ? "positive" : "negative");
+  }, []);
 
   // Set the active tab based on the selected section
   useEffect(() => {
@@ -213,7 +217,7 @@ export const SectionsList = ({
         <Tabs
           defaultValue="negative"
           value={activeTab}
-          onValueChange={setActiveTab}
+          onValueChange={handleTabChange}
           className="w-full"
         >
           <div className="sticky top-0 z-10 bg-background/90 pt-2 backdrop-blur-md">

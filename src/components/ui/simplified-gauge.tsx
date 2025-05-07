@@ -35,12 +35,11 @@ export function SimplifiedGauge({
   size = "md",
   className,
 }: SimplifiedGaugeProps) {
-  // Initialize displayValue to match normalizedValue on first render
-  const normalizedValue = value ? Math.max(min, Math.min(max, value)) : min;
-  const [displayValue, setDisplayValue] = useState(normalizedValue);
+  const [displayValue, setDisplayValue] = useState(min);
   const animationRef = useRef<number | null>(null);
-  const isFirstRender = useRef(true);
 
+  // Normalize the value between min and max
+  const normalizedValue = value ? Math.max(min, Math.min(max, value)) : min;
   const percentage = ((normalizedValue - min) / (max - min)) * 100;
 
   // Size mappings
@@ -54,13 +53,6 @@ export function SimplifiedGauge({
   // Animate the displayed value
   useEffect(() => {
     if (typeof value !== "number") return;
-
-    // Skip animation on first render
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      setDisplayValue(normalizedValue);
-      return;
-    }
 
     // Clean up any existing animation
     if (animationRef.current !== null) {
@@ -81,8 +73,7 @@ export function SimplifiedGauge({
       const easedProgress = easeOutQuart(progress);
 
       const currentValue = startValue + (endValue - startValue) * easedProgress;
-      // Ensure the displayed value never goes below min
-      setDisplayValue(Math.max(min, currentValue));
+      setDisplayValue(currentValue);
 
       if (progress < 1) {
         animationRef.current = requestAnimationFrame(updateCounter);
@@ -100,7 +91,7 @@ export function SimplifiedGauge({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [normalizedValue, value, displayValue, min]);
+  }, [normalizedValue, value, displayValue]);
 
   return (
     <div className={cn("flex flex-col items-center justify-center", className)}>

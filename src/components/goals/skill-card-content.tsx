@@ -106,27 +106,52 @@ export function NoSkillContent({ className }: ContentProps) {
   return (
     <motion.div
       className={cn(
-        "flex flex-col items-center justify-center gap-3 px-6 text-center",
+        "z-20 flex flex-col items-center justify-center py-4 text-center",
         className,
       )}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{
-        type: "spring",
-        stiffness: 100,
-        damping: 20,
-        delay: 0.2,
-      }}
+      variants={gaugeVariants}
+      initial="hidden"
+      animate="visible"
     >
-      <AnimatedIcon className="bg-muted/30">
-        <AlertCircle className="text-muted-foreground" />
+      <AnimatedIcon className="bg-rose-500/20">
+        <AlertCircle className="text-rose-500" />
       </AnimatedIcon>
-      <span className="bg-gradient-to-r from-muted-foreground to-muted-foreground/70 bg-clip-text text-xl font-semibold text-transparent">
+      <motion.p
+        variants={{
+          hidden: { opacity: 0, y: 10 },
+          visible: { opacity: 1, y: 0 },
+        }}
+        initial="hidden"
+        animate="visible"
+        transition={{
+          type: "spring",
+          stiffness: 100,
+          damping: 20,
+          delay: 0.4,
+          duration: 0.2,
+        }}
+        className="mb-2 text-lg font-medium text-rose-500"
+      >
         No Skill Data
-      </span>
-      <span className="text-xs text-muted-foreground/70">
+      </motion.p>
+      <motion.p
+        variants={{
+          hidden: { opacity: 0, y: 10 },
+          visible: { opacity: 1, y: 0 },
+        }}
+        initial="hidden"
+        animate="visible"
+        transition={{
+          type: "spring",
+          stiffness: 100,
+          damping: 20,
+          delay: 0.5,
+          duration: 0.2,
+        }}
+        className="max-w-xs text-center text-sm text-foreground"
+      >
         Skill configuration needed
-      </span>
+      </motion.p>
     </motion.div>
   );
 }
@@ -135,27 +160,53 @@ export function NotEnoughDataContent({ className }: ContentProps) {
   return (
     <motion.div
       className={cn(
-        "flex flex-col items-center justify-center gap-3 px-6 text-center",
+        "z-20 flex flex-col items-center justify-center py-4 text-center",
         className,
       )}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{
-        type: "spring",
-        stiffness: 100,
-        damping: 20,
-        delay: 0.2,
-      }}
+      variants={gaugeVariants}
+      initial="hidden"
+      animate="visible"
     >
-      <AnimatedIcon className="bg-amber-500/10">
-        <AlertTriangle className="text-amber-500/80" />
+      <AnimatedIcon className="bg-amber-500/20">
+        <AlertTriangle className="text-amber-500" />
       </AnimatedIcon>
-      <span className="bg-gradient-to-r from-amber-500/90 to-amber-400/90 bg-clip-text text-xl font-semibold text-transparent">
-        Not Enough Data
-      </span>
-      <span className="text-xs text-muted-foreground/70">
-        More sessions needed
-      </span>
+      <motion.p
+        variants={{
+          hidden: { opacity: 0, y: 10 },
+          visible: { opacity: 1, y: 0 },
+        }}
+        initial="hidden"
+        animate="visible"
+        transition={{
+          type: "spring",
+          stiffness: 100,
+          damping: 20,
+          delay: 0.4,
+          duration: 0.2,
+        }}
+        className="mb-2 text-lg font-medium text-amber-500"
+      >
+        Insufficient Data
+      </motion.p>
+      <motion.p
+        variants={{
+          hidden: { opacity: 0, y: 10 },
+          visible: { opacity: 1, y: 0 },
+        }}
+        initial="hidden"
+        animate="visible"
+        transition={{
+          type: "spring",
+          stiffness: 100,
+          damping: 20,
+          delay: 0.5,
+          duration: 0.2,
+        }}
+        className="max-w-xs text-center text-sm text-foreground"
+      >
+        Additional coaching sessions are needed to generate an accurate skill
+        report
+      </motion.p>
     </motion.div>
   );
 }
