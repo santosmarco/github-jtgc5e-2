@@ -4705,6 +4705,7 @@ export type Database = {
           icon: string | null
           id: string
           internal_title: string | null
+          is_enabled: boolean
           title: string
         }
         Insert: {
@@ -4713,6 +4714,7 @@ export type Database = {
           icon?: string | null
           id?: string
           internal_title?: string | null
+          is_enabled?: boolean
           title: string
         }
         Update: {
@@ -4721,6 +4723,7 @@ export type Database = {
           icon?: string | null
           id?: string
           internal_title?: string | null
+          is_enabled?: boolean
           title?: string
         }
         Relationships: []
@@ -5313,6 +5316,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      begin_transaction: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       binary_quantize: {
         Args: { "": string } | { "": unknown }
         Returns: unknown
@@ -5320,6 +5327,10 @@ export type Database = {
       check_user_permissions: {
         Args: { user_id: string }
         Returns: boolean
+      }
+      commit_transaction: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       get_action_items_for_entity: {
         Args: { entity_id: string }
@@ -5426,6 +5437,10 @@ export type Database = {
       parse_search_query: {
         Args: { search_input: string }
         Returns: string
+      }
+      rollback_transaction: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       search_meetings: {
         Args: { search_input: string }
