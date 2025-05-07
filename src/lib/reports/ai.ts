@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import { generateObject } from "ai";
 import { dedent } from "ts-dedent";
 import { z } from "zod";
@@ -8,6 +8,64 @@ import type { Database, Tables } from "~/lib/supabase/database.types";
 
 import { transformJsonIntoXml } from "../suggested-topics/utils";
 import { formatReportToMarkdown } from "./formatting";
+
+export type ReportForAI = {
+  id: string;
+  skill: {
+    id: string;
+    title: string;
+    icon: string;
+    description: string;
+    internal_title: string;
+    created_at: string;
+    goals: Tables<"goals">[];
+  };
+  profile?: {
+    id: string;
+    nickname: string;
+    development_themes?: Array<{
+      id: string;
+      title: string;
+      description: string;
+      key_points: string[];
+      is_enabled: boolean;
+      order: number;
+    }>;
+  };
+  report_moments?: Array<{
+    id: string;
+    moment: {
+      id: string;
+      vtt: string;
+      title: string;
+      summary: string;
+      version: string;
+      activity: string;
+      relevant: boolean;
+      topic_id: string;
+      intensity: number;
+      created_at: string;
+      video_api_id: string;
+      _internal_thumbs_down: boolean;
+      segment_end_timestamp_in_seconds: number;
+      segment_start_timestamp_in_seconds: number;
+      segment_start_timestamp_in_seconds_ideal: number;
+      subtags: Tables<"moment_subtags">[];
+    };
+    report_goal_signal?: (Tables<"report_goal_signals"> & {
+      goal_signal: Tables<"goal_signals">;
+    })[];
+  }>;
+  report_comments?: (Tables<"report_comments"> & {
+    user: Tables<"profiles">;
+  })[];
+  report_goals?: (Tables<"report_goals"> & {
+    goal: Tables<"goals">;
+  })[];
+  report_goal_signals?: (Tables<"report_goal_signals"> & {
+    goal_signal: Tables<"goal_signals">;
+  })[];
+};
 
 export const ReportSections = z.object({
   strengthSections: z
@@ -128,7 +186,7 @@ export async function generateReportSections(
   reportId: string,
   supabaseClient: SupabaseClient<Database>,
 ) {
-  const { data: report, error: reportError } = await supabaseClient
+  const { data: report, error: reportError } = (await supabaseClient
     .from("reports")
     .select(
       `
@@ -253,7 +311,9 @@ export async function generateReportSections(
     .eq("report_moments.moment.relevant", true)
     .eq("profile.development_themes.is_enabled", true)
     .is("profile.development_themes.deleted_at", null)
-    .single();
+    .single()) as
+    | { data: ReportForAI; error: null }
+    | { data: null; error: PostgrestError };
 
   if (reportError) {
     throw reportError;
@@ -280,7 +340,7 @@ export async function generateReportSections(
       
       Here's the report data:
       <report_data>
-      ${formatReportToMarkdown(report)}
+      ${formatReportToMarkdown(report as any)}
       </report_data>
       
       You are working for:
@@ -422,7 +482,7 @@ export async function generateReportSections(
 
       Here's the report data:
       <report_data>
-      ${formatReportToMarkdown(report)}
+      ${formatReportToMarkdown(report as any)}
       </report_data>
 
       ${transformJsonIntoXml(reportSections, "report_sections")}
