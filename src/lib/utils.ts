@@ -2,6 +2,7 @@ import type { ClassValue } from "clsx";
 import { clsx } from "clsx";
 import type { Falsey } from "lodash";
 import { twMerge } from "tailwind-merge";
+import type { Tagged } from "type-fest";
 
 import { env } from "~/env";
 
@@ -110,4 +111,11 @@ export function isKeyOf<T extends object>(
   obj: T,
 ): key is Extract<keyof T, string> {
   return key in obj;
+}
+
+export function tag<T, TTag extends string>(
+  value: T,
+  _tag: TTag,
+): Tagged<T, TTag> {
+  return value as Tagged<T, TTag>;
 }

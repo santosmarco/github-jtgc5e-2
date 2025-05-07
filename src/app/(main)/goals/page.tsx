@@ -345,8 +345,7 @@ export default function GoalsPage() {
             className="grid auto-rows-max grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
           >
             <AnimatePresence mode="popLayout">
-              {skills
-                .filter((s) => s.goal_templates.length > 0)
+              {[...skills]
                 .sort((a, b) => {
                   // Assign a numeric score to each skill (lower = higher priority)
                   let aScore = 0;

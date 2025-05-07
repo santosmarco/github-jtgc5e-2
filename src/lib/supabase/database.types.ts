@@ -2440,8 +2440,8 @@ export type Database = {
           created_at: string
           date: string | null
           db_created_at: string | null
-          duration_in_ms: number | null
-          duration_in_seconds: number | null
+          duration_in_ms: number
+          duration_in_seconds: number
           meeting_baas_original_json: Json | null
           name: string | null
           original_vtt_file: string | null
@@ -2466,8 +2466,8 @@ export type Database = {
           created_at?: string
           date?: string | null
           db_created_at?: string | null
-          duration_in_ms?: number | null
-          duration_in_seconds?: number | null
+          duration_in_ms: number
+          duration_in_seconds: number
           meeting_baas_original_json?: Json | null
           name?: string | null
           original_vtt_file?: string | null
@@ -2492,8 +2492,8 @@ export type Database = {
           created_at?: string
           date?: string | null
           db_created_at?: string | null
-          duration_in_ms?: number | null
-          duration_in_seconds?: number | null
+          duration_in_ms?: number
+          duration_in_seconds?: number
           meeting_baas_original_json?: Json | null
           name?: string | null
           original_vtt_file?: string | null
@@ -2714,7 +2714,7 @@ export type Database = {
           moment_id: string | null
           profile_id: string | null
           reasoning: string | null
-          tag: string | null
+          tag: string
         }
         Insert: {
           confidence?: number | null
@@ -2723,7 +2723,7 @@ export type Database = {
           moment_id?: string | null
           profile_id?: string | null
           reasoning?: string | null
-          tag?: string | null
+          tag: string
         }
         Update: {
           confidence?: number | null
@@ -2732,7 +2732,7 @@ export type Database = {
           moment_id?: string | null
           profile_id?: string | null
           reasoning?: string | null
-          tag?: string | null
+          tag?: string
         }
         Relationships: [
           {
@@ -3977,7 +3977,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          is_visible: boolean | null
+          is_visible: boolean
           moment_id: string
           omission_reason: string | null
           report_goal_signal_id: string
@@ -3993,7 +3993,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
-          is_visible?: boolean | null
+          is_visible?: boolean
           moment_id: string
           omission_reason?: string | null
           report_goal_signal_id: string
@@ -4009,7 +4009,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
-          is_visible?: boolean | null
+          is_visible?: boolean
           moment_id?: string
           omission_reason?: string | null
           report_goal_signal_id?: string
@@ -4149,7 +4149,7 @@ export type Database = {
       reports: {
         Row: {
           created_at: string
-          end_date: string | null
+          end_date: string
           id: string
           is_hidden: boolean
           personality_badges: string[] | null
@@ -4159,13 +4159,13 @@ export type Database = {
           personality_text: string | null
           profile_id: string | null
           skill_id: string | null
-          start_date: string | null
+          start_date: string
           summary: string | null
           updated_at: string | null
         }
         Insert: {
           created_at?: string
-          end_date?: string | null
+          end_date: string
           id?: string
           is_hidden?: boolean
           personality_badges?: string[] | null
@@ -4175,13 +4175,13 @@ export type Database = {
           personality_text?: string | null
           profile_id?: string | null
           skill_id?: string | null
-          start_date?: string | null
+          start_date: string
           summary?: string | null
           updated_at?: string | null
         }
         Update: {
           created_at?: string
-          end_date?: string | null
+          end_date?: string
           id?: string
           is_hidden?: boolean
           personality_badges?: string[] | null
@@ -4191,7 +4191,7 @@ export type Database = {
           personality_text?: string | null
           profile_id?: string | null
           skill_id?: string | null
-          start_date?: string | null
+          start_date?: string
           summary?: string | null
           updated_at?: string | null
         }
@@ -5434,8 +5434,8 @@ export type Database = {
           created_at: string
           date: string | null
           db_created_at: string | null
-          duration_in_ms: number | null
-          duration_in_seconds: number | null
+          duration_in_ms: number
+          duration_in_seconds: number
           meeting_baas_original_json: Json | null
           name: string | null
           original_vtt_file: string | null

@@ -29,7 +29,7 @@ import {
 } from "~/components/ui/tooltip";
 import { useProfile } from "~/hooks/use-profile";
 import { transformMoment } from "~/lib/db/moments";
-import { checkUserFlags, Flag } from "~/lib/flags/flags";
+import { Flag, checkUserFlags } from "~/lib/flags/flags";
 import { getReportScores } from "~/lib/reports/scoring";
 import { createClient } from "~/lib/supabase/client";
 import type { Tables } from "~/lib/supabase/database.types";
@@ -84,11 +84,12 @@ export default function ReportPage({
     api.reports.getReportsTimelineDataForUser.useQuery(
       {
         userId: selectedProfile?.id ?? user?.id ?? "",
-        skillId: groupReports?.group.skill_id ?? "",
+        skillId: groupReports?.reports[0]?.skill_id ?? "",
       },
       {
         enabled:
-          !!(selectedProfile?.id || user?.id) && !!groupReports?.group.skill_id,
+          !!(selectedProfile?.id || user?.id) &&
+          !!groupReports?.reports[0]?.skill_id,
       },
     );
 
@@ -394,13 +395,13 @@ export default function ReportPage({
 
   const navigateToPreviousReport = () => {
     if (previousReport) {
-      router.push(`/goals/reports/${previousReport.groupId}`);
+      router.push(`/goals/reports/${previousReport.report.id}`);
     }
   };
 
   const navigateToNextReport = () => {
     if (nextReport) {
-      router.push(`/goals/reports/${nextReport.groupId}`);
+      router.push(`/goals/reports/${nextReport.report.id}`);
     }
   };
 
@@ -408,7 +409,7 @@ export default function ReportPage({
     if (!timelineData) return;
 
     for (const { entry } of timelineData.timelineData) {
-      router.prefetch(`/goals/reports/${entry.groupId}`);
+      router.prefetch(`/goals/reports/${entry.report.id}`);
     }
   }, [timelineData, router]);
 
@@ -479,8 +480,13 @@ export default function ReportPage({
               {previousReport && (
                 <TooltipContent side="bottom" sideOffset={5}>
                   <p className="text-sm">
-                    {dayjs(previousReport?.startDate ?? "").format("MMM D")} to{" "}
-                    {dayjs(previousReport?.endDate ?? "").format("MMM D")}
+                    {dayjs(previousReport?.report.start_date ?? "").format(
+                      "MMM D",
+                    )}{" "}
+                    to{" "}
+                    {dayjs(previousReport?.report.end_date ?? "").format(
+                      "MMM D",
+                    )}
                   </p>
                 </TooltipContent>
               )}
@@ -518,8 +524,9 @@ export default function ReportPage({
               {nextReport && (
                 <TooltipContent side="bottom" sideOffset={5}>
                   <p className="text-sm">
-                    {dayjs(nextReport?.startDate ?? "").format("MMM D")} to{" "}
-                    {dayjs(nextReport?.endDate ?? "").format("MMM D")}
+                    {dayjs(nextReport?.report.start_date ?? "").format("MMM D")}
+                    to{" "}
+                    {dayjs(nextReport?.report.end_date ?? "").format("MMM D")}
                   </p>
                 </TooltipContent>
               )}
@@ -558,7 +565,9 @@ export default function ReportPage({
             .map((item) => ({
               date: item.x,
               value: item.y,
-              groupId: item.entry.groupId,
+              groupId:
+                item.entry.report.processing_statuses[0]
+                  ?.group_processing_status_id ?? item.entry.report.id,
             })) ?? [];
 
         // Create a type-safe metrics array
@@ -638,12 +647,10 @@ export default function ReportPage({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-4 sm:gap-6">
               {report.skill && report.profile_id && (
                 <GoalCardMinimal
-                  skill={{
-                    ...report.skill,
-                    reports: [report],
-                    report_goals: report.report_goals,
+                  report={{
+                    ...report,
+                    skill: { ...report.skill },
                   }}
-                  profileId={report.profile_id}
                 />
               )}
 

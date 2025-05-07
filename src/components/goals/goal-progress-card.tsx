@@ -509,27 +509,15 @@ export function SkillProgressCard({
                 {dayjs(latestSkillAssessment.end_date).format("MMM D")}
               </span>
             </motion.div>
-
-            <Separator className="my-3 opacity-30" />
-
-            <motion.div
-              variants={contentVariants}
-              className="relative flex-grow pb-2 pt-1"
-            >
-              <p className="line-clamp-4 text-sm leading-relaxed text-muted-foreground/90">
-                {latestSkillAssessment.summary?.replace(/^['"]|['"]$/g, "")}
-              </p>
-              <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-background to-transparent" />
-            </motion.div>
           </div>
 
-          {latestSkillAssessmentStatus?.id && (
+          {latestSkillAssessment?.id && (
             <motion.div
               variants={contentVariants}
               className="relative z-10 mt-auto pt-2"
             >
               <Link
-                href={`/goals/reports/${latestSkillAssessmentStatus.id}?goalId=${skillAssessmentGoal.goal_id}`}
+                href={`/goals/reports/${latestSkillAssessment.id}?goalId=${skillAssessmentGoal.goal_id}`}
                 className="block w-full"
               >
                 <Button

@@ -1,16 +1,14 @@
 "use client";
 
-import dayjs from "dayjs";
 import { motion } from "framer-motion";
-import _ from "lodash";
 import type { LucideProps } from "lucide-react";
 import { ArrowUp } from "lucide-react";
 import dynamic from "next/dynamic";
 import React, { useEffect, useMemo, useState } from "react";
 
-import { getReportScores } from "~/lib/reports/scoring";
+import { type ScorableReport, getReportScores } from "~/lib/reports/scoring";
 import { cn } from "~/lib/utils";
-import type { RouterOutputs } from "~/trpc/react";
+import type { Intersect, Select } from "~/lib/utils/types";
 
 // Enhanced animations
 const cardVariants = {
@@ -44,13 +42,19 @@ const gaugeVariants = {
 };
 
 export type SkillCardProps = {
-  skill: RouterOutputs["skills"]["getAllSkills"][number];
-  profileId: string;
+  report: Intersect<
+    ScorableReport,
+    {
+      skill: Select<"skills", "icon" | "title">;
+    }
+  >;
 };
 
 export const GoalCardMinimal = React.forwardRef<HTMLDivElement, SkillCardProps>(
-  function SkillCard({ skill, profileId }, ref) {
+  function SkillCard({ report }, ref) {
     const [isHovered, setIsHovered] = useState(false);
+
+    const { skill } = report;
 
     const Icon = useMemo(
       () =>
@@ -82,21 +86,7 @@ export const GoalCardMinimal = React.forwardRef<HTMLDivElement, SkillCardProps>(
       [skill.icon],
     );
 
-    // Calculate statistics about reviews and assessments
-    const skillAssessments = skill.reports;
-    const latestAssessment =
-      skillAssessments.length > 0
-        ? _.orderBy(
-            skillAssessments,
-            [(r) => dayjs(r.created_at).toDate()],
-            ["desc"],
-          )[0]
-        : null;
-
-    const skillScore = getReportScores({
-      skill: { scales: skill.scales },
-      report_moments: latestAssessment?.report_moments ?? [],
-    });
+    const skillScore = getReportScores(report);
 
     return (
       <motion.div
@@ -117,7 +107,7 @@ export const GoalCardMinimal = React.forwardRef<HTMLDivElement, SkillCardProps>(
         {/* Background pattern */}
         <motion.div
           className={cn(
-            "pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-30 opacity-40",
+            "pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-40",
           )}
           style={{
             backgroundImage: `url(/skills/${skill.title.toLowerCase().replace(/[\s$$$$]+/g, "-")}.svg)`,
@@ -172,12 +162,12 @@ export const GoalCardMinimal = React.forwardRef<HTMLDivElement, SkillCardProps>(
 
           {/* Content */}
           <SimplifiedGauge
-            value={skillScore.finalScore * 100}
+            value={skillScore.finalScore}
             min={0}
             max={100}
             size="md"
             className="sm:h-48"
-            hasAssessments={!!latestAssessment}
+            hasAssessments={!!report.report_moments.length}
           />
 
           <div className="absolute bottom-4 left-4 flex items-center justify-between">

@@ -3,6 +3,7 @@ import { AxiosError } from "axios";
 import { z } from "zod";
 
 import { client as apiClient } from "~/lib/api/client";
+import { fetchReportsForHistoricalSkillScore } from "~/lib/reports/scoring";
 import { createClient } from "~/lib/supabase/server";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
@@ -63,65 +64,6 @@ export const skillsRouter = createTRPCRouter({
         });
       }
 
-      // Fetch reports and their related data in a single query
-      const { data: reports, error: reportsError } = await supabase
-        .from("reports")
-        .select(
-          `
-            *,
-            report_goals(*),
-            report_moments!inner(
-              *,
-              moment:moments(
-                id,
-                vtt,
-                title,
-                summary,
-                version,
-                activity,
-                relevant,
-                topic_id,
-                intensity,
-                created_at,
-                video_api_id,
-                _internal_thumbs_down,
-                segment_end_timestamp_in_seconds,
-                segment_start_timestamp_in_seconds,
-                segment_start_timestamp_in_seconds_ideal,
-                subtags:moment_subtags(
-                  id,
-                  tag,
-                  moment_id,
-                  profile_id,
-                  reasoning,
-                  confidence,
-                  created_at
-                )
-              ),
-              report_goal_signal:report_goal_signals!inner(
-                *,
-                goal_signal:goal_signals(
-                  *,
-                  goal_id
-                )
-              )
-            )
-          `,
-        )
-        .eq("profile_id", input.profileId)
-        .eq("is_hidden", false)
-        .eq("report_moments.is_visible", true)
-        .is("report_moments.omission_reason", null)
-        .order("start_date", { ascending: true });
-
-      if (reportsError) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: reportsError.message,
-          cause: reportsError,
-        });
-      }
-
       // Fetch statuses in a single query
       const { data: statuses, error: statusesError } = await supabase
         .from("group_report_processing_status")
@@ -137,20 +79,35 @@ export const skillsRouter = createTRPCRouter({
       }
 
       // Assemble the final result
-      const result = skills.map((skill) => ({
-        ...skill,
-        goals: skill.goals ?? [],
-        reports: reports
-          .filter((report) => report.skill_id === skill.id)
-          .map((r) => ({
-            ...r,
-            report_moments: r.report_moments.filter((rm) => rm.is_visible),
-          })),
-        statuses: statuses.filter((status) => status.skill_id === skill.id),
-        report_goals: reports
-          .filter((report) => report.skill_id === skill.id)
-          .flatMap((report) => report.report_goals ?? []),
-      }));
+      const result = await Promise.all(
+        skills.map(async (skill) => {
+          const reports = await fetchReportsForHistoricalSkillScore(
+            skill.id,
+            input.profileId,
+            supabase,
+          );
+          const { data: reportGoals } = await supabase
+            .from("report_goals")
+            .select("*")
+            .in(
+              "report_id",
+              reports.map((r) => r.id),
+            );
+
+          return {
+            ...skill,
+            goals: skill.goals ?? [],
+            reports: reports.map((report) => ({
+              ...report,
+              report_goals: (reportGoals ?? []).filter(
+                (rg) => rg.report_id === report.id,
+              ),
+            })),
+            statuses: statuses.filter((status) => status.skill_id === skill.id),
+            report_goals: reportGoals ?? [],
+          };
+        }),
+      );
 
       return result;
     }),

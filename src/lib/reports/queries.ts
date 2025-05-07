@@ -1013,15 +1013,17 @@ export class ReportsService {
         .select(
           `
             id,
+            skill_id,
             start_date,
             end_date,
-            processing_status:report_processing_status!inner(status, group_processing_status_id)
+            profile_id,
+            processing_statuses:report_processing_status!inner(status, group_processing_status_id)
           `,
         )
         .eq("profile_id", profileId)
         .eq("skill_id", skillId)
         .eq("is_hidden", false)
-        .eq("processing_status.status", "completed")
+        .eq("processing_statuses.status", "completed")
         .order("start_date", { ascending: true });
 
       if (reportsError) {
@@ -1081,7 +1083,8 @@ export class ReportsService {
 
           return {
             reportId: report.id,
-            groupId: report.processing_status?.[0]?.group_processing_status_id,
+            groupId:
+              report.processing_statuses?.[0]?.group_processing_status_id,
             startDate: report.start_date,
             endDate: report.end_date,
             score: Math.round(score * 100), // Convert to percentage

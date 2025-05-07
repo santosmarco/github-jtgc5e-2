@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import { getReportScores } from "~/lib/reports/scoring";
 import { cn } from "~/lib/utils";
-import { api, type RouterOutputs } from "~/trpc/react";
+import { type RouterOutputs, api } from "~/trpc/react";
 
 // Enhanced animations
 const cardVariants = {
@@ -173,12 +173,6 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
         skill.goals.some((goal) => goal.id === reportGoal.goal_id),
     );
 
-    const latestSkillAssessmentStatus = _.orderBy(
-      skill.statuses,
-      [(status) => dayjs(status.created_at).toDate()],
-      ["desc"],
-    )[0];
-
     // Calculate next report date (2 weeks after the end_date of the previous one or after goal.created_at)
     const getNextReportDate = () => {
       if (hasAssessments && latestAssessment?.end_date) {
@@ -199,20 +193,14 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
       return "Soon";
     };
 
-    const skillScore = getReportScores({
-      skill: { scales: skill.scales },
-      report_moments: latestAssessment?.report_moments ?? [],
-    });
+    const skillScore = latestAssessment
+      ? getReportScores(latestAssessment)
+      : null;
 
     const navigateToReport = () => {
-      if (
-        isEnabled &&
-        !isLoading &&
-        latestSkillAssessmentStatus &&
-        hasAssessments
-      ) {
+      if (isEnabled && !isLoading && latestAssessment && hasAssessments) {
         router.push(
-          `/goals/reports/${latestSkillAssessmentStatus?.id}?goalId=${skillAssessmentGoal?.goal_id}`,
+          `/goals/reports/${latestAssessment?.id}${skillAssessmentGoal?.goal_id ? `?goalId=${skillAssessmentGoal?.goal_id}` : ""}`,
         );
       }
     };
@@ -371,12 +359,11 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
               className="relative z-20 h-48"
             >
               <SimplifiedGauge
-                value={skillScore.finalScore * 100}
+                value={skillScore?.finalScore ?? null}
                 min={0}
                 max={100}
                 size="md"
                 className="h-48"
-                hasAssessments={hasAssessments}
               />
             </motion.div>
           ) : (
@@ -465,7 +452,7 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
                   e.stopPropagation();
                   if (hasAssessments) {
                     router.push(
-                      `/goals/reports/${latestSkillAssessmentStatus?.id}?goalId=${skillAssessmentGoal?.goal_id}`,
+                      `/goals/reports/${latestAssessment?.id}${skillAssessmentGoal?.goal_id ? `?goalId=${skillAssessmentGoal?.goal_id}` : ""}`,
                     );
                   }
                 }}
@@ -594,19 +581,17 @@ function SimplifiedGauge({
   max = 100,
   size = "md",
   className,
-  hasAssessments = false,
 }: {
-  value: number;
+  value: number | null;
   min?: number;
   max?: number;
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
-  hasAssessments?: boolean;
 }) {
   const [displayValue, setDisplayValue] = useState(min);
 
   // Normalize the value between min and max
-  const normalizedValue = Math.max(min, Math.min(max, value));
+  const normalizedValue = value ? Math.max(min, Math.min(max, value)) : min;
   const percentage = ((normalizedValue - min) / (max - min)) * 100;
 
   // Size mappings
@@ -702,14 +687,20 @@ function SimplifiedGauge({
               delay: 0.7,
             }}
           >
-            {hasAssessments ? (
+            {typeof value === "number" ? (
               <motion.span
                 className="text-5xl font-bold"
-                initial={{ value: min } as any}
-                animate={{ value: displayValue } as any}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 transition={{ duration: 1.5, ease: "easeOut" }}
               >
-                {Math.round(displayValue)}
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                >
+                  {Math.round(displayValue)}
+                </motion.span>
               </motion.span>
             ) : (
               <span className="text-5xl font-bold text-muted-foreground">
