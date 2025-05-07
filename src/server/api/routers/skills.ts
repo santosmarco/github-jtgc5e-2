@@ -50,11 +50,18 @@ export const skillsRouter = createTRPCRouter({
       const { data: skills, error: skillsError } = await supabase
         .from("skills")
         .select(
-          "*, goal_templates(*), scales:skill_scales(*), goals!goals_skill_id_fkey(*)",
+          `
+            *,
+            goal_templates(*),
+            scales:skill_scales(*),
+            goals(*)
+          `,
         )
+        .eq("is_enabled", true)
         .eq("goals.profile_id", input.profileId)
-        .is("goals.deleted_at", null)
-        .is("goals.is_current", true);
+        .eq("goals.is_default", true)
+        .eq("goals.is_current", true)
+        .is("goals.deleted_at", null);
 
       if (skillsError) {
         throw new TRPCError({
@@ -64,28 +71,15 @@ export const skillsRouter = createTRPCRouter({
         });
       }
 
-      // Fetch statuses in a single query
-      const { data: statuses, error: statusesError } = await supabase
-        .from("group_report_processing_status")
-        .select("*")
-        .eq("profile_id", input.profileId);
-
-      if (statusesError) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: statusesError.message,
-          cause: statusesError,
-        });
-      }
-
-      // Assemble the final result
       const result = await Promise.all(
         skills.map(async (skill) => {
           const reports = await fetchReportsForHistoricalSkillScore(
             skill.id,
             input.profileId,
             supabase,
+            { includeEmptyReports: true },
           );
+
           const { data: reportGoals } = await supabase
             .from("report_goals")
             .select("*")
@@ -96,44 +90,17 @@ export const skillsRouter = createTRPCRouter({
 
           return {
             ...skill,
-            goals: skill.goals ?? [],
             reports: reports.map((report) => ({
               ...report,
               report_goals: (reportGoals ?? []).filter(
-                (rg) => rg.report_id === report.id,
+                (reportGoal) => reportGoal.report_id === report.id,
               ),
             })),
-            statuses: statuses.filter((status) => status.skill_id === skill.id),
-            report_goals: reportGoals ?? [],
           };
         }),
       );
 
       return result;
-    }),
-
-  getGoalsForSkillForProfile: publicProcedure
-    .input(z.object({ skillId: z.string(), profileId: z.string() }))
-    .query(async ({ input }) => {
-      const supabase = await createClient();
-
-      const { data: goals, error: goalsError } = await supabase
-        .from("goals")
-        .select("*")
-        .eq("skill_id", input.skillId)
-        .eq("profile_id", input.profileId)
-        .eq("is_current", true)
-        .is("deleted_at", null);
-
-      if (goalsError) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: goalsError.message,
-          cause: goalsError,
-        });
-      }
-
-      return goals;
     }),
 
   enableSkill: publicProcedure
@@ -207,55 +174,76 @@ export const skillsRouter = createTRPCRouter({
 
       const goalsToCreate = goalTemplates.filter(
         (template) =>
-          !existingDeletedGoals.some((goal) => goal.text === template.text),
+          !existingDeletedGoals.some(
+            (goal) =>
+              goal.text.trim().toLowerCase() ===
+              template.text.trim().toLowerCase(),
+          ),
       );
 
-      // Create new goals from templates that don't exist yet
-      await Promise.all(
-        goalsToCreate.map(async (goalTemplate) => {
-          const { data: goal, error: goalInsertionError } = await supabase
-            .from("goals")
-            .insert({
-              hidden_text: goalTemplate.text,
-              is_current: true,
-              is_default: true,
-              profile_id: input.profileId,
-              skill_id: input.skillId,
-              text: goalTemplate.text,
-            })
-            .select("*")
-            .single();
+      // Create goals sequentially to avoid race conditions
+      for (const goalTemplate of goalsToCreate) {
+        const { data: goal, error: goalInsertionError } = await supabase
+          .from("goals")
+          .insert({
+            hidden_text: goalTemplate.text,
+            is_current: true,
+            is_default: true,
+            profile_id: input.profileId,
+            skill_id: input.skillId,
+            text: goalTemplate.text,
+          })
+          .select("*")
+          .single();
 
-          if (goalInsertionError) {
+        if (goalInsertionError) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: goalInsertionError.message,
+            cause: goalInsertionError,
+          });
+        }
+
+        // Create signals sequentially to avoid race conditions
+        for (const goalSignalTemplate of goalTemplate.goal_signal_templates) {
+          const { error: signalError } = await supabase
+            .from("goal_signals")
+            .insert({
+              activity_type: goalSignalTemplate.activity_type,
+              activity: goalSignalTemplate.activity,
+              direction: goalSignalTemplate.direction,
+              goal_id: goal.id,
+              hidden_text: goalSignalTemplate.text,
+              is_current: true,
+              tag: goalSignalTemplate.tag,
+              target_person_type: goalSignalTemplate.target_person_type,
+              text: goalSignalTemplate.text,
+            });
+
+          if (signalError) {
             throw new TRPCError({
               code: "INTERNAL_SERVER_ERROR",
-              message: goalInsertionError.message,
-              cause: goalInsertionError,
+              message: signalError.message,
+              cause: signalError,
             });
           }
+        }
 
-          await Promise.all(
-            goalTemplate.goal_signal_templates.map((goalSignalTemplate) =>
-              supabase.from("goal_signals").insert({
-                activity_type: goalSignalTemplate.activity_type,
-                activity: goalSignalTemplate.activity,
-                direction: goalSignalTemplate.direction,
-                goal_id: goal.id,
-                hidden_text: goalSignalTemplate.text,
-                is_current: true,
-                tag: goalSignalTemplate.tag,
-                target_person_type: goalSignalTemplate.target_person_type,
-                text: goalSignalTemplate.text,
-              }),
-            ),
+        goalIds.push(goal.id);
+      }
+
+      if (input.generateAssessment && goalIds.length > 0) {
+        const assessmentResult = await generateAssessment(
+          input.profileId,
+          goalIds,
+        );
+        if (!assessmentResult.success) {
+          console.error(
+            "Assessment generation failed:",
+            assessmentResult.error,
           );
-
-          goalIds.push(goal.id);
-        }),
-      );
-
-      if (input.generateAssessment) {
-        void generateAssessment(input.profileId, goalIds);
+          // We don't throw here as the skill enabling was successful
+        }
       }
 
       return { success: true };
@@ -267,11 +255,13 @@ export const skillsRouter = createTRPCRouter({
       const supabase = await createClient();
       const now = new Date().toISOString();
 
+      // Get all goals that need to be disabled
       const { data: goals, error: goalsError } = await supabase
         .from("goals")
         .select("*")
         .eq("skill_id", input.skillId)
         .eq("profile_id", input.profileId)
+        .eq("is_default", true)
         .eq("is_current", true)
         .is("deleted_at", null);
 
@@ -283,19 +273,23 @@ export const skillsRouter = createTRPCRouter({
         });
       }
 
-      await Promise.all(
-        goals.map((goal) =>
-          supabase
-            .from("goals")
-            .update({
-              deleted_at: now,
-            })
-            .eq("id", goal.id)
-            .eq("skill_id", input.skillId)
-            .eq("profile_id", input.profileId)
-            .eq("is_current", true),
-        ),
-      );
+      // Disable goals sequentially to ensure consistency
+      for (const goal of goals) {
+        const { error: updateError } = await supabase
+          .from("goals")
+          .update({
+            deleted_at: now,
+          })
+          .eq("id", goal.id);
+
+        if (updateError) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: updateError.message,
+            cause: updateError,
+          });
+        }
+      }
 
       return { success: true };
     }),

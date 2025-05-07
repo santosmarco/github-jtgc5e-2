@@ -1,10 +1,10 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import dayjs from "dayjs";
 import _ from "lodash";
 import type { SimplifyDeep } from "type-fest";
 
 import type { Database, Tables } from "~/lib/supabase/database.types";
 
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Intersect, Select } from "../utils/types";
 import { dedupeReports, shouldShowReportMoment } from "./utils";
 
@@ -49,11 +49,22 @@ export type ReportMetric = {
 export type ReportScore = {
   report: ScorableReport;
   date: string;
-  metrics: ReportMetric[];
-  negativeScore: number;
-  positiveScore: number;
-  finalScore: number;
-};
+} & (
+  | {
+      status: "success";
+      metrics: ReportMetric[];
+      negativeScore: number;
+      positiveScore: number;
+      finalScore: number;
+    }
+  | {
+      status: "no_skill" | "not_enough_moments";
+      metrics?: never;
+      negativeScore?: never;
+      positiveScore?: never;
+      finalScore?: never;
+    }
+);
 
 /**
  * Represents the historical report scores for a skill
@@ -70,10 +81,14 @@ export type HistoricalSkillScore = {
  * @returns A complete ReportScore object with metrics and aggregated scores
  */
 export function getReportScores(report: ScorableReport): ReportScore {
+  const date = dayjs(report.end_date).format("YYYY-MM-DD");
+
+  const baseScore = { report, date };
+
   // Initialize empty score object with default values
   const score: ReportScore = {
-    report,
-    date: dayjs(report.end_date).format("YYYY-MM-DD"),
+    ...baseScore,
+    status: "success",
     metrics: [],
     negativeScore: 0,
     positiveScore: 0,
@@ -81,13 +96,9 @@ export function getReportScores(report: ScorableReport): ReportScore {
   };
 
   // Early return if no skill data is available
-  if (!report.skill) return score;
-
-  // Sort scales for consistent ordering in the UI
-  const sortedScales = _.sortBy(
-    report.skill.scales,
-    (scale) => scale.negative_tag_title,
-  );
+  if (!report.skill) {
+    return { ...baseScore, status: "no_skill" };
+  }
 
   // Filter for valid moments that should be included in scoring
   const validReportMoments = report.report_moments.filter(
@@ -97,7 +108,15 @@ export function getReportScores(report: ScorableReport): ReportScore {
     (reportMoment) => reportMoment.moment,
   );
 
-  console.log({ validMoments, report });
+  if (validMoments.length === 0) {
+    return { ...baseScore, status: "not_enough_moments" };
+  }
+
+  // Sort scales for consistent ordering in the UI
+  const sortedScales = _.sortBy(
+    report.skill.scales,
+    (scale) => scale.negative_tag_title,
+  );
 
   // Process each scale to generate individual metrics
   for (const scale of sortedScales) {
@@ -134,8 +153,9 @@ export function getReportScores(report: ScorableReport): ReportScore {
   // Calculate final score as a value between 0.5 and 1.0
   // Higher positive tag ratio yields a higher score
   const total = score.positiveScore + score.negativeScore;
-  score.finalScore =
-    (total > 0 ? 0.5 + 0.5 * (score.positiveScore / total) : 0.5) * 100;
+  score.finalScore = Math.round(
+    (total > 0 ? 0.5 + 0.5 * (score.positiveScore / total) : 0.5) * 100,
+  );
 
   return score;
 }
@@ -163,6 +183,9 @@ export async function fetchReportsForHistoricalSkillScore(
   skillId: string,
   profileId: string,
   supabaseClient: SupabaseClient<Database>,
+  options?: {
+    includeEmptyReports?: boolean;
+  },
 ): Promise<ScorableReport[]> {
   // Get all completed reports for this profile and skill
   const { data: reports, error: reportsError } = await supabaseClient
@@ -180,7 +203,7 @@ export async function fetchReportsForHistoricalSkillScore(
           id,
           scales:skill_scales(positive_tag_title, negative_tag_title)
         ),
-        report_moments:report_moments!inner(
+        report_moments:report_moments(
           is_visible,
           omission_reason,
           moment:moments!inner(
@@ -207,15 +230,21 @@ export async function fetchReportsForHistoricalSkillScore(
     throw reportsError;
   }
 
-  if (!reports?.length) return [];
+  let filteredReports = reports.map((report) => ({
+    ...report,
+    report_moments: report.report_moments.filter(shouldShowReportMoment),
+  }));
+
+  if (!options?.includeEmptyReports) {
+    filteredReports = filteredReports.filter(
+      (report) => report.report_moments.length > 0,
+    );
+  }
+
+  if (!filteredReports?.length) return [];
 
   // Deduplicate reports by their date periods
-  const dedupedReports = dedupeReports(
-    reports.map((report) => ({
-      ...report,
-      report_moments: report.report_moments.filter(shouldShowReportMoment),
-    })),
-  );
+  const dedupedReports = dedupeReports(filteredReports);
 
   return dedupedReports;
 }

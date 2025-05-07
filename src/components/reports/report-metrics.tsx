@@ -81,6 +81,16 @@ export function ReportMetrics({
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
     );
 
+    if (sortedData.length === 1) {
+      const firstDate = new Date(sortedData[0]?.date ?? "");
+      firstDate.setDate(firstDate.getDate() - 7); // Subtract 7 days for the first tick
+
+      sortedData.unshift({
+        date: firstDate.toISOString().split("T")[0] ?? "",
+        value: 0,
+      });
+    }
+
     // Add a future date point without a value to create the "to be calculated" impression
     if (sortedData.length > 0) {
       const lastDate = new Date(sortedData[sortedData.length - 1]?.date ?? "");

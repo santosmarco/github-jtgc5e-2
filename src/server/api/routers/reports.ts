@@ -9,13 +9,13 @@ import { z } from "zod";
 
 import { formatReportToMarkdown } from "~/lib/reports/formatting";
 import { ReportPersonality } from "~/lib/reports/schemas";
-import { createClient } from "~/lib/supabase/server";
-
 import {
   fetchReportsForHistoricalSkillScore,
   getHistoricalReportScores,
 } from "~/lib/reports/scoring";
 import { dedupeReports } from "~/lib/reports/utils";
+import { createClient } from "~/lib/supabase/server";
+
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
 
 async function getGroupReports(groupId: string, reportId?: string) {
@@ -668,9 +668,79 @@ export const reportsRouter = createTRPCRouter({
           (entry) => ({
             entry,
             x: dayjs(entry.date).format("YYYY-MM-DD"),
-            y: entry.finalScore,
+            y: entry.finalScore ?? 0,
           }),
         ),
       };
+    }),
+
+  getNextReportDate: publicProcedure
+    .input(z.object({ skillId: z.string(), profileId: z.string() }))
+    .query(async ({ input }) => {
+      const supabase = await createClient();
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("*, user_settings!inner(*)")
+        .eq("id", input.profileId)
+        .single();
+
+      if (profileError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: profileError.message,
+          cause: profileError,
+        });
+      }
+
+      const reportFrequencyInDays =
+        profile.user_settings[0]?.report_frequency_in_days ?? 7;
+
+      const reports = await fetchReportsForHistoricalSkillScore(
+        input.skillId,
+        input.profileId,
+        supabase,
+      );
+
+      const dedupedReports = dedupeReports(reports);
+
+      const latestReport = _.maxBy(dedupedReports, (r) =>
+        dayjs(r.end_date).unix(),
+      );
+
+      if (!latestReport) {
+        const { data: defaultGoals, error: defaultGoalError } = await supabase
+          .from("goals")
+          .select("profile_id, skill_id, created_at, is_default")
+          .eq("profile_id", input.profileId)
+          .eq("skill_id", input.skillId)
+          .eq("is_default", true)
+          .eq("is_current", true)
+          .is("deleted_at", null)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (defaultGoalError) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: defaultGoalError.message,
+            cause: defaultGoalError,
+          });
+        }
+
+        const defaultGoal = defaultGoals[0];
+
+        if (!defaultGoal) {
+          return null;
+        }
+
+        return dayjs(dayjs(defaultGoal.created_at).format("YYYY-MM-DD"))
+          .add(reportFrequencyInDays, "days")
+          .toISOString();
+      }
+
+      return dayjs(dayjs(latestReport.end_date).format("YYYY-MM-DD"))
+        .add(reportFrequencyInDays, "days")
+        .toISOString();
     }),
 });

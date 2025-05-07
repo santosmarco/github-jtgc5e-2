@@ -1,11 +1,13 @@
 import { motion } from "framer-motion";
 import { ArrowUpRight, Target, TrendingUp } from "lucide-react";
 import { useEffect, useState } from "react";
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useIsMobile } from "~/hooks/use-mobile";
 import type { Enums } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { RouterOutputs } from "~/trpc/react";
+
 import { SectionCard } from "./section-card";
 
 type SectionWithScore = {
@@ -57,7 +59,9 @@ export const SectionsList = ({
   isAdmin = false,
 }: SectionsListProps): JSX.Element => {
   const [hoveredSection, setHoveredSection] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<string>("negative");
+  const [activeTab, setActiveTab] = useState<"positive" | "negative">(
+    "positive",
+  );
   const isMobile = useIsMobile();
 
   // Set the active tab based on the selected section

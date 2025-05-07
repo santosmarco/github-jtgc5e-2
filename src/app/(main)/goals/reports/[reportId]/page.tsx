@@ -29,7 +29,7 @@ import {
 } from "~/components/ui/tooltip";
 import { useProfile } from "~/hooks/use-profile";
 import { transformMoment } from "~/lib/db/moments";
-import { Flag, checkUserFlags } from "~/lib/flags/flags";
+import { checkUserFlags, Flag } from "~/lib/flags/flags";
 import { getReportScores } from "~/lib/reports/scoring";
 import { createClient } from "~/lib/supabase/client";
 import type { Tables } from "~/lib/supabase/database.types";
@@ -236,12 +236,12 @@ export default function ReportPage({
         );
 
         if (report) {
-          const firstNegativeSection = report.report_sections.find(
-            (section) => section.direction === "negative",
+          const firstPositiveSection = report.report_sections.find(
+            (section) => section.direction === "positive",
           );
 
-          if (firstNegativeSection) {
-            setSelectedReportSectionId(firstNegativeSection.id);
+          if (firstPositiveSection) {
+            setSelectedReportSectionId(firstPositiveSection.id);
           }
         }
       } else {
@@ -254,12 +254,12 @@ export default function ReportPage({
         });
 
         if (nextExpandedReport) {
-          const firstNegativeSection = nextExpandedReport.report_sections.find(
-            (section) => section.direction === "negative",
+          const firstPositiveSection = nextExpandedReport.report_sections.find(
+            (section) => section.direction === "positive",
           );
 
-          if (firstNegativeSection) {
-            setSelectedReportSectionId(firstNegativeSection.id);
+          if (firstPositiveSection) {
+            setSelectedReportSectionId(firstPositiveSection.id);
           }
         }
       }
@@ -314,63 +314,23 @@ export default function ReportPage({
             )
           : null;
 
-        // Get highest scoring negative section
-        const sortedNegativeSections = _.orderBy(
-          sectionScores.filter((s) => s.direction === "negative"),
+        // Get highest scoring positive section
+        const sortedPositiveSections = _.orderBy(
+          sectionScores.filter((s) => s.direction === "positive"),
           ["totalScore"],
           ["desc"],
         );
 
-        // Prioritize section with highest moment if it's negative, otherwise use highest scoring negative section
-        if (sectionWithHighestMoment?.direction === "negative") {
+        // Prioritize section with highest moment if it's positive, otherwise use highest scoring positive section
+        if (sectionWithHighestMoment?.direction === "positive") {
           setSelectedReportSectionId(sectionWithHighestMoment.id);
         } else {
-          const firstNegativeSection = sortedNegativeSections[0];
-          setSelectedReportSectionId(firstNegativeSection?.id ?? null);
+          const firstPositiveSection = sortedPositiveSections[0];
+          setSelectedReportSectionId(firstPositiveSection?.id ?? null);
         }
       }
     }
   }, [groupReports, selectedReportSectionId, goalId]);
-
-  // Update section selection when tab changes
-  const handleTabChange = (
-    value: string,
-    report: NonNullable<typeof groupReports>["reports"][number],
-  ) => {
-    const direction = value === "positive" ? "positive" : "negative";
-
-    // Calculate section scores
-    const sectionScores = report.report_sections.map((section) => {
-      const sectionMoments = report.report_moments.filter(
-        (rm) =>
-          rm.report_section_id === section.id &&
-          (!rm.moment._internal_thumbs_down ||
-            rm.moment._internal_thumbs_down <= 0),
-      );
-      const totalScore = sectionMoments.reduce(
-        (sum, rm) => sum + (rm.score ?? 0),
-        0,
-      );
-      return {
-        ...section,
-        totalScore,
-      };
-    });
-
-    // Get highest scoring section for the selected direction
-    const sortedSections = _.orderBy(
-      sectionScores.filter((s) => s.direction === direction),
-      ["totalScore"],
-      ["desc"],
-    );
-
-    const firstSection = sortedSections[0];
-    if (firstSection) {
-      setSelectedReportSectionId(firstSection.id);
-      setCurrentMomentIndex(0);
-      setHasJustUpdatedCurrentMomentIndex(true);
-    }
-  };
 
   const handleSectionSelect = (sectionId: string) => {
     setSelectedReportSectionId(sectionId);
@@ -571,14 +531,8 @@ export default function ReportPage({
             })) ?? [];
 
         // Create a type-safe metrics array
-        const typeCheckedMetrics: ReadonlyArray<{
-          id: string;
-          leftLabel: string;
-          rightLabel: string;
-          value: number;
-          history?: Array<{ date: string; value: number }>;
-        }> = [
-          ...reportMetrics.metrics.map((metric) => ({
+        const typeCheckedMetrics = [
+          ...(reportMetrics.metrics ?? []).map((metric) => ({
             ...metric,
             history: undefined,
           })),
@@ -651,6 +605,9 @@ export default function ReportPage({
                     ...report,
                     skill: { ...report.skill },
                   }}
+                  historicalScores={
+                    timelineData?.timelineData.map((data) => data.entry) ?? null
+                  }
                 />
               )}
 
