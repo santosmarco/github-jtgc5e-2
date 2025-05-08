@@ -191,20 +191,20 @@ export async function generateReportSections(
     .from("reports")
     .select(
       `
-      *,
-      profile:profiles(
-        id,
-        nickname,
-        development_themes:profile_development_themes(
+        *,
+        profile:profiles(
           id,
-          title,
-          description,
-          key_points,
-          is_enabled,
-          order
+          nickname,
+          development_themes:profile_development_themes(
+            id,
+            title,
+            description,
+            key_points,
+            is_enabled,
+            order
+          )
         )
-      )
-    `,
+      `,
     )
     .eq("id", reportId)
     .eq("profile.development_themes.is_enabled", true)
@@ -456,6 +456,9 @@ export async function generateReportSections(
       Format your response as a structured JSON object conforming to the specified schema.
     `,
     temperature: 0.7,
+    experimental_telemetry: {
+      isEnabled: true,
+    },
   });
 
   /**
@@ -497,10 +500,22 @@ export async function generateReportSections(
         Input: "Your strategic vision consistently translates into actionable plans. When pivoting the product roadmap or restructuring the sales territory, you break down complex goals into clear milestones. This <highlight>strategic clarity</highlight> helps everyone understand how their daily work connects to the company's bigger mission."
         Output: "You excel at translating <highlight>strategic vision</highlight> into clear, actionable plans for your team."
 
+        Input: "You sometimes struggle to maintain composure during high-pressure situations. In the budget review meeting with the executive team and when responding to client escalations, your reactions appeared reactive rather than measured. Developing a <highlight>consistent emotional regulation strategy</highlight> would help you navigate these challenging moments more effectively and maintain team confidence."
+        Output: "You can increase your impact by <highlight>preparing before meetings</highlight> to better regulate emotions and respond effectively during high-stakes conversations."
+
+        Input: "You need to establish clearer consequences for missed targets. When reviewing quarterly goals with the sales team or discussing project timelines with developers, you often acknowledge shortfalls without defining specific repercussions. Implementing a <highlight>structured accountability framework</highlight> would help team members understand the importance of meeting commitments and drive better performance."
+        Output: "Clarify and communicate <highlight>specific consequences</highlight> for unmet targets to reinforce accountability and drive performance."
+
+        Input: "Your follow-through on initiatives sometimes lacks consistency. After setting ambitious targets with the marketing team or establishing new processes with operations, the accountability mechanisms often fade over time. Creating a <highlight>systematic check-in protocol</highlight> would ensure sustained focus on key priorities and prevent important initiatives from losing momentum."
+        Output: "Implementing <highlight>consistent follow-up</highlight> after setting targets will strengthen accountability and clarify expectations."
+
         Input: "${section.summary}"
         Output:
       `,
-      temperature: 0.5,
+      temperature: 0.3,
+      experimental_telemetry: {
+        isEnabled: true,
+      },
     });
 
     return {
@@ -541,6 +556,11 @@ export async function generateReportSections(
       </report_data>
 
       ${transformJsonIntoXml(reportSections, "report_sections")}
+
+      You are working for:
+      <profile_data>
+      Nickname: ${report.profile?.nickname || "User"}
+      </profile_data>
 
       Your teaser must:
       <guidelines>

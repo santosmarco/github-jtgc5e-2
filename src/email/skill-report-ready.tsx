@@ -78,8 +78,8 @@ export function SkillReportReadyEmail({
   const skillTitle = report.skill.title;
 
   // Format date range
-  const startDate = dayjs(report.start_date).format("MMM, DD");
-  const endDate = dayjs(report.end_date).format("MMM, DD");
+  const startDate = dayjs(report.start_date).format("MMM DD");
+  const endDate = dayjs(report.end_date).format("MMM DD");
 
   // Prepare the historical scores for the sparkline
   const historicalScoresData = historicalScores.map((score) => ({
@@ -97,7 +97,7 @@ export function SkillReportReadyEmail({
   const leadershipMetrics = report.scores.metrics?.map((metric) => ({
     leftLabel: metric.leftLabel,
     rightLabel: metric.rightLabel,
-    value: metric.value,
+    value: 100 - metric.value,
   }));
 
   const isFounder = variant === "skill-report-ready-founder";
@@ -135,7 +135,7 @@ export function SkillReportReadyEmail({
                 </>
               }
               nickname={report.profile.nickname || ""}
-              meetingMinutes={meetingMinutes}
+              meetingMinutes={Math.round(meetingMinutes)}
               startDate={startDate}
               endDate={endDate}
             />
