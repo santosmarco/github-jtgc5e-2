@@ -298,7 +298,12 @@ export async function sendSkillReportReadyEmail(
         variant={emailVariant}
         previewText={previewText}
         baseReportUrl={baseReportUrl}
-        report={report}
+        report={{
+          ...report,
+          skill: report.skill,
+          profile: report.profile,
+          scores: getReportScores(scorableReport),
+        }}
         historicalScores={historicalScores}
         teaser={teaser}
         sections={sections}

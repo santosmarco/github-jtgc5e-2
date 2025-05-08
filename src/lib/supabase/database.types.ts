@@ -4704,7 +4704,7 @@ export type Database = {
           description: string | null
           icon: string | null
           id: string
-          internal_title: string | null
+          internal_title: string
           is_enabled: boolean
           title: string
         }
@@ -4713,7 +4713,7 @@ export type Database = {
           description?: string | null
           icon?: string | null
           id?: string
-          internal_title?: string | null
+          internal_title: string
           is_enabled?: boolean
           title: string
         }
@@ -4722,7 +4722,7 @@ export type Database = {
           description?: string | null
           icon?: string | null
           id?: string
-          internal_title?: string | null
+          internal_title?: string
           is_enabled?: boolean
           title?: string
         }

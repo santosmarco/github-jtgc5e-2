@@ -557,7 +557,7 @@ export async function generateReportSections(
 
       ${transformJsonIntoXml(reportSections, "report_sections")}
 
-      You are working for:
+      You are creating an email teaser for:
       <profile_data>
       Nickname: ${report.profile?.nickname || "User"}
       </profile_data>
@@ -565,7 +565,7 @@ export async function generateReportSections(
       Your teaser must:
       <guidelines>
       - Be 1-3 sentences (maximum 60 words)
-      - Address the reader directly using "you" or "your"
+      - Address the reader${report.profile?.nickname ? ` (${report.profile.nickname})` : ""} directly using "you" or "your"
       - Reference specific meetings, conversations, or interactions (e.g., "your strategy session with Alex" or "that critical product launch meeting")
       - Mention actual people by name from the report (team members, stakeholders)
       - Highlight one concrete strength and one specific growth opportunity
@@ -589,6 +589,9 @@ export async function generateReportSections(
       - "In this report, your delegation meetings with Marco and Tim demonstrate your ability to provide <highlight:strength>clear, detailed instructions</highlight:strength> that drive results—but your <highlight:growth>overly informal communication style</highlight:growth> in certain contexts may be reducing clarity and undermining the urgency of important tasks. See how consistent communication can transform your team dynamics!"
       - "In this report, your session with Marvin about <highlight:moment>redefining his role</highlight:moment> showcases your strength in <highlight:strength>empowering ownership and creativity</highlight:strength> among team members—but inconsistencies in <highlight:growth>ownership tracking and follow-up</highlight:growth> with Tim and Marco suggest an opportunity to prevent confusion and missed deadlines. Learn practical strategies to balance autonomy with accountability!"
       </examples>
+
+      REMEMBER:
+      - The reader is ${report.profile?.nickname || "User"}
     `,
     temperature: 0.7,
   });

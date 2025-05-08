@@ -60,46 +60,40 @@ async function handleExploreUnlockedEmail(
   supabase: SupabaseServerClient,
   profileId: string,
 ): Promise<NextResponse<ResponseBody>> {
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", profileId)
-    .single();
+  try {
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", profileId)
+      .single();
 
-  if (profileError) {
-    logger.error("Failed to fetch profile", { error: profileError, profileId });
-    return createErrorResponse(profileError.message, 404);
-  }
+    if (profileError) {
+      logger.error("Failed to fetch profile", {
+        error: profileError,
+        profileId,
+      });
+      return createErrorResponse(profileError.message, 404);
+    }
 
-  if (!profile) {
-    logger.error("Profile not found", { profileId });
-    return createErrorResponse("Profile not found", 404);
-  }
+    if (!profile) {
+      logger.error("Profile not found", { profileId });
+      return createErrorResponse("Profile not found", 404);
+    }
 
-  const { data: emailData, error: emailError } = await sendExploreUnlockedEmail(
-    {
+    const emailData = await sendExploreUnlockedEmail({
       profile,
-    },
-  );
-
-  if (emailError) {
-    logger.error("Failed to send explore unlocked email", {
-      error: emailError,
-      profileId,
     });
-    return createErrorResponse(emailError.message, 500);
-  }
 
-  if (!emailData) {
-    logger.error("Email data missing after send", { profileId });
-    return createErrorResponse("Email not sent", 500);
-  }
+    logger.info("Successfully sent explore unlocked email", {
+      profileId,
+      messageId: emailData.id,
+    });
 
-  logger.info("Successfully sent explore unlocked email", {
-    profileId,
-    messageId: emailData.id,
-  });
-  return createSuccessResponse(emailData.id);
+    return createSuccessResponse(emailData.id);
+  } catch (error) {
+    logger.error("Failed to send explore unlocked email", { error });
+    return createErrorResponse((error as Error).message, 500);
+  }
 }
 
 async function handleMeetingRecapEmail(
@@ -107,108 +101,96 @@ async function handleMeetingRecapEmail(
   meetingId: string,
   sections: ("topics-discussed" | "action-items")[],
 ): Promise<NextResponse<ResponseBody>> {
-  const { data: meeting, error: meetingError } = await supabase
-    .from("meetings")
-    .select(
-      "*, profile:profiles(*), topics:meeting_topics(*), actionItems:meeting_action_items(*, assignees:meeting_action_item_assignees(assignee:entities(*)))",
-    )
-    .eq("video_api_id", meetingId)
-    .single();
+  try {
+    const { data: meeting, error: meetingError } = await supabase
+      .from("meetings")
+      .select(
+        "*, profile:profiles(*), topics:meeting_topics(*), actionItems:meeting_action_items(*, assignees:meeting_action_item_assignees(assignee:entities(*)))",
+      )
+      .eq("video_api_id", meetingId)
+      .single();
 
-  if (meetingError) {
-    logger.error("Failed to fetch meeting", { error: meetingError, meetingId });
-    return createErrorResponse(meetingError.message, 404);
-  }
+    if (meetingError) {
+      logger.error("Failed to fetch meeting", {
+        error: meetingError,
+        meetingId,
+      });
+      return createErrorResponse(meetingError.message, 404);
+    }
 
-  if (!meeting) {
-    logger.error("Meeting not found", { meetingId });
-    return createErrorResponse("Meeting not found", 404);
-  }
+    if (!meeting) {
+      logger.error("Meeting not found", { meetingId });
+      return createErrorResponse("Meeting not found", 404);
+    }
 
-  if (!meeting.profile) {
-    logger.error("Meeting profile not found", { meetingId });
-    return createErrorResponse("Meeting profile not found", 404);
-  }
+    if (!meeting.profile) {
+      logger.error("Meeting profile not found", { meetingId });
+      return createErrorResponse("Meeting profile not found", 404);
+    }
 
-  const { data: emailData, error: emailError } = await sendMeetingRecapEmail({
-    meeting: {
-      ...meeting,
-      profile: meeting.profile,
-    },
-    sections,
-  });
-
-  if (emailError) {
-    logger.error("Failed to send meeting recap email", {
-      error: emailError,
-      meetingId,
+    const emailData = await sendMeetingRecapEmail({
+      meeting: {
+        ...meeting,
+        profile: meeting.profile,
+      },
+      sections,
     });
-    return createErrorResponse(emailError.message, 500);
-  }
 
-  if (!emailData) {
-    logger.error("Email data missing after send", { meetingId });
-    return createErrorResponse("Email not sent", 500);
-  }
+    logger.info("Successfully sent meeting recap email", {
+      meetingId,
+      messageId: emailData.id,
+    });
 
-  logger.info("Successfully sent meeting recap email", {
-    meetingId,
-    messageId: emailData.id,
-  });
-  return createSuccessResponse(emailData.id);
+    return createSuccessResponse(emailData.id);
+  } catch (error) {
+    logger.error("Failed to send meeting recap email", { error });
+    return createErrorResponse((error as Error).message, 500);
+  }
 }
 
 async function handleSkillReportReadyEmail(
   supabase: SupabaseServerClient,
   reportId: string,
 ): Promise<NextResponse<ResponseBody>> {
-  const { data: report, error: reportError } = await supabase
-    .from("reports")
-    .select("id, profile_id")
-    .eq("id", reportId)
-    .single();
+  try {
+    const { data: report, error: reportError } = await supabase
+      .from("reports")
+      .select("id, profile_id")
+      .eq("id", reportId)
+      .single();
 
-  if (reportError) {
-    logger.error("Failed to fetch report", { error: reportError, reportId });
-    return createErrorResponse(reportError.message, 404);
-  }
+    if (reportError) {
+      logger.error("Failed to fetch report", { error: reportError, reportId });
+      return createErrorResponse(reportError.message, 404);
+    }
 
-  if (!report) {
-    logger.error("Report not found", { reportId });
-    return createErrorResponse("Report not found", 404);
-  }
+    if (!report) {
+      logger.error("Report not found", { reportId });
+      return createErrorResponse("Report not found", 404);
+    }
 
-  if (!report.profile_id) {
-    logger.error("Report profile ID not found", { reportId });
-    return createErrorResponse("Report profile ID not found", 404);
-  }
+    if (!report.profile_id) {
+      logger.error("Report profile ID not found", { reportId });
+      return createErrorResponse("Report profile ID not found", 404);
+    }
 
-  const response = await sendSkillReportReadyEmail(report.id, supabase);
-  if (!response) {
-    logger.info("Skipping email send for report", { reportId });
-    return createSuccessResponse(null);
-  }
+    const emailData = await sendSkillReportReadyEmail(report.id, supabase);
 
-  const { data: emailData, error: emailError } = response;
+    if (!emailData) {
+      logger.info("Skipping email send for report", { reportId });
+      return createSuccessResponse(null);
+    }
 
-  if (emailError) {
-    logger.error("Failed to send skill report ready email", {
-      error: emailError,
+    logger.info("Successfully sent skill report ready email", {
       reportId,
+      messageId: emailData.id,
     });
-    return createErrorResponse(emailError.message, 500);
-  }
 
-  if (!emailData) {
-    logger.error("Email data missing after send", { reportId });
-    return createErrorResponse("Email not sent", 500);
+    return createSuccessResponse(emailData.id);
+  } catch (error) {
+    logger.error("Failed to send skill report ready email", { error });
+    return createErrorResponse((error as Error).message, 500);
   }
-
-  logger.info("Successfully sent skill report ready email", {
-    reportId,
-    messageId: emailData.id,
-  });
-  return createSuccessResponse(emailData.id);
 }
 
 export async function POST(
@@ -263,6 +245,7 @@ export async function POST(
     logger.warn("Invalid template ID received", {
       templateId: params.templateId,
     });
+
     return createErrorResponse("Invalid template ID", 400);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
