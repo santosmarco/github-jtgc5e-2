@@ -29,6 +29,7 @@ import {
 } from "./reports/scoring";
 import type { Database } from "./supabase/database.types";
 import { createClient } from "./supabase/server";
+import { isTruthy } from "./utils";
 
 const IS_TESTING_REPORT_READY_EMAIL = true;
 
@@ -171,23 +172,23 @@ export async function sendSkillReportReadyEmail(
           profile_id,
           start_date,
           end_date,
-          skill:skills!inner(
+          skill:skills(
             id,
             title,
             internal_title,
             scales:skill_scales(*)
           ),
-          report_moments!inner(
+          report_moments(
             id,
-            moment:moments!inner(
+            moment:moments(
               id,
-              meeting:meetings!inner(
+              meeting:meetings(
                 video_api_id,
                 duration_in_ms
               )
             )
           ),
-          profile:profiles!inner(
+          profile:profiles(
             id,
             email,
             nickname,
@@ -210,6 +211,13 @@ export async function sendSkillReportReadyEmail(
 
     if (!report.profile) {
       throw new Error("Report has no profile");
+    }
+
+    if (report.report_moments.length === 0) {
+      logger.info(`Report ${report.id} has no moments, skipping email`, {
+        report,
+      });
+      return;
     }
 
     const reports = await fetchReportsForHistoricalSkillScore(
@@ -243,11 +251,12 @@ export async function sendSkillReportReadyEmail(
       supabaseClient,
     );
 
-    const meetingMinutes = report.report_moments.reduce(
-      (total, moment) =>
-        total + (moment.moment.meeting?.duration_in_ms ?? 0) / 1000 / 60,
-      0,
-    );
+    const meetingMinutes = _.uniqBy(
+      report.report_moments
+        .map(({ moment }) => moment.meeting)
+        .filter(isTruthy),
+      (meeting) => meeting.video_api_id,
+    ).reduce((total, meeting) => total + meeting.duration_in_ms / 1000 / 60, 0);
 
     // Render the email
     const emailHtml = await render(
