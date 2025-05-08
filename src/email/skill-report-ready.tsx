@@ -34,6 +34,7 @@ export type ReportInsightSection = {
   title: string;
   summary: string;
   shortenedSummary: string;
+  relatedThemes?: string[];
 };
 
 export type ReportKeyMoment = ReportInsightSection & {
@@ -381,7 +382,7 @@ SkillReportReadyEmail.PreviewProps = {
   previewText: "Your Strategic Communication skill report is ready to review",
   baseReportUrl: "https://example.com/reports/",
   teaser:
-    "In this report, your strategy calls with Ralf and Sara reveal how your <highlight:strength>clear, direct delegation</highlight:strength> during the <highlight:moment>Germany market expansion planning</highlight:moment> drives team accountability—but your <highlight:growth>quick instructions to Sarah and Piotr</highlight:growth> sometimes leave room for ambiguity and missed context. Uncover how fine-tuning your communication can elevate your cross-cultural management impact!",
+    "In this report, your interactions with Ralf on the <highlight:moment>Germany market action plan</highlight:moment> reveal your <highlight:strength>clear, direct delegation</highlight:strength> that empowers team members to take ownership—but your <highlight:growth>brief instructions to Piotr during the glove testing follow-up</highlight:growth> highlight a chance to verify understanding and strengthen communication. See how refining your approach can further build cross-cultural management systems for scale!",
   report: generateMockReport(new Date()),
   historicalScores: [
     generateMockReportScores(
@@ -509,8 +510,6 @@ SkillReportReadyEmail.PreviewProps = {
           "You can strengthen your <highlight>delegation clarity and accountability</highlight> by verifying task comprehension after assigning responsibilities, ensuring effective execution and improved cross-cultural communication.",
       },
     ],
-    teaser:
-      "In this report, your interactions with Ralf on the <highlight:moment>Germany market action plan</highlight:moment> reveal your <highlight:strength>clear, direct delegation</highlight:strength> that empowers team members to take ownership—but your <highlight:growth>brief instructions to Piotr during the glove testing follow-up</highlight:growth> highlight a chance to verify understanding and strengthen communication. See how refining your approach can further build cross-cultural management systems for scale!",
   },
   meetingMinutes: faker.number.int({ min: 0, max: 1000 }),
 } satisfies SkillReportReadyEmailProps;
