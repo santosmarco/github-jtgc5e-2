@@ -9,6 +9,64 @@ import type { Database, Tables } from "~/lib/supabase/database.types";
 import { transformJsonIntoXml } from "../suggested-topics/utils";
 import { formatReportToMarkdown } from "./formatting";
 
+export type ReportForAI = {
+  id: string;
+  skill: {
+    id: string;
+    title: string;
+    icon: string;
+    description: string;
+    internal_title: string;
+    created_at: string;
+    goals: Tables<"goals">[];
+  };
+  profile?: {
+    id: string;
+    nickname: string;
+    development_themes?: Array<{
+      id: string;
+      title: string;
+      description: string;
+      key_points: string[];
+      is_enabled: boolean;
+      order: number;
+    }>;
+  };
+  report_moments?: Array<{
+    id: string;
+    moment: {
+      id: string;
+      vtt: string;
+      title: string;
+      summary: string;
+      version: string;
+      activity: string;
+      relevant: boolean;
+      topic_id: string;
+      intensity: number;
+      created_at: string;
+      video_api_id: string;
+      _internal_thumbs_down: boolean;
+      segment_end_timestamp_in_seconds: number;
+      segment_start_timestamp_in_seconds: number;
+      segment_start_timestamp_in_seconds_ideal: number;
+      subtags: Tables<"moment_subtags">[];
+    };
+    report_goal_signal?: (Tables<"report_goal_signals"> & {
+      goal_signal: Tables<"goal_signals">;
+    })[];
+  }>;
+  report_comments?: (Tables<"report_comments"> & {
+    user: Tables<"profiles">;
+  })[];
+  report_goals?: (Tables<"report_goals"> & {
+    goal: Tables<"goals">;
+  })[];
+  report_goal_signals?: (Tables<"report_goal_signals"> & {
+    goal_signal: Tables<"goal_signals">;
+  })[];
+};
+
 export const ReportSections = z.object({
   strengthSections: z
     .array(
@@ -92,7 +150,10 @@ export type ReportTeaser = z.infer<typeof ReportTeaser>;
  * @returns Formatted markdown string of development themes
  */
 function formatDevelopmentThemesToMarkdown(
-  developmentThemes: Tables<"profile_development_themes">[],
+  developmentThemes: Pick<
+    Tables<"profile_development_themes">,
+    "id" | "title" | "description" | "key_points" | "is_enabled" | "order"
+  >[],
 ): string {
   if (!developmentThemes?.length) {
     return "No development themes available.";
@@ -125,172 +186,197 @@ export async function generateReportSections(
   reportId: string,
   supabaseClient: SupabaseClient<Database>,
 ) {
-  const { data: report, error: reportError } = await supabaseClient
+  // First query to get the basic report data
+  const { data: reportBasic, error: reportBasicError } = await supabaseClient
     .from("reports")
     .select(
       `
         *,
-        skill:skills(
-          *,
-          goals(*),
-          scales:skill_scales(*),
-          statuses:group_report_processing_status(*),
-          goal_templates:goal_templates(*)
-        ),
-        report_sections(*),
-        report_goals(
-          *,
-          goal:goals!inner(
-            *,
-            signals:goal_signals!inner(*)
-          )
-        ),
-        report_goal_signals(
-          *,
-          goal_signal:goal_signals!inner(*)
-        ),
-        report_moments(
-          *,
-          moment:moments!inner(
-            *,
-            subtags:moment_subtags(*),
-            meeting:meetings!inner(
-              video_api_id,
-              name,
-              summary,
-              clean_vtt_file,
-              date,
-              profile_id,
-              topics_discussed:meeting_topics(
-                id,
-                title,
-                summary,
-                vtt_start_segment_id,
-                vtt_end_segment_id,
-                server_deleted_at,
-                created_at
-              ),
-              action_items:meeting_action_items(
-                id,
-                text,
-                vtt_start_segment_id,
-                vtt_end_segment_id,
-                due_date,
-                completed_at,
-                deleted_at,
-                server_deleted_at,
-                created_at,
-                assignees:meeting_action_item_assignees(
-                  assignee:entities(
-                    id,
-                    name,
-                    type,
-                    attributes,
-                    is_test
-                  )
-                )
-              ),
-              topics:meeting_topics_v2(
-                id,
-                index,
-                title,
-                summary,
-                start_segment_id,
-                end_segment_id,
-                created_at,
-                latest,
-                events:meeting_topic_events_v2(
-                  id,
-                  event,
-                  timestamp,
-                  latest
-                ),
-                entities:meeting_entities_v2(
-                  id,
-                  name,
-                  type,
-                  description,
-                  latest,
-                  observations:meeting_entity_observations_v2(
-                    id,
-                    observation,
-                    latest
-                  )
-                ),
-                relationships:meeting_entity_relationships_v2(
-                  id,
-                  subject_entity_name,
-                  object_entity_name,
-                  relationship_type,
-                  latest,
-                  observations:meeting_entity_relationship_observations_v2(
-                    id,
-                    observation,
-                    latest
-                  )
-                ),
-                observations:meeting_observations_v2(
-                  id,
-                  observation,
-                  latest
-                )
-              )
-            )
-          )
-        ),
         profile:profiles(
+          id,
           nickname,
           development_themes:profile_development_themes(
             id,
             title,
             description,
-            icon,
             key_points,
             is_enabled,
-            order,
-            parent_theme
+            order
           )
         )
       `,
     )
     .eq("id", reportId)
-    .eq("report_moments.is_visible", true)
-    .is("report_moments.omission_reason", null)
-    .is(
-      "report_moments.moment.meeting.topics_discussed.server_deleted_at",
-      null,
-    )
-    .is("report_moments.moment.meeting.action_items.server_deleted_at", null)
-    .eq(
-      "report_moments.moment.meeting.action_items.assignees.assignee.is_test",
-      false,
-    )
-    .eq("report_moments.moment.meeting.topics.latest", true)
-    .eq("report_moments.moment.meeting.topics.events.latest", true)
-    .eq("report_moments.moment.meeting.topics.entities.latest", true)
-    .eq(
-      "report_moments.moment.meeting.topics.entities.observations.latest",
-      true,
-    )
-    .eq("report_moments.moment.meeting.topics.relationships.latest", true)
-    .eq(
-      "report_moments.moment.meeting.topics.relationships.observations.latest",
-      true,
-    )
-    .eq("report_moments.moment.meeting.topics.observations.latest", true)
-    .eq("report_moments.moment.latest", true)
-    .eq("report_moments.moment.relevant", true)
     .eq("profile.development_themes.is_enabled", true)
     .is("profile.development_themes.deleted_at", null)
     .single();
 
-  if (reportError) {
-    throw reportError;
+  if (reportBasicError) {
+    throw reportBasicError;
   }
 
-  const developmentThemesMarkdown = formatDevelopmentThemesToMarkdown(
-    report.profile.development_themes,
-  );
+  // Second query to get skill-related data
+  const { data: reportSkills, error: reportSkillsError } = await supabaseClient
+    .from("reports")
+    .select(
+      `
+        skill:skills!inner(
+          id,
+          title,
+          icon,
+          description,
+          internal_title,
+          created_at,
+          goals!inner(
+            id,
+            text,
+            progress,
+            is_current,
+            is_default,
+            hidden_text,
+            user_provided_context,
+            completed_at,
+            previous_goal_id,
+            created_at,
+            deleted_at,
+            profile_id,
+            skill_id
+          ),
+          scales:skill_scales(
+            id,
+            positive_tag_title,
+            negative_tag_title,
+            positive_tag_description,
+            negative_tag_description
+          ),
+          statuses:group_report_processing_status(
+            id,
+            status,
+            goal_ids,
+            created_at,
+            profile_id,
+            skill_id
+          ),
+          goal_templates(
+            id,
+            text,
+            context,
+            is_current,
+            created_at,
+            skill_id
+          )
+        )
+      `,
+    )
+    .eq("id", reportId)
+    .single();
+
+  if (reportSkillsError) {
+    throw reportSkillsError;
+  }
+
+  // Third query to get report sections and goals
+  const { data: reportSectionsAndGoals, error: reportSectionsError } =
+    await supabaseClient
+      .from("reports")
+      .select(
+        `
+          report_sections(*),
+          report_goals(
+            *,
+            goal:goals(
+              *,
+              signals:goal_signals(*)
+            )
+          ),
+          report_goal_signals(
+            *,
+            goal_signal:goal_signals(
+              *,
+              goal_id
+            ),
+            direction
+          )
+        `,
+      )
+      .eq("id", reportId)
+      .single();
+
+  if (reportSectionsError) {
+    throw reportSectionsError;
+  }
+
+  // Fourth query to get report moments
+  const { data: reportMoments, error: reportMomentsError } =
+    await supabaseClient
+      .from("reports")
+      .select(
+        `
+          report_moments(
+            *,
+            moment:moments!inner(
+              id,
+              vtt,
+              title,
+              latest,
+              summary,
+              version,
+              activity,
+              relevant,
+              topic_id,
+              intensity,
+              created_at,
+              video_api_id,
+              _internal_thumbs_down,
+              segment_end_timestamp_in_seconds,
+              segment_start_timestamp_in_seconds,
+              segment_start_timestamp_in_seconds_ideal,
+              subtags:moment_subtags(
+                id,
+                tag,
+                moment_id,
+                profile_id,
+                reasoning,
+                confidence,
+                created_at
+              )
+            ),
+            report_goal_signal:report_goal_signals(
+              *,
+              goal_signal:goal_signals(
+                *,
+                goal_id
+              )
+            )
+          ),
+          report_comments(*, user:profiles(*))
+        `,
+      )
+      .eq("id", reportId)
+      .eq("report_moments.is_visible", true)
+      .is("report_moments.omission_reason", null)
+      .eq("report_moments.moment.latest", true)
+      .eq("report_moments.moment.relevant", true)
+      .single();
+
+  if (reportMomentsError) {
+    throw reportMomentsError;
+  }
+
+  // Combine all the data into a single report object
+  const report = {
+    ...reportBasic,
+    skill: reportSkills.skill,
+    report_sections: reportSectionsAndGoals.report_sections,
+    report_goals: reportSectionsAndGoals.report_goals,
+    report_goal_signals: reportSectionsAndGoals.report_goal_signals,
+    report_moments: reportMoments.report_moments,
+    report_comments: reportMoments.report_comments,
+  };
+
+  const developmentThemesMarkdown =
+    report.profile?.development_themes &&
+    formatDevelopmentThemesToMarkdown(report.profile.development_themes);
 
   // Generate the report sections using AI
   const { object } = await generateObject({
@@ -319,7 +405,7 @@ export async function generateReportSections(
       
       The leader has the following DEVELOPMENT THEMES that should be prioritized in your analysis:
       <development_themes>
-      ${developmentThemesMarkdown}
+      ${developmentThemesMarkdown ?? "No development themes available."}
       </development_themes>
       
       INSTRUCTIONS FOR STRENGTH SECTIONS:
@@ -370,6 +456,9 @@ export async function generateReportSections(
       Format your response as a structured JSON object conforming to the specified schema.
     `,
     temperature: 0.7,
+    experimental_telemetry: {
+      isEnabled: true,
+    },
   });
 
   /**
@@ -411,10 +500,22 @@ export async function generateReportSections(
         Input: "Your strategic vision consistently translates into actionable plans. When pivoting the product roadmap or restructuring the sales territory, you break down complex goals into clear milestones. This <highlight>strategic clarity</highlight> helps everyone understand how their daily work connects to the company's bigger mission."
         Output: "You excel at translating <highlight>strategic vision</highlight> into clear, actionable plans for your team."
 
+        Input: "You sometimes struggle to maintain composure during high-pressure situations. In the budget review meeting with the executive team and when responding to client escalations, your reactions appeared reactive rather than measured. Developing a <highlight>consistent emotional regulation strategy</highlight> would help you navigate these challenging moments more effectively and maintain team confidence."
+        Output: "You can increase your impact by <highlight>preparing before meetings</highlight> to better regulate emotions and respond effectively during high-stakes conversations."
+
+        Input: "You need to establish clearer consequences for missed targets. When reviewing quarterly goals with the sales team or discussing project timelines with developers, you often acknowledge shortfalls without defining specific repercussions. Implementing a <highlight>structured accountability framework</highlight> would help team members understand the importance of meeting commitments and drive better performance."
+        Output: "You should clarify and communicate <highlight>specific consequences</highlight> for unmet targets to reinforce accountability and drive performance."
+
+        Input: "Your follow-through on initiatives sometimes lacks consistency. After setting ambitious targets with the marketing team or establishing new processes with operations, the accountability mechanisms often fade over time. Creating a <highlight>systematic check-in protocol</highlight> would ensure sustained focus on key priorities and prevent important initiatives from losing momentum."
+        Output: "You can improve by implementing <highlight>consistent follow-up</highlight> after setting targets to strengthen accountability and clarify expectations."
+
         Input: "${section.summary}"
         Output:
       `,
-      temperature: 0.5,
+      temperature: 0.3,
+      experimental_telemetry: {
+        isEnabled: true,
+      },
     });
 
     return {
@@ -456,10 +557,15 @@ export async function generateReportSections(
 
       ${transformJsonIntoXml(reportSections, "report_sections")}
 
+      You are creating an email teaser for:
+      <profile_data>
+      Nickname: ${report.profile?.nickname || "User"}
+      </profile_data>
+
       Your teaser must:
       <guidelines>
       - Be 1-3 sentences (maximum 60 words)
-      - Address the reader directly using "you" or "your"
+      - Address the reader${report.profile?.nickname ? ` (${report.profile.nickname})` : ""} directly using "you" or "your"
       - Reference specific meetings, conversations, or interactions (e.g., "your strategy session with Alex" or "that critical product launch meeting")
       - Mention actual people by name from the report (team members, stakeholders)
       - Highlight one concrete strength and one specific growth opportunity
@@ -483,6 +589,9 @@ export async function generateReportSections(
       - "In this report, your delegation meetings with Marco and Tim demonstrate your ability to provide <highlight:strength>clear, detailed instructions</highlight:strength> that drive results—but your <highlight:growth>overly informal communication style</highlight:growth> in certain contexts may be reducing clarity and undermining the urgency of important tasks. See how consistent communication can transform your team dynamics!"
       - "In this report, your session with Marvin about <highlight:moment>redefining his role</highlight:moment> showcases your strength in <highlight:strength>empowering ownership and creativity</highlight:strength> among team members—but inconsistencies in <highlight:growth>ownership tracking and follow-up</highlight:growth> with Tim and Marco suggest an opportunity to prevent confusion and missed deadlines. Learn practical strategies to balance autonomy with accountability!"
       </examples>
+
+      REMEMBER:
+      - The reader is ${report.profile?.nickname || "User"}
     `,
     temperature: 0.7,
   });

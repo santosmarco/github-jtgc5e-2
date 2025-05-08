@@ -84,11 +84,12 @@ export default function ReportPage({
     api.reports.getReportsTimelineDataForUser.useQuery(
       {
         userId: selectedProfile?.id ?? user?.id ?? "",
-        skillId: groupReports?.group.skill_id ?? "",
+        skillId: groupReports?.reports[0]?.skill_id ?? "",
       },
       {
         enabled:
-          !!(selectedProfile?.id || user?.id) && !!groupReports?.group.skill_id,
+          !!(selectedProfile?.id || user?.id) &&
+          !!groupReports?.reports[0]?.skill_id,
       },
     );
 
@@ -235,12 +236,12 @@ export default function ReportPage({
         );
 
         if (report) {
-          const firstNegativeSection = report.report_sections.find(
-            (section) => section.direction === "negative",
+          const firstPositiveSection = report.report_sections.find(
+            (section) => section.direction === "positive",
           );
 
-          if (firstNegativeSection) {
-            setSelectedReportSectionId(firstNegativeSection.id);
+          if (firstPositiveSection) {
+            setSelectedReportSectionId(firstPositiveSection.id);
           }
         }
       } else {
@@ -253,12 +254,12 @@ export default function ReportPage({
         });
 
         if (nextExpandedReport) {
-          const firstNegativeSection = nextExpandedReport.report_sections.find(
-            (section) => section.direction === "negative",
+          const firstPositiveSection = nextExpandedReport.report_sections.find(
+            (section) => section.direction === "positive",
           );
 
-          if (firstNegativeSection) {
-            setSelectedReportSectionId(firstNegativeSection.id);
+          if (firstPositiveSection) {
+            setSelectedReportSectionId(firstPositiveSection.id);
           }
         }
       }
@@ -313,63 +314,23 @@ export default function ReportPage({
             )
           : null;
 
-        // Get highest scoring negative section
-        const sortedNegativeSections = _.orderBy(
-          sectionScores.filter((s) => s.direction === "negative"),
+        // Get highest scoring positive section
+        const sortedPositiveSections = _.orderBy(
+          sectionScores.filter((s) => s.direction === "positive"),
           ["totalScore"],
           ["desc"],
         );
 
-        // Prioritize section with highest moment if it's negative, otherwise use highest scoring negative section
-        if (sectionWithHighestMoment?.direction === "negative") {
+        // Prioritize section with highest moment if it's positive, otherwise use highest scoring positive section
+        if (sectionWithHighestMoment?.direction === "positive") {
           setSelectedReportSectionId(sectionWithHighestMoment.id);
         } else {
-          const firstNegativeSection = sortedNegativeSections[0];
-          setSelectedReportSectionId(firstNegativeSection?.id ?? null);
+          const firstPositiveSection = sortedPositiveSections[0];
+          setSelectedReportSectionId(firstPositiveSection?.id ?? null);
         }
       }
     }
   }, [groupReports, selectedReportSectionId, goalId]);
-
-  // Update section selection when tab changes
-  const handleTabChange = (
-    value: string,
-    report: NonNullable<typeof groupReports>["reports"][number],
-  ) => {
-    const direction = value === "positive" ? "positive" : "negative";
-
-    // Calculate section scores
-    const sectionScores = report.report_sections.map((section) => {
-      const sectionMoments = report.report_moments.filter(
-        (rm) =>
-          rm.report_section_id === section.id &&
-          (!rm.moment._internal_thumbs_down ||
-            rm.moment._internal_thumbs_down <= 0),
-      );
-      const totalScore = sectionMoments.reduce(
-        (sum, rm) => sum + (rm.score ?? 0),
-        0,
-      );
-      return {
-        ...section,
-        totalScore,
-      };
-    });
-
-    // Get highest scoring section for the selected direction
-    const sortedSections = _.orderBy(
-      sectionScores.filter((s) => s.direction === direction),
-      ["totalScore"],
-      ["desc"],
-    );
-
-    const firstSection = sortedSections[0];
-    if (firstSection) {
-      setSelectedReportSectionId(firstSection.id);
-      setCurrentMomentIndex(0);
-      setHasJustUpdatedCurrentMomentIndex(true);
-    }
-  };
 
   const handleSectionSelect = (sectionId: string) => {
     setSelectedReportSectionId(sectionId);
@@ -394,13 +355,13 @@ export default function ReportPage({
 
   const navigateToPreviousReport = () => {
     if (previousReport) {
-      router.push(`/goals/reports/${previousReport.groupId}`);
+      router.push(`/goals/reports/${previousReport.report.id}`);
     }
   };
 
   const navigateToNextReport = () => {
     if (nextReport) {
-      router.push(`/goals/reports/${nextReport.groupId}`);
+      router.push(`/goals/reports/${nextReport.report.id}`);
     }
   };
 
@@ -408,7 +369,7 @@ export default function ReportPage({
     if (!timelineData) return;
 
     for (const { entry } of timelineData.timelineData) {
-      router.prefetch(`/goals/reports/${entry.groupId}`);
+      router.prefetch(`/goals/reports/${entry.report.id}`);
     }
   }, [timelineData, router]);
 
@@ -479,8 +440,13 @@ export default function ReportPage({
               {previousReport && (
                 <TooltipContent side="bottom" sideOffset={5}>
                   <p className="text-sm">
-                    {dayjs(previousReport?.startDate ?? "").format("MMM D")} to{" "}
-                    {dayjs(previousReport?.endDate ?? "").format("MMM D")}
+                    {dayjs(previousReport?.report.start_date ?? "").format(
+                      "MMM D",
+                    )}{" "}
+                    to{" "}
+                    {dayjs(previousReport?.report.end_date ?? "").format(
+                      "MMM D",
+                    )}
                   </p>
                 </TooltipContent>
               )}
@@ -518,8 +484,9 @@ export default function ReportPage({
               {nextReport && (
                 <TooltipContent side="bottom" sideOffset={5}>
                   <p className="text-sm">
-                    {dayjs(nextReport?.startDate ?? "").format("MMM D")} to{" "}
-                    {dayjs(nextReport?.endDate ?? "").format("MMM D")}
+                    {dayjs(nextReport?.report.start_date ?? "").format("MMM D")}
+                    to{" "}
+                    {dayjs(nextReport?.report.end_date ?? "").format("MMM D")}
                   </p>
                 </TooltipContent>
               )}
@@ -558,18 +525,14 @@ export default function ReportPage({
             .map((item) => ({
               date: item.x,
               value: item.y,
-              groupId: item.entry.groupId,
+              groupId:
+                item.entry.report.processing_statuses[0]
+                  ?.group_processing_status_id ?? item.entry.report.id,
             })) ?? [];
 
         // Create a type-safe metrics array
-        const typeCheckedMetrics: ReadonlyArray<{
-          id: string;
-          leftLabel: string;
-          rightLabel: string;
-          value: number;
-          history?: Array<{ date: string; value: number }>;
-        }> = [
-          ...reportMetrics.metrics.map((metric) => ({
+        const typeCheckedMetrics = [
+          ...(reportMetrics.metrics ?? []).map((metric) => ({
             ...metric,
             history: undefined,
           })),
@@ -638,12 +601,13 @@ export default function ReportPage({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-4 sm:gap-6">
               {report.skill && report.profile_id && (
                 <GoalCardMinimal
-                  skill={{
-                    ...report.skill,
-                    reports: [report],
-                    report_goals: report.report_goals,
+                  report={{
+                    ...report,
+                    skill: { ...report.skill },
                   }}
-                  profileId={report.profile_id}
+                  historicalScores={
+                    timelineData?.timelineData.map((data) => data.entry) ?? null
+                  }
                 />
               )}
 
@@ -678,7 +642,7 @@ export default function ReportPage({
               </div>
 
               {/* Video Player */}
-              <div className="hidden sm:col-span-2 sm:block">
+              <div className="hidden pt-0 sm:col-span-2 sm:block sm:pt-3">
                 <MomentsPlayer
                   reportMoments={filteredReportMoments.map((rm, idx) => ({
                     ...rm,

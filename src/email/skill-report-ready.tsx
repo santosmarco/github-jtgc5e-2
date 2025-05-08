@@ -1,3 +1,4 @@
+import { faker } from "@faker-js/faker";
 import {
   Body,
   Container,
@@ -8,9 +9,13 @@ import {
   Section,
   Tailwind,
 } from "@react-email/components";
+import dayjs from "dayjs";
+import _ from "lodash";
 
-import type { Tables } from "~/lib/supabase/database.types";
+import type { HistoricalSkillScore, ReportScore } from "~/lib/reports/scoring";
+import type { Enums, Tables } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
+import type { Select } from "~/lib/utils/types";
 
 import { CTAButtonSection } from "./_components/cta-button-section";
 import { MetricsSection } from "./_components/reports/metrics-section";
@@ -21,151 +26,97 @@ import { ReportKeyMomentsSection } from "./_components/reports/report-key-moment
 import { ReportSectionHeading } from "./_components/reports/report-section-heading";
 import { ReportTeaserSection } from "./_components/reports/report-teaser-section";
 import { Sparkline } from "./_components/sparkline";
-import { createUtmUrl, formatDate } from "./_components/text-processing";
+import { createUtmUrl } from "./_components/text-processing";
 import tailwindEmailConfig from "./tailwind.config";
-
-export type ReportProfile = Pick<
-  Tables<"profiles">,
-  "nickname" | "email" | "coach_id"
->;
-
-export type ReportSkill = {
-  id: string;
-  description?: string;
-  title: string;
-} | null;
-
-export type ReportData = Pick<
-  Tables<"reports">,
-  "id" | "start_date" | "end_date" | "created_at"
-> & {
-  skill?: ReportSkill;
-  report_goals: Array<Tables<"report_goals">>;
-  report_moments: Array<
-    Tables<"report_moments"> & {
-      moment: Tables<"moments">;
-    }
-  >;
-  report_sections?: Array<{
-    id: string;
-    title: string;
-    summary?: string | null;
-    direction?: "positive" | "negative" | null;
-  }>;
-  score?: number;
-  previous_score?: number;
-  historical_scores?: Array<{
-    score: number;
-    reportId: string;
-    startDate?: string;
-  }>;
-};
 
 export type ReportInsightSection = {
   id: string;
   title: string;
   summary: string;
   shortenedSummary: string;
+  relatedThemes?: string[];
 };
 
-export type ReportKeyMoment = {
-  id: string;
-  title: string;
-  summary: string;
-  shortenedSummary: string;
+export type ReportKeyMoment = ReportInsightSection & {
   people?: string[];
 };
 
-export type GeneratedSections = {
+export type SkillReportReadyEmailSections = {
   strengthSections: ReportInsightSection[];
   growthSections: ReportInsightSection[];
   keyMoments: ReportKeyMoment[];
-  teaser?: string;
 };
 
 export type SkillReportReadyEmailProps = {
-  variant: "manager" | "founder";
-  profile: ReportProfile;
-  report: ReportData;
-  meetingMinutes: number;
+  variant: Extract<
+    Enums<"email_template_type">,
+    "skill-report-ready-founder" | "skill-report-ready-manager"
+  >;
+  previewText: string;
+  baseReportUrl: string;
+  report: Select<"reports", "start_date" | "end_date"> & {
+    skill: Select<"skills", "internal_title"> & {
+      scales: Tables<"skill_scales">[];
+    };
+    profile: Select<"profiles", "nickname">;
+    scores: ReportScore;
+  };
+  historicalScores: HistoricalSkillScore["scores"];
   teaser: string;
-  generatedSections: GeneratedSections;
+  sections: SkillReportReadyEmailSections;
+  meetingMinutes: number;
 };
 
 export function SkillReportReadyEmail({
   variant,
-  profile,
+  previewText,
+  baseReportUrl,
   report,
-  meetingMinutes,
+  historicalScores,
   teaser,
-  generatedSections,
+  sections,
+  meetingMinutes,
 }: SkillReportReadyEmailProps) {
-  // Determine preview text
-  const previewText = `📊 Your ${report.skill?.title ?? "Leadership"} insights report is ready to view`;
-  const baseReportUrl = `https://app.withtitan.com/goals/reports/${report.id}`;
+  const skillTitle = report.skill.internal_title;
 
   // Format date range
-  const startDate = report.start_date
-    ? formatDate(new Date(report.start_date))
-    : "Recent";
-  const endDate = report.end_date
-    ? formatDate(new Date(report.end_date))
-    : "Now";
-
-  // Get skill title
-  const skillTitle = report.skill?.title;
+  const startDate = dayjs(report.start_date).format("MMM DD");
+  const endDate = dayjs(report.end_date).format("MMM DD");
 
   // Prepare the historical scores for the sparkline
-  const historicalScores =
-    report.historical_scores?.map((item) => ({
-      x: new Date(item.startDate ?? ""),
-      y: item.score * 100,
-    })) || [];
-
-  if (report.score) {
-    // Add current score to the historical scores if not already included
-    if (
-      !report.historical_scores?.some((item) => item.reportId === report.id)
-    ) {
-      historicalScores.push({
-        x: new Date(report.start_date ?? ""),
-        y: report.score * 100,
-      });
-    }
-  }
+  const historicalScoresData = historicalScores.map((score) => ({
+    x: dayjs(score.date).toDate(),
+    y: score.finalScore ?? 0,
+  }));
 
   // Create UTM params for tracking different CTAs
-  const reportUrl = createUtmUrl(baseReportUrl, "report");
+  const metricsUrl = createUtmUrl(baseReportUrl, "metrics");
   const wellDoneUrl = createUtmUrl(baseReportUrl, "doing_well");
   const growthUrl = createUtmUrl(baseReportUrl, "growth_areas");
   const momentsUrl = createUtmUrl(baseReportUrl, "key_moments");
+  const reportUrl = createUtmUrl(baseReportUrl, "report");
 
   // Define metrics for leadership dimensions (only used for founder)
-  const leadershipMetrics = [
-    { leftLabel: "Task Vague", rightLabel: "Task Clarity", value: 44 },
-    { leftLabel: "Reactive", rightLabel: "Proactive", value: 32 },
-    { leftLabel: "Passive", rightLabel: "Influential", value: 78 },
-    { leftLabel: "Rigid", rightLabel: "Adaptable", value: 65 },
-  ];
+  const leadershipMetrics = report.scores.metrics?.map((metric) => ({
+    leftLabel: metric.leftLabel,
+    rightLabel: metric.rightLabel,
+    value: 100 - metric.value,
+  }));
 
-  const isFounder = variant === "founder";
-  const isManager = variant === "manager";
+  const isFounder = variant === "skill-report-ready-founder";
+  const isManager = variant === "skill-report-ready-manager";
 
   return (
     <Html>
       <Preview>{previewText}</Preview>
       <Tailwind config={tailwindEmailConfig}>
         <Head>
-          <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1.0"
-          />
           <link
             href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
             rel="stylesheet"
           />
         </Head>
-        <Body className="m-0 bg-gray-50 p-0 font-sans">
+        <Body className="m-0 bg-gray-50 font-sans">
           <Container className="mx-auto w-full max-w-[600px] bg-white/50">
             {/* Header */}
             <ReportHeader
@@ -182,8 +133,8 @@ export function SkillReportReadyEmail({
                   </small>
                 </>
               }
-              nickname={profile.nickname || ""}
-              meetingMinutes={meetingMinutes}
+              nickname={report.profile.nickname || ""}
+              meetingMinutes={Math.round(meetingMinutes)}
               startDate={startDate}
               endDate={endDate}
             />
@@ -191,26 +142,27 @@ export function SkillReportReadyEmail({
             {/* Report Card */}
             <Section className="mx-auto bg-white px-10">
               {/* Score Visualization */}
-              {historicalScores.length >= 2 && (
-                <div className={cn("w-full pt-6", isManager && "pb-6")}>
-                  <div className="mt-8 w-full text-center">
-                    <ReportSectionHeading title="PERFORMANCE TREND" />
-                    <div className="mt-4 w-full">
-                      <Sparkline
-                        data={historicalScores}
-                        height={120}
-                        areaColor="#E5E7EB"
-                      />
-                    </div>
+              <div className={cn("w-full pt-6", isManager && "pb-6")}>
+                <div className="mt-8 w-full text-center">
+                  <ReportSectionHeading title="PERFORMANCE TREND" />
+                  <div className="mt-4 w-full">
+                    <Sparkline
+                      data={historicalScoresData}
+                      height={120}
+                      areaColor="#E5E7EB"
+                    />
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* Email-friendly Report Metrics - Founder only */}
-              {isFounder && (
+              {isFounder && leadershipMetrics && (
                 <MetricsSection
                   title="REPORT METRICS"
-                  metrics={leadershipMetrics}
+                  metrics={_.sortBy(
+                    leadershipMetrics,
+                    "value" as keyof (typeof leadershipMetrics)[number],
+                  )}
                   showNotches={true}
                 />
               )}
@@ -218,22 +170,20 @@ export function SkillReportReadyEmail({
               {/* After-Metrics CTA Section - Founder only */}
               {isFounder && (
                 <CTAButtonSection
-                  href={reportUrl}
+                  href={metricsUrl}
                   buttonText="View Full Report"
                 />
               )}
 
               {/* Teaser Section - Manager only */}
-              {isManager && (
-                <ReportTeaserSection teaser={teaser} reportUrl={reportUrl} />
-              )}
+              {isManager && <ReportTeaserSection teaser={teaser} />}
 
               {/* Areas of Strength and Growth Sections - Founder only */}
-              {isFounder && generatedSections.growthSections.length > 0 && (
+              {isFounder && sections.growthSections.length > 0 && (
                 <ReportInsightsSection
                   title="GROWTH OPPORTUNITIES"
                   type="growth"
-                  items={generatedSections.growthSections.map((section) => ({
+                  items={sections.growthSections.map((section) => ({
                     id: section.id,
                     summary: section.shortenedSummary,
                   }))}
@@ -242,11 +192,11 @@ export function SkillReportReadyEmail({
                 />
               )}
 
-              {isFounder && generatedSections.strengthSections.length > 0 && (
+              {isFounder && sections.strengthSections.length > 0 && (
                 <ReportInsightsSection
                   title="AREAS OF STRENGTH"
                   type="strength"
-                  items={generatedSections.strengthSections.map((section) => ({
+                  items={sections.strengthSections.map((section) => ({
                     id: section.id,
                     summary: section.shortenedSummary,
                   }))}
@@ -258,9 +208,13 @@ export function SkillReportReadyEmail({
               {/* Key Moments Section - Founder only */}
               {isFounder && (
                 <ReportKeyMomentsSection
-                  moments={generatedSections.keyMoments.map((moment) => ({
+                  moments={sections.keyMoments.map((moment) => ({
                     ...moment,
-                    people: moment.people || [],
+                    people: (moment.people || []).filter(
+                      (person) =>
+                        person.trim().toLowerCase() !==
+                        report.profile.nickname?.trim().toLowerCase(),
+                    ),
                   }))}
                   buttonHref={momentsUrl}
                   highlightTitle={false}
@@ -268,7 +222,7 @@ export function SkillReportReadyEmail({
                 />
               )}
 
-              {isFounder && <Hr className="my-3" />}
+              {isFounder && <Hr />}
 
               {/* Final CTA */}
               <CTAButtonSection
@@ -278,9 +232,9 @@ export function SkillReportReadyEmail({
                     ? "View Full Report Data →"
                     : "View Complete Analysis →"
                 }
-                className="my-3"
+                className="mb-3"
                 buttonClassName={
-                  isFounder ? undefined : "px-6 py-3 text-base font-medium"
+                  isFounder ? "mt-1" : "px-6 py-3 text-base font-medium"
                 }
               />
             </Section>
@@ -294,188 +248,270 @@ export function SkillReportReadyEmail({
   );
 }
 
-// Mock data for preview in email clients
-SkillReportReadyEmail.PreviewProps = {
-  // variant: "founder",
-  variant: "manager",
-  teaser:
-    "In this report, your delegation with Ralf on the <highlight:moment>Germany market expansion</highlight:moment> highlights your <highlight:strength>clear, authoritative delegation style</highlight:strength>—but your <highlight:growth>quick instructions to Agnieszka and Sarah sometimes lack crucial context</highlight:growth>, risking ambiguity as you build cross-cultural management systems. Uncover how refining your detail and follow-up can elevate your team's execution.",
-  profile: {
-    nickname: "Alex",
-    email: "alex@example.com",
-    coach_id: "coach-123",
-  },
-  report: {
-    id: "report-123",
-    start_date: "2023-12-01",
-    end_date: "2023-12-31",
-    created_at: "2024-01-05",
-    skill: {
-      id: "skill-123",
-      title: "Strategic Communication",
-      description: "Effectively conveying ideas to drive outcomes",
+function generateMockReportScores(
+  startDate: Date,
+  endDate: Date,
+  createdAt: Date,
+) {
+  return {
+    status: "success",
+    date: endDate.toISOString(),
+    report: {
+      start_date: startDate.toISOString(),
+      end_date: endDate.toISOString(),
+      created_at: createdAt.toISOString(),
+      id: faker.string.uuid(),
+      skill: {
+        scales: [
+          {
+            negative_tag_title: "Ambiguous and unclear",
+            positive_tag_title: "Clear and concise",
+          },
+        ],
+      },
+      report_moments: [
+        {
+          is_visible: true,
+          omission_reason: null,
+          moment: {
+            latest: true,
+            _internal_thumbs_down: 0,
+            relevant: true,
+            subtags: [],
+          },
+        },
+      ],
+      processing_statuses: [
+        {
+          group_processing_status_id: `status-${faker.number.int(100)}`,
+        },
+      ],
     },
-    report_goals: [],
-    report_moments: [
+    metrics: [
       {
-        id: "moment-1",
-        score: 0.85,
-        report_section_id: "section-1",
-        report_section_reasoning:
-          "You demonstrated clear task delegation to Marco",
-        moment: {
-          id: "moment-123",
-          title: "Delegation to Marco for build",
-          summary:
-            "Dave assigns Marco the responsibility to reallocate development efforts toward addressing vulnerabilities in Zoom recording.",
-          activity: "Delegation_v5",
-          created_at: "2023-12-15T12:00:00Z",
+        id: `metric-${faker.number.int(100)}`,
+        leftLabel: "Clear and concise",
+        rightLabel: "Ambiguous and unclear",
+        value: faker.number.int({ min: 70, max: 90 }),
+      },
+      {
+        id: `metric-${faker.number.int(100)}`,
+        leftLabel: "Direct and assertive",
+        rightLabel: "Indirect and passive",
+        value: faker.number.int({ min: 70, max: 90 }),
+      },
+      {
+        id: `metric-${faker.number.int(100)}`,
+        leftLabel: "Empathetic and supportive",
+        rightLabel: "Unsupportive and unempathetic",
+        value: faker.number.int({ min: 70, max: 90 }),
+      },
+      {
+        id: `metric-${faker.number.int(100)}`,
+        leftLabel: "Supportive and empathetic",
+        rightLabel: "Unsupportive and unempathetic",
+        value: faker.number.int({ min: 70, max: 90 }),
+      },
+    ],
+    negativeScore: faker.number.int({ min: 10, max: 30 }),
+    positiveScore: faker.number.int({ min: 70, max: 90 }),
+    finalScore: faker.number.int({ min: 70, max: 90 }),
+  } satisfies SkillReportReadyEmailProps["report"]["scores"];
+}
+
+function generateMockReport(date: Date) {
+  const endDate = new Date(date);
+  const startDate = new Date(date);
+  startDate.setDate(endDate.getDate() - 14); // 14 day window
+
+  const createdAt = new Date(endDate);
+  createdAt.setHours(23, 59, 59, 999); // End of the last day
+
+  return {
+    start_date: startDate.toISOString(),
+    end_date: endDate.toISOString(),
+    skill: {
+      internal_title: "Strategic Communication",
+      scales: [
+        {
+          id: faker.string.uuid(),
+          positive_tag_title: "Clear and concise",
+          positive_tag_description: "You convey ideas clearly and concisely.",
+          negative_tag_title: "Ambiguous and unclear",
+          negative_tag_description:
+            "You convey ideas ambiguously and unclearly.",
+          skill_id: faker.string.uuid(),
         },
-      },
-      {
-        id: "moment-2",
-        score: 0.78,
-        report_section_id: "section-2",
-        report_section_reasoning: "You provided detailed instructions to Tim",
-        moment: {
-          id: "moment-124",
-          title: "Weekly Meeting with Tim",
-          summary:
-            "Discussion about pipeline priorities and assignment of key tasks to Tim for the upcoming sprint.",
-          activity: "Delegation_v5",
-          created_at: "2023-12-10T14:30:00Z",
+        {
+          id: faker.string.uuid(),
+          positive_tag_title: "Direct and assertive",
+          positive_tag_description:
+            "You convey ideas directly and assertively.",
+          negative_tag_title: "Indirect and passive",
+          negative_tag_description:
+            "You convey ideas indirectly and passively.",
+          skill_id: faker.string.uuid(),
         },
-      },
-    ],
-    report_sections: [
-      {
-        id: "section-1",
-        title: "Clear and decisive task assignment",
-        summary:
-          "You consistently delegate tasks with clear instructions and deadlines.",
-        direction: "positive",
-      },
-      {
-        id: "section-2",
-        title: "Detailed instructions with clear expectations",
-        summary:
-          "You offer detailed steps and concrete expectations when delegating work.",
-        direction: "positive",
-      },
-      {
-        id: "section-3",
-        title: "Empowering team through balanced delegation",
-        summary:
-          "You empower others by delegating tasks and allowing room for initiative.",
-        direction: "positive",
-      },
-      {
-        id: "section-4",
-        title: "Ambiguous task details",
-        summary:
-          "You delegate tasks quickly but sometimes leave out key details.",
-        direction: "negative",
-      },
-      {
-        id: "section-5",
-        title: "Inconsistent communication style",
-        summary: "Your communication style in delegation can be inconsistent.",
-        direction: "negative",
-      },
-    ],
-    score: 78,
-    previous_score: 72,
-    historical_scores: [
-      { score: 0.65, reportId: "report-1", startDate: "2023-09-01" },
-      { score: 0.68, reportId: "report-2", startDate: "2023-10-01" },
-      { score: 0.72, reportId: "report-3", startDate: "2023-11-01" },
-      { score: 0.78, reportId: "report-123", startDate: "2023-12-01" },
-    ],
-  },
-  generatedSections: {
+        {
+          id: faker.string.uuid(),
+          positive_tag_title: "Empathetic and supportive",
+          positive_tag_description: "You show empathy and support.",
+          negative_tag_title: "Unsupportive and unempathetic",
+          negative_tag_description: "You show unsupportive and unempathetic.",
+          skill_id: faker.string.uuid(),
+        },
+        {
+          id: faker.string.uuid(),
+          positive_tag_title: "Supportive and empathetic",
+          positive_tag_description: "You show supportive and empathetic.",
+          negative_tag_title: "Unsupportive and unempathetic",
+          negative_tag_description: "You show unsupportive and unempathetic.",
+          skill_id: faker.string.uuid(),
+        },
+      ],
+    },
+    profile: {
+      nickname: faker.person.firstName(),
+    },
+    scores: generateMockReportScores(startDate, endDate, createdAt),
+  } satisfies SkillReportReadyEmailProps["report"];
+}
+
+SkillReportReadyEmail.PreviewProps = {
+  variant: "skill-report-ready-founder",
+  previewText: "Your Strategic Communication skill report is ready to review",
+  baseReportUrl: "https://example.com/reports/",
+  teaser:
+    "In this report, your interactions with Ralf on the <highlight:moment>Germany market action plan</highlight:moment> reveal your <highlight:strength>clear, direct delegation</highlight:strength> that empowers team members to take ownership—but your <highlight:growth>brief instructions to Piotr during the glove testing follow-up</highlight:growth> highlight a chance to verify understanding and strengthen communication. See how refining your approach can further build cross-cultural management systems for scale!",
+  report: generateMockReport(new Date()),
+  historicalScores: [
+    generateMockReportScores(
+      dayjs().subtract(8, "weeks").toDate(),
+      dayjs().subtract(6, "weeks").toDate(),
+      dayjs().subtract(6, "weeks").toDate(),
+    ),
+    generateMockReportScores(
+      dayjs().subtract(6, "weeks").toDate(),
+      dayjs().subtract(4, "weeks").toDate(),
+      dayjs().subtract(4, "weeks").toDate(),
+    ),
+    generateMockReportScores(
+      dayjs().subtract(4, "weeks").toDate(),
+      dayjs().subtract(2, "weeks").toDate(),
+      dayjs().subtract(2, "weeks").toDate(),
+    ),
+    generateMockReportScores(
+      dayjs().subtract(2, "weeks").toDate(),
+      dayjs().toDate(),
+      dayjs().toDate(),
+    ),
+  ],
+  sections: {
     strengthSections: [
       {
         id: "strength1",
-        title: "Consistent Clarity in Task Delegation",
+        title: "Clear, Direct Delegation",
         summary:
-          "You consistently assign tasks with clear instructions, deadlines, and responsibility. For example, you directed Marco to address Zoom vulnerabilities with a set deadline and assigned Divya to test the application with explicit steps. This <highlight>keeps your team focused and aligned</highlight>, ensuring roles are well understood and projects move forward efficiently.",
+          "You consistently provide clear, actionable instructions by delegating tasks such as advancing the Germany market, reassigning roles, and managing production details. You ensure that team members like Ralf, Filip, and Agnieszka understand their responsibilities. Your approach supports <highlight>Building Cross-Cultural Management Systems for Scale</highlight> by establishing transparent communication and clear accountability.",
+        relatedThemes: [
+          "Building Cross-Cultural Management Systems for Scale",
+          "Strengthening Operational Rigor & Accountability at the Mid-Level",
+        ],
         shortenedSummary:
-          "You assign tasks with <highlight>clear instructions and deadlines</highlight>, keeping your team focused and aligned.",
+          "You excel at <highlight>Building Cross-Cultural Management Systems for Scale</highlight> by providing clear, actionable instructions and ensuring transparent communication and accountability across your team.",
       },
       {
         id: "strength2",
-        title: "Setting Detailed Expectations for Team Members",
+        title: "Detailed Task Assignment",
         summary:
-          "You provide your team with detailed steps and expectations when delegating work. When asking Tim to build a new daily metrics report or instructing the team to prepare pre-meeting questions, you made sure requirements and outcomes were clear. This approach helps your team work confidently and maintain high accountability.",
+          "You clearly define tasks with specific details and context, as shown when you delegated follow-ups with Allianz and confirmed stock availability. Your detailed instructions ensure that responsibilities and rationale are understood, reinforcing accountability and precision in execution.",
+        relatedThemes: [
+          "Strengthening Operational Rigor & Accountability at the Mid-Level",
+        ],
         shortenedSummary:
-          "You give <highlight>clear steps and expectations</highlight> when delegating, helping your team work confidently and stay accountable.",
+          "You provide <highlight>explicit task guidance</highlight>, ensuring team members understand both their responsibilities and the context behind them, which strengthens accountability and execution precision.",
       },
       {
         id: "strength3",
-        title: "Empowering Others Through Delegation and Input",
+        title: "Structured Team Delegation",
         summary:
-          "You empower your team by inviting their ideas and granting ownership. When you asked Marvin to propose three new role ideas or delegated the coaching program to Alex, you showed trust in their initiative. This balance of direction and autonomy <highlight>fosters a proactive, engaged team</highlight>.",
+          "You methodically assign and confirm roles, building trust across your team. Your structured delegation process—evident in various task assignments—ensures responsibilities are clearly communicated and met, supporting scalable operations and efficient management across diverse regions.",
+        relatedThemes: [
+          "Building Cross-Cultural Management Systems for Scale",
+          "Strengthening Operational Rigor & Accountability at the Mid-Level",
+        ],
         shortenedSummary:
-          "You foster a <highlight>proactive, engaged team</highlight> by balancing direction with autonomy when delegating.",
+          "You foster team trust and operational efficiency through a <highlight>systematic role assignment process</highlight> that ensures clarity and accountability across diverse teams.",
       },
     ],
     growthSections: [
       {
         id: "growth1",
-        title: "Clarify Task Details and Success Criteria",
+        title: "Enhance Context in Task Delegation",
         summary:
-          "Some delegated tasks lack specific timelines or clear criteria for completion, which may lead to uncertainty. For example, when assigning Marco to support calendar updates, key details were omitted. To improve, <highlight>add explicit timelines and desired outcomes</highlight> to every assignment.",
+          "You sometimes issue brief instructions that lack sufficient context, as seen in the email notification setup task. An actionable next step is to include specific details and expected outcomes with your delegation. This improvement will help you build clearer cross-cultural management systems and reduce ambiguity.",
+        relatedThemes: [
+          "Building Cross-Cultural Management Systems for Scale",
+          "Growing as a Self-Taught Executive Operator",
+        ],
         shortenedSummary:
-          "You should <highlight>add explicit timelines and desired outcomes</highlight> when delegating tasks to avoid uncertainty.",
+          "You can improve by providing <highlight>context-rich delegation</highlight>, ensuring instructions include specific details and expected outcomes to minimize ambiguity and enhance clarity.",
       },
       {
         id: "growth2",
-        title: "Increase Consistency in Communication Style",
+        title: "Clarify Task Descriptions",
         summary:
-          "Your tone sometimes shifts from formal to overly casual, as seen when directing Marvin to 'speed run' his update. This can create confusion about priorities. To strengthen team understanding, ensure your communication style is <highlight>consistently clear and professional</highlight> in all delegations.",
+          "You occasionally provide task instructions that remain vague, as demonstrated by the screen fill-in request to Sarah. A clear action is to specify detailed requirements and desired outcomes. Enhancing clarity in your task descriptions will bolster operational rigor and ensure team members understand their responsibilities.",
+        relatedThemes: [
+          "Strengthening Operational Rigor & Accountability at the Mid-Level",
+          "Growing as a Self-Taught Executive Operator",
+        ],
         shortenedSummary:
-          "Ensure your communication is <highlight>consistently clear and professional</highlight> when delegating tasks to avoid confusion.",
+          "You can strengthen your leadership by providing <highlight>explicit task instructions</highlight>, ensuring team members have clear requirements and understand expected outcomes.",
       },
       {
         id: "growth3",
-        title: "Ensure Ownership Is Always Clearly Defined",
+        title: "Verify Understanding Before Execution",
         summary:
-          "In a few moments, such as delegating follow-up monitoring tasks, ownership or next steps were ambiguous. Strengthen accountability by <highlight>explicitly naming who is responsible</highlight> for every task and confirming their understanding.",
+          "You delegate tasks without always confirming that your instructions are fully understood, as seen with the follow-up assignment to Piotr. An effective next step is to ask for confirmation or feedback immediately after delegation. This practice will enhance accountability and streamline communication across culturally diverse teams.",
+        relatedThemes: [
+          "Growing as a Self-Taught Executive Operator",
+          "Strengthening Operational Rigor & Accountability at the Mid-Level",
+        ],
         shortenedSummary:
-          "Clarify <highlight>ownership and next steps</highlight> when delegating to ensure accountability.",
+          "You can improve delegation by seeking immediate confirmation or feedback after assigning tasks, ensuring clarity and accountability, especially within diverse teams.",
       },
     ],
     keyMoments: [
       {
         id: "moment1",
-        title: "Empowering Marvin to Redefine His Role",
+        title: "Advance Germany Market Actions",
         summary:
-          "You asked Marvin to propose three new ideas for his role, inviting his input and planning a follow-up discussion. This moment highlights your commitment to empowering team members and fostering innovation.",
-        people: ["Marvin"],
+          "You delegated responsibility to Ralf for advancing the Germany market by leading the mailing campaign and addressing exhibition challenges. You provided clear, direct instructions detailing next steps and assigning ownership, which empowered Ralf to execute his role confidently. You ensured that all instructions were unambiguous, highlighting your ability to drive operational accountability. This moment demonstrates your alignment with Building Cross-Cultural Management Systems for Scale and Strengthening Operational Rigor, as it underscores the importance of clear communication across diverse geographies.",
+        people: ["Ralf"],
+        relatedThemes: [
+          "Building Cross-Cultural Management Systems for Scale",
+          "Strengthening Operational Rigor & Accountability at the Mid-Level",
+        ],
         shortenedSummary:
-          "You empower team members and foster innovation by inviting their input and following up on their ideas.",
+          "You demonstrated <highlight>clear, direct delegation</highlight> by assigning Ralf ownership of the Germany market initiatives, reinforcing operational accountability and effective cross-cultural communication.",
       },
       {
         id: "moment2",
-        title: "Clear Assignment of Zoom Recording Vulnerability Task to Marco",
+        title: "Assign Follow-Up to Piotr",
         summary:
-          "You assigned Marco the responsibility to address Zoom recording vulnerabilities with a specific deadline, demonstrating decisive delegation and clarity in expectations.",
-        people: ["Marco"],
+          "You delegated the follow-up for glove testing to Piotr by instructing him to contact the patient. You did not confirm if Piotr fully understood the task details, leaving room for ambiguity in execution. You can benefit from verifying comprehension with a quick check-in after delegation. This moment illustrates an opportunity to improve communication clarity and accountability, aligning with Growing as a Self-Taught Executive Operator and enhancing systematic follow-ups in cross-cultural team settings.",
+        people: ["Piotr"],
+        relatedThemes: [
+          "Growing as a Self-Taught Executive Operator",
+          "Strengthening Operational Rigor & Accountability at the Mid-Level",
+        ],
         shortenedSummary:
-          "You delegated the task to address Zoom recording vulnerabilities to Marco with <highlight>clear expectations and a deadline</highlight>.",
-      },
-      {
-        id: "moment3",
-        title: "Delegating Daily Metrics Report to Tim",
-        summary:
-          "You tasked Tim with building a daily metrics report, specifying the metrics required and transferring clear responsibility, which helped set a strong standard for detailed delegation.",
-        people: ["Tim"],
-        shortenedSummary:
-          "You set a strong standard for <highlight>detailed delegation</highlight> by clearly specifying requirements and responsibilities.",
+          "You can strengthen your <highlight>delegation clarity and accountability</highlight> by verifying task comprehension after assigning responsibilities, ensuring effective execution and improved cross-cultural communication.",
       },
     ],
   },
-  meetingMinutes: 120,
-};
+  meetingMinutes: faker.number.int({ min: 0, max: 1000 }),
+} satisfies SkillReportReadyEmailProps;
 
 export default SkillReportReadyEmail;

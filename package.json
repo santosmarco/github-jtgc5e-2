@@ -88,6 +88,7 @@
     "@react-email/preview": "^0.0.12",
     "@react-email/tailwind": "^1.0.4",
     "@slack/web-api": "^7.7.0",
+    "@supabase/postgrest-js": "^1.19.4",
     "@supabase/ssr": "^0.5.1",
     "@supabase/supabase-js": "^2.49.1",
     "@t3-oss/env-nextjs": "^0.11.1",
@@ -124,7 +125,7 @@
     "@vercel/analytics": "^1.5.0",
     "@vercel/otel": "^1.10.1",
     "@vercel/speed-insights": "^1.2.0",
-    "@vidstack/react": "^1.12.12",
+    "@vidstack/react": "^1.12.13",
     "@voctrolabs/node-webvtt": "^1.1.0",
     "@zodios/core": "^10.9.6",
     "@zodios/express": "^10.6.1",
@@ -214,6 +215,7 @@
     "zustand": "^5.0.1"
   },
   "devDependencies": {
+    "@faker-js/faker": "^9.7.0",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/forms": "^0.5.9",
@@ -253,7 +255,7 @@
     "tailwindcss": "^3.4.14",
     "tsconfig-paths": "^4.2.0",
     "type-fest": "^4.26.1",
-    "typescript": "^5.6.3",
+    "typescript": "^5.8.3",
     "vercel": "^37.14.0",
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.1.2"

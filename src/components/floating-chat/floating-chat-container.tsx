@@ -26,6 +26,7 @@ interface FloatingChatContainerProps {
   onReset: () => void;
   isFullscreen?: boolean;
   onFullscreenToggle?: () => void;
+  exportChatButton?: React.ReactNode;
 }
 
 export function FloatingChatContainer({
@@ -39,6 +40,7 @@ export function FloatingChatContainer({
   onReset,
   isFullscreen = false,
   onFullscreenToggle,
+  exportChatButton,
 }: FloatingChatContainerProps) {
   // Only create portal on client side
   const [mounted, setMounted] = useState(false);
@@ -120,6 +122,7 @@ export function FloatingChatContainer({
           </AnimatePresence>
         </div>
         <div className="flex items-center">
+          {exportChatButton}
           <AnimatePresence mode="popLayout">
             <motion.div
               key="reset-button"

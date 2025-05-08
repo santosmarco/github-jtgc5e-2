@@ -1,6 +1,37 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import dayjs from "dayjs";
 import _ from "lodash";
+import type { SimplifyDeep } from "type-fest";
 
-import type { Tables } from "~/lib/supabase/database.types";
+import type { Database, Tables } from "~/lib/supabase/database.types";
+
+import type { Intersect, Select } from "../utils/types";
+import { dedupeReports, shouldShowReportMoment } from "./utils";
+
+export type ScorableReport = SimplifyDeep<
+  Intersect<
+    [
+      Select<"reports", "id" | "start_date" | "end_date" | "created_at">,
+      {
+        skill: {
+          scales: Select<
+            "skill_scales",
+            "positive_tag_title" | "negative_tag_title"
+          >[];
+        } | null;
+        report_moments: (Parameters<typeof shouldShowReportMoment>[0] & {
+          moment: {
+            subtags: Select<"moment_subtags", "tag">[];
+          };
+        })[];
+        processing_statuses: Select<
+          "report_processing_status",
+          "group_processing_status_id"
+        >[];
+      },
+    ]
+  >
+>;
 
 /**
  * Represents a single metric in a report with labels and a value
@@ -16,10 +47,31 @@ export type ReportMetric = {
  * Represents the complete scoring data for a report
  */
 export type ReportScore = {
-  metrics: ReportMetric[];
-  negativeScore: number;
-  positiveScore: number;
-  finalScore: number;
+  report: ScorableReport;
+  date: string;
+} & (
+  | {
+      status: "success";
+      metrics: ReportMetric[];
+      negativeScore: number;
+      positiveScore: number;
+      finalScore: number;
+    }
+  | {
+      status: "no_skill" | "not_enough_moments";
+      metrics?: never;
+      negativeScore?: never;
+      positiveScore?: never;
+      finalScore?: never;
+    }
+);
+
+/**
+ * Represents the historical report scores for a skill
+ */
+export type HistoricalSkillScore = {
+  skillId: string;
+  scores: ReportScore[];
 };
 
 /**
@@ -28,24 +80,15 @@ export type ReportScore = {
  * @param report - The report containing skill scales and moments to analyze
  * @returns A complete ReportScore object with metrics and aggregated scores
  */
-export function getReportScores(report: {
-  skill: {
-    scales: Pick<
-      Tables<"skill_scales">,
-      "positive_tag_title" | "negative_tag_title"
-    >[];
-  } | null;
-  report_moments: (Pick<
-    Tables<"report_moments">,
-    "is_visible" | "omission_reason"
-  > & {
-    moment: Pick<Tables<"moments">, "_internal_thumbs_down"> & {
-      subtags: Pick<Tables<"moment_subtags">, "tag">[];
-    };
-  })[];
-}): ReportScore {
+export function getReportScores(report: ScorableReport): ReportScore {
+  const date = dayjs(report.end_date).format("YYYY-MM-DD");
+
+  const baseScore = { report, date };
+
   // Initialize empty score object with default values
   const score: ReportScore = {
+    ...baseScore,
+    status: "success",
     metrics: [],
     negativeScore: 0,
     positiveScore: 0,
@@ -53,20 +96,26 @@ export function getReportScores(report: {
   };
 
   // Early return if no skill data is available
-  if (!report.skill) return score;
+  if (!report.skill) {
+    return { ...baseScore, status: "no_skill" };
+  }
+
+  // Filter for valid moments that should be included in scoring
+  const validReportMoments = report.report_moments.filter(
+    shouldShowReportMoment,
+  );
+  const validMoments = validReportMoments.map(
+    (reportMoment) => reportMoment.moment,
+  );
+
+  if (validMoments.length === 0) {
+    return { ...baseScore, status: "not_enough_moments" };
+  }
 
   // Sort scales for consistent ordering in the UI
   const sortedScales = _.sortBy(
     report.skill.scales,
     (scale) => scale.negative_tag_title,
-  );
-
-  // Filter for valid moments that should be included in scoring
-  const validMoments = report.report_moments.filter(
-    (moment) =>
-      moment.is_visible &&
-      !moment.omission_reason &&
-      (moment.moment._internal_thumbs_down ?? 0) <= 0,
   );
 
   // Process each scale to generate individual metrics
@@ -75,23 +124,17 @@ export function getReportScores(report: {
     const rightLabel = scale.positive_tag_title;
 
     // Count moments with negative tags matching this scale
-    const negativeCount = countMomentsWithMatchingTag(
-      validMoments,
-      leftLabel.trim().toLowerCase(),
-    );
+    const negativeCount = countMomentsWithMatchingTag(validMoments, leftLabel);
 
     // Count moments with positive tags matching this scale
-    const positiveCount = countMomentsWithMatchingTag(
-      validMoments,
-      rightLabel.trim().toLowerCase(),
-    );
+    const positiveCount = countMomentsWithMatchingTag(validMoments, rightLabel);
 
     // Calculate total with fallback to prevent division by zero
     const total = Math.max(positiveCount + negativeCount, 1);
 
     // Create metric for this scale
     const metric: ReportMetric = {
-      id: `${leftLabel}-${rightLabel}`,
+      id: `${_.camelCase(leftLabel)}_${_.camelCase(rightLabel)}`,
       leftLabel,
       rightLabel,
       value:
@@ -110,10 +153,100 @@ export function getReportScores(report: {
   // Calculate final score as a value between 0.5 and 1.0
   // Higher positive tag ratio yields a higher score
   const total = score.positiveScore + score.negativeScore;
-  score.finalScore =
-    total > 0 ? 0.5 + 0.5 * (score.positiveScore / total) : 0.5;
+  score.finalScore = Math.round(
+    (total > 0 ? 0.5 + 0.5 * (score.positiveScore / total) : 0.5) * 100,
+  );
 
   return score;
+}
+
+/**
+ * Calculates historical scores for a skill across multiple reports
+ *
+ * @param skillId - The ID of the skill to calculate scores for
+ * @param reports - Array of report objects to calculate scores from
+ * @returns HistoricalSkillScore object containing skill ID and sorted scores
+ */
+export function getHistoricalReportScores(
+  skillId: string,
+  reports: ScorableReport[],
+): HistoricalSkillScore {
+  return {
+    skillId,
+    scores: _.sortBy(reports.map(getReportScores), (score) =>
+      dayjs(score.date).unix(),
+    ),
+  };
+}
+
+export async function fetchReportsForHistoricalSkillScore(
+  skillId: string,
+  profileId: string,
+  supabaseClient: SupabaseClient<Database>,
+  options?: {
+    includeEmptyReports?: boolean;
+  },
+): Promise<ScorableReport[]> {
+  // Get all completed reports for this profile and skill
+  const { data: reports, error: reportsError } = await supabaseClient
+    .from("reports")
+    .select(
+      `
+        id,
+        start_date,
+        end_date,
+        created_at,
+        skill_id,
+        profile_id,
+        is_hidden,
+        skill:skills!inner(
+          id,
+          scales:skill_scales(positive_tag_title, negative_tag_title)
+        ),
+        report_moments:report_moments(
+          is_visible,
+          omission_reason,
+          moment:moments!inner(
+            _internal_thumbs_down,
+            latest,
+            relevant,
+            subtags:moment_subtags(tag)
+          )
+        ),
+        processing_statuses:report_processing_status(status, group_processing_status_id)
+      `,
+    )
+    .eq("skill_id", skillId)
+    .eq("profile_id", profileId)
+    .eq("is_hidden", false)
+    .eq("report_moments.is_visible", true)
+    .is("report_moments.omission_reason", null)
+    .eq("report_moments.moment.latest", true)
+    .eq("report_moments.moment.relevant", true)
+    .eq("processing_statuses.status", "completed")
+    .order("start_date", { ascending: true });
+
+  if (reportsError) {
+    throw reportsError;
+  }
+
+  let filteredReports = reports.map((report) => ({
+    ...report,
+    report_moments: report.report_moments.filter(shouldShowReportMoment),
+  }));
+
+  if (!options?.includeEmptyReports) {
+    filteredReports = filteredReports.filter(
+      (report) => report.report_moments.length > 0,
+    );
+  }
+
+  if (!filteredReports?.length) return [];
+
+  // Deduplicate reports by their date periods
+  const dedupedReports = dedupeReports(filteredReports);
+
+  return dedupedReports;
 }
 
 /**
@@ -125,18 +258,16 @@ export function getReportScores(report: {
  */
 function countMomentsWithMatchingTag(
   moments: {
-    moment: {
-      subtags: { tag: string | null }[];
-    };
+    subtags: Pick<Tables<"moment_subtags">, "tag">[];
   }[],
   tagToMatch: string,
 ): number {
   return moments.filter((moment) =>
-    moment.moment.subtags.some((subtag) =>
-      (subtag.tag ?? "")
+    moment.subtags.some((subtag) =>
+      subtag.tag
         .split(",")
         .map((t) => t.trim().toLowerCase())
-        .includes(tagToMatch),
+        .includes(tagToMatch.trim().toLowerCase()),
     ),
   ).length;
 }

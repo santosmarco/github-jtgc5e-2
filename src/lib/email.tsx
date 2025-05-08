@@ -1,5 +1,6 @@
 import { render } from "@react-email/components";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import _ from "lodash";
 import { Resend } from "resend";
 
 import {
@@ -21,55 +22,80 @@ import { env } from "~/env";
 import { generateReportSections } from "~/lib/reports/ai";
 import { ReportsService } from "~/lib/reports/queries";
 
+import { logger } from "./logging/server";
+import { generateReportSections } from "./reports/ai";
+import {
+  fetchReportsForHistoricalSkillScore,
+  getHistoricalReportScores,
+  getReportScores,
+} from "./reports/scoring";
 import type { Database } from "./supabase/database.types";
 import { createClient } from "./supabase/server";
+import { isTruthy } from "./utils";
+
+const IS_TESTING_REPORT_READY_EMAIL = true;
 
 const resend = new Resend(env.RESEND_API_KEY);
 
-export async function sendInvitationEmail({ invite }: InvitationEmailProps) {
+async function sendEmail(
+  element: React.ReactElement,
+  { to, subject }: { to: string | string[]; subject: string },
+) {
   try {
-    const emailHtml = await render(InvitationEmail({ invite }));
+    logger.info("Sending email", { to, subject });
 
-    const data = await resend.emails.send({
+    const [emailHtml, plainText] = await Promise.all([
+      render(element),
+      render(element, { plainText: true }),
+    ]);
+
+    const { data, error } = await resend.emails.send({
       from: "Titan <onboarding@emails.withtitan.com>",
-      to: invite.email,
-      subject: "Create Your Account On Titan GameTape",
+      to,
+      subject,
       html: emailHtml,
+      text: plainText,
     });
 
-    if (!data || data.error) {
-      console.error("Resend API error:", data?.error);
-      throw new Error(data?.error?.message || "Failed to send email");
+    if (error) {
+      logger.error("Resend API error:", { error });
+      throw new Error(error.message || "Failed to send email");
     }
+
+    if (!data) {
+      logger.error("No data returned from Resend");
+      throw new Error("No data returned from Resend");
+    }
+
+    logger.info("Email sent successfully", { data });
 
     return data;
   } catch (error) {
-    console.error("Email sending error:", error);
-    throw error; // Re-throw to be handled by the caller
+    logger.error("Email sending error:", { error });
+    throw error;
   }
+}
+
+export async function sendInvitationEmail({ invite }: InvitationEmailProps) {
+  return sendEmail(<InvitationEmail invite={invite} />, {
+    to: invite.email,
+    subject: "Create Your Account On Titan GameTape",
+  });
 }
 
 export async function sendExploreUnlockedEmail({
   profile,
 }: ExploreUnlockedEmailProps) {
-  const emailHtml = await render(ExploreUnlockedEmail({ profile }));
-
-  const data = await resend.emails.send({
-    from: "Titan <onboarding@emails.withtitan.com>",
+  return sendEmail(<ExploreUnlockedEmail profile={profile} />, {
     to: profile.email,
     subject: "🎉 Congrats! Start Exploring Your Performance with GameTape",
-    html: emailHtml,
   });
-
-  return data;
 }
 
 export async function sendMeetingRecapEmail({
   meeting,
   sections,
 }: MeetingRecapEmailProps) {
-  const emailHtml = await render(MeetingRecapEmail({ meeting, sections }));
-
   // Format date if available
   const meetingDate = meeting.date
     ? new Date(meeting.date).toLocaleDateString()
@@ -106,14 +132,13 @@ export async function sendMeetingRecapEmail({
   // Create a subject that includes date, title, and attendees
   const subject = `Meeting Recap: ${meetingName}${meetingDate ? ` (${meetingDate})` : ""}${attendeeNames}`;
 
-  const data = await resend.emails.send({
-    from: "Titan <onboarding@emails.withtitan.com>",
-    to: meeting.profile.email,
-    subject,
-    html: emailHtml,
-  });
-
-  return data;
+  return sendEmail(
+    <MeetingRecapEmail meeting={meeting} sections={sections} />,
+    {
+      to: meeting.profile.email,
+      subject,
+    },
+  );
 }
 
 export async function sendSuggestedTopicsEmail({
@@ -152,26 +177,39 @@ export async function sendSkillReportReadyEmail(
   supabaseClient: SupabaseClient<Database>,
 ) {
   try {
-    // Create ReportsService instance
-    const reportsService = new ReportsService(supabaseClient);
+    const supabase = await createClient();
 
-    // Fetch the report data
-    const { data: report, error: reportError } = await supabaseClient
+    const { data: report, error: reportError } = await supabase
       .from("reports")
       .select(
         `
-          *,
-          profile:profiles(*),
+          id,
+          skill_id,
+          profile_id,
+          start_date,
+          end_date,
           skill:skills(
-            *,
+            id,
+            title,
+            internal_title,
             scales:skill_scales(*)
           ),
-          report_goals(*),
           report_moments(
-            *,
-            moment:moments!inner(
-              *,
-              subtags:moment_subtags(*)
+            id,
+            moment:moments(
+              id,
+              meeting:meetings(
+                video_api_id,
+                duration_in_ms
+              )
+            )
+          ),
+          profile:profiles(
+            id,
+            email,
+            nickname,
+            user_settings(
+              report_email_template
             )
           )
         `,
@@ -179,145 +217,109 @@ export async function sendSkillReportReadyEmail(
       .eq("id", reportId)
       .single();
 
-    if (reportError || !report?.profile) {
-      console.error("Error fetching report:", reportError);
-      throw new Error(
-        reportError?.message || "Failed to fetch report or profile",
-      );
+    if (reportError) {
+      throw reportError;
     }
 
-    // Get user settings to determine which email template to use
-    const { data: userSettings, error: settingsError } = await supabaseClient
-      .from("user_settings")
-      .select("report_email_template")
-      .eq("profile_id", report.profile_id || "")
-      .single();
-
-    if (settingsError) {
-      console.error("Error fetching user settings:", settingsError);
-      // Default to founder template if there's an error
+    if (!report.skill) {
+      throw new Error("Report has no skill");
     }
 
-    // Determine the variant based on user settings or default to founder
-    const variant: "manager" | "founder" =
-      userSettings?.report_email_template === "skill-report-ready-manager"
-        ? "manager"
-        : "founder";
-
-    // Calculate meeting minutes by fetching all meetings for this profile in the report date range
-    let meetingMinutes = 0;
-    if (report.start_date && report.end_date) {
-      const { data: meetings, error: meetingsError } = await supabaseClient
-        .from("meetings")
-        .select("duration_in_seconds")
-        .eq("profile_id", report.profile_id || "")
-        .gte("date", report.start_date)
-        .lte("date", report.end_date);
-
-      if (!meetingsError && meetings && meetings.length > 0) {
-        meetingMinutes = meetings.reduce((total, meeting) => {
-          return total + (meeting.duration_in_seconds || 0) / 60;
-        }, 0);
-      }
+    if (!report.profile) {
+      throw new Error("Report has no profile");
     }
 
-    // Calculate current report score
-    const skillScore =
-      report.skill && report.report_moments
-        ? reportsService.calculateSkillScore(
-            {
-              scales: report.skill.scales || [],
-            },
-            report.report_moments,
-          )
-        : { score: 0.5 }; // Default score if no data
+    if (report.report_moments.length === 0) {
+      logger.info(`Report ${report.id} has no moments, skipping email`, {
+        report,
+      });
+      return;
+    }
 
-    // Get historical scores
-    const historicalScores =
-      report.profile_id && report.skill?.id
-        ? await reportsService.calculateHistoricalSkillScoresBatched(
-            report.profile_id,
-            report.skill.id,
-          )
-        : [];
+    const reports = await fetchReportsForHistoricalSkillScore(
+      report.skill.id,
+      report.profile.id,
+      supabase,
+    );
 
-    // Find previous report score
-    const previousScore =
-      historicalScores.length > 1
-        ? (historicalScores[historicalScores.length - 2]?.score ?? 0) * 100
-        : undefined;
+    const scorableReport = reports.find(
+      (historicalReport) => historicalReport.id === report.id,
+    );
+    if (!scorableReport) {
+      logger.info(`Report ${report.id} has no scores, skipping email`, {
+        report,
+      });
+      return;
+    }
 
-    // Generate the sections using AI
-    const generatedSections = await generateReportSections(
+    const emailVariant =
+      report.profile.user_settings[0]?.report_email_template ??
+      "skill-report-ready-founder";
+    const previewText = `📊 Your ${report.skill.internal_title} insights report is ready to view`;
+    const baseReportUrl = `https://app.withtitan.com/goals/reports/${report.id}`;
+    const historicalScores = getHistoricalReportScores(
+      report.skill.id,
+      reports,
+    ).scores;
+
+    const { teaser, ...sections } = await generateReportSections(
       reportId,
       supabaseClient,
     );
 
-    // Format historical scores for the email template
-    const formattedHistoricalScores = historicalScores.map((score) => ({
-      score: score.score * 100, // Convert to percentage
-      reportId: score.reportId,
-      startDate: score.startDate || "",
-    }));
-
-    // Build the report data in the format expected by the email component
-    const reportData = {
-      id: report.id,
-      start_date: report.start_date,
-      end_date: report.end_date,
-      created_at: report.created_at,
-      skill: report.skill
-        ? {
-            id: report.skill.id,
-            title: report.skill.title,
-            description: report.skill.description || undefined,
-          }
-        : undefined,
-      report_goals: report.report_goals || [],
-      report_moments: report.report_moments || [],
-      // Include calculated scores
-      score: skillScore.score,
-      previous_score: previousScore,
-      historical_scores: formattedHistoricalScores,
-    };
-
-    // Prepare the email props
-    const emailProps = {
-      variant,
-      profile: {
-        nickname: report.profile.nickname || "",
-        email: report.profile.email,
-        coach_id: report.profile.coach_id,
-      },
-      report: reportData,
-      meetingMinutes: Math.round(meetingMinutes),
-      teaser: generatedSections.teaser,
-      generatedSections,
-    };
+    const meetingMinutes = _.uniqBy(
+      report.report_moments
+        .map(({ moment }) => moment.meeting)
+        .filter(isTruthy),
+      (meeting) => meeting.video_api_id,
+    ).reduce((total, meeting) => total + meeting.duration_in_ms / 1000 / 60, 0);
 
     // Render the email
-    const emailHtml = await render(SkillReportReadyEmail(emailProps));
+    const emailHtml = await render(
+      SkillReportReadyEmail({
+        variant: emailVariant,
+        previewText,
+        baseReportUrl,
+        report: {
+          ...report,
+          skill: report.skill,
+          profile: report.profile,
+          scores: getReportScores(scorableReport),
+        },
+        historicalScores,
+        teaser,
+        sections,
+        meetingMinutes,
+      }),
+    );
 
-    // Create a descriptive subject line
-    const skillTitle = report.skill?.title || "Leadership";
-    const subject = `Your ${skillTitle} Performance Report is Ready`;
+    const subject = `Your ${report.skill.internal_title} Performance Report is Ready`;
 
-    // Send the email
-    const data = await resend.emails.send({
-      from: "Titan <onboarding@emails.withtitan.com>",
-      to: report.profile.email,
-      subject,
-      html: emailHtml,
-    });
-
-    if (!data || data.error) {
-      console.error("Resend API error:", data?.error);
-      throw new Error(data?.error?.message || "Failed to send email");
-    }
-
-    return data;
+    return sendEmail(
+      <SkillReportReadyEmail
+        variant={emailVariant}
+        previewText={previewText}
+        baseReportUrl={baseReportUrl}
+        report={{
+          ...report,
+          skill: report.skill,
+          profile: report.profile,
+          scores: getReportScores(scorableReport),
+        }}
+        historicalScores={historicalScores}
+        teaser={teaser}
+        sections={sections}
+        meetingMinutes={meetingMinutes}
+      />,
+      {
+        to: IS_TESTING_REPORT_READY_EMAIL
+          ? `marco+${_.camelCase(report.profile.nickname ?? report.profile.id)}@withtitan.com`
+          : report.profile.email,
+        subject,
+      },
+    );
   } catch (error) {
-    console.error("Error sending skill report email:", error);
+    logger.error("Error sending skill report email:", { error });
     throw error;
   }
 }

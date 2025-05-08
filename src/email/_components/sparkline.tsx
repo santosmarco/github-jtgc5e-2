@@ -1,4 +1,5 @@
 import { Img, Section } from "@react-email/components";
+import dayjs from "dayjs";
 
 import { cn } from "~/lib/utils";
 
@@ -85,16 +86,15 @@ export function Sparkline({
   // If only one point, duplicate it to draw at least a line
   const points =
     data.length === 1 && data[0]
-      ? [...data, { ...data[0], x: new Date(data[0].x.getTime() + 86400000) }] // Add one day
+      ? [...data, { ...data[0], x: dayjs(data[0].x).add(1, "day").toDate() }]
       : data;
 
   // Find min/max values for scaling
   const minX = Math.min(...points.map((p) => p.x.getTime()));
   const maxX = Math.max(...points.map((p) => p.x.getTime()));
-  const minY = Math.min(...points.map((p) => p.y ?? 0));
 
   // Set fixed Y scale from (minY - 10) to 100, with a minimum of 0
-  const fixedMinY = Math.max(0, minY - 10);
+  const fixedMinY = 50;
   const fixedMaxY = 100;
 
   // Calculate padding based on viewport dimensions
@@ -104,10 +104,13 @@ export function Sparkline({
   const chartHeight = viewBoxHeight - paddingY * 2;
 
   // Function to normalize values to SVG coordinates
-  const normalizeX = (x: Date) => {
+  const normalizeX = (x: Date | number) => {
     // Add padding of 5%
     const range = maxX - minX || 1;
-    return paddingX + ((x.getTime() - minX) / range) * chartWidth;
+    return (
+      paddingX +
+      (((x instanceof Date ? x.getTime() : x) - minX) / range) * chartWidth
+    );
   };
 
   const normalizeY = (y: number) => {
@@ -155,11 +158,6 @@ export function Sparkline({
     `);
   }
 
-  // Generate date ticks for x-axis
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  };
-
   // Calculate number of date ticks to show (max 5)
   const numPoints = points.length;
   const tickInterval = Math.max(1, Math.floor(numPoints / 5));
@@ -179,7 +177,7 @@ export function Sparkline({
           font-size="8"
           fill="${labelColor}"
           opacity="0.7"
-        >${formatDate(point.x)}</text>
+        >${dayjs(point.x).format("MMM DD")}</text>
         <path
           d="M ${x} ${bottomGridY} L ${x} ${bottomGridY + 5}"
           stroke="${gridColor}"
@@ -205,7 +203,7 @@ export function Sparkline({
         font-size="8"
         fill="${labelColor}"
         opacity="0.7"
-      >${formatDate(lastPoint.x)}</text>
+      >${dayjs(lastPoint.x).format("MMM DD")}</text>
       <path
         d="M ${x} ${bottomGridY} L ${x} ${bottomGridY + 5}"
         stroke="${gridColor}"
@@ -253,17 +251,9 @@ export function Sparkline({
               <!-- Y-axis labels -->
               <text 
                 x="${leftGridX - 5}" 
-                y="${normalizeY(5)}" 
-                text-anchor="end" 
-                font-family="sans-serif" 
-                font-size="8" 
-                fill="${labelColor}" 
-                opacity="0.7" 
-              >0</text>
-              <text 
-                x="${leftGridX - 5}" 
-                y="${normalizeY(55)}" 
-                text-anchor="end" 
+                y="${normalizeY(50)}" 
+                text-anchor="end"
+                dominant-baseline="middle"
                 font-family="sans-serif" 
                 font-size="8" 
                 fill="${labelColor}" 
@@ -271,9 +261,10 @@ export function Sparkline({
               >50</text>
               <text 
                 x="${leftGridX - 5}" 
-                y="${normalizeY(95)}" 
+                y="${normalizeY(100)}" 
                 text-anchor="end" 
-                font-family="sans-serif" 
+                dominant-baseline="middle"
+                font-family="sans-serif"
                 font-size="8" 
                 fill="${labelColor}" 
                 opacity="0.7" 
@@ -313,11 +304,12 @@ export function Sparkline({
         showPoints
           ? points
               .map((p, i) => {
-                const x = normalizeX(p.x);
+                const isFirstPoint = i === 0;
+                const isLastPoint = i === points.length - 1;
+                const x = normalizeX(p.x.getTime() + (isLastPoint ? -10 : 10));
                 const y = normalizeY(p.y ?? 0);
                 const isMaxPoint =
                   p.y === Math.max(...points.map((p) => p.y ?? 0));
-                const isLastPoint = i === points.length - 1;
 
                 // Add performance trend indicators between points
                 let trendIndicator = "";
@@ -330,7 +322,7 @@ export function Sparkline({
 
                   // Calculate position between points
                   const midX = (normalizeX(prevPoint?.x ?? new Date()) + x) / 2;
-                  const midY = (normalizeY(prevPoint?.y ?? 0) + y) / 2 - 15; // Position above the line
+                  const midY = (normalizeY(prevPoint?.y ?? 0) + y) / 2 - 10; // Position above the line
 
                   trendIndicator = `
                     <text 
@@ -346,9 +338,13 @@ export function Sparkline({
                   `;
                 }
 
-                // Highlight the most recent point
                 const pointRadius = isLastPoint ? pointSize * 1.5 : pointSize;
-                const pointOpacity = isLastPoint ? "1" : "0.8";
+                const textColor = isLastPoint ? lineColor : labelColor;
+                const fontWeight = isLastPoint ? "bold" : "normal";
+                const fontSize = isLastPoint ? "12" : "10";
+
+                const textXOffset = isFirstPoint ? 10 : 0;
+                const textYOffset = isMaxPoint ? (isLastPoint ? 18 : 15) : -10;
 
                 return `
                   ${trendIndicator}
@@ -357,20 +353,20 @@ export function Sparkline({
                     cy="${y}"
                     r="${pointRadius}"
                     fill="${lineColor}"
-                    opacity="${pointOpacity}"
+                    opacity="1"
                     vector-effect="non-scaling-stroke"
                   />
                   ${
                     showPointLabels
                       ? `
                           <text 
-                            x="${x}" 
-                            y="${isMaxPoint ? (isLastPoint ? y + 18 : y + 15) : y - 10}" 
+                            x="${x + textXOffset}" 
+                            y="${y + textYOffset}" 
                             text-anchor="middle"
                             font-family="sans-serif" 
-                            font-size="${isLastPoint ? "11" : "10"}"
-                            font-weight="${isLastPoint ? "bold" : "normal"}"
-                            fill="${labelColor}"
+                            font-size="${fontSize}"
+                            font-weight="${fontWeight}"
+                            fill="${textColor}"
                             opacity="${isLastPoint ? "1" : "0.8"}"
                           >${p.y?.toFixed(0)}</text>
                         `

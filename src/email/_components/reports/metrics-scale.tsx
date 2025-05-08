@@ -1,16 +1,24 @@
 import { Column, Img, Row } from "@react-email/components";
 
+import { cn } from "~/lib/utils";
+
 export type MetricsScaleProps = {
   leftLabel: string;
   rightLabel: string;
   value: number; // 0-100 value representing the position of the marker
+  className?: string;
   showNotches?: boolean;
+  leftLabelClassName?: string;
+  rightLabelClassName?: string;
 };
 
 export function MetricsScale({
   leftLabel,
   rightLabel,
   value,
+  className,
+  leftLabelClassName,
+  rightLabelClassName,
   showNotches = false,
 }: MetricsScaleProps) {
   // Constrain value between 0-100
@@ -54,17 +62,29 @@ export function MetricsScale({
   const svgDataUrl = `data:image/svg+xml,${encodeURIComponent(svgContent)}`;
 
   return (
-    <Row>
-      <Column className="w-1/4 text-sm text-gray-600">{leftLabel}</Column>
+    <Row className={className}>
+      <Column
+        className={cn(
+          "w-1/4 text-[13px] leading-[16px] text-gray-600",
+          leftLabelClassName,
+        )}
+      >
+        {leftLabel}
+      </Column>
       <Column className="w-1/2 px-2">
         <Img
           src={svgDataUrl}
-          width={svgWidth}
+          width="100%"
           height={svgHeight}
           alt={`Metrics scale showing ${value}% towards ${rightLabel}`}
         />
       </Column>
-      <Column className="w-1/4 text-right text-sm text-gray-600">
+      <Column
+        className={cn(
+          "w-1/4 text-right text-[13px] leading-[18px] text-gray-600",
+          rightLabelClassName,
+        )}
+      >
         {rightLabel}
       </Column>
     </Row>

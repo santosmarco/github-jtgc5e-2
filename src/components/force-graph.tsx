@@ -19,7 +19,7 @@ interface Node extends d3.SimulationNodeDatum {
 }
 
 // Extended Link interface with d3 simulation properties
-interface Link extends d3.SimulationLinkDatum<Node> {
+export interface ForceGraphLink extends d3.SimulationLinkDatum<Node> {
   id: string;
   source: Node | string;
   target: Node | string;
@@ -30,7 +30,7 @@ interface Link extends d3.SimulationLinkDatum<Node> {
 
 interface GraphData {
   nodes: Node[];
-  links: Link[];
+  links: ForceGraphLink[];
 }
 
 interface ForceGraphProps {
@@ -38,7 +38,7 @@ interface ForceGraphProps {
   showLabels: boolean;
   zoomLevel: number;
   onNodeClick: (node: Node) => void;
-  onLinkClick?: (link: Link) => void;
+  onLinkClick?: (link: ForceGraphLink) => void;
   highlightedNodeIds?: Set<string>;
   layoutMode?: "clustered" | "radial" | "force";
 }
@@ -159,7 +159,7 @@ export default function ForceGraph({
     }
 
     // Process links to ensure source and target are Node objects
-    const processedLinks: Link[] = data.links.map((link) => {
+    const processedLinks: ForceGraphLink[] = data.links.map((link) => {
       const sourceId =
         typeof link.source === "string" ? link.source : link.source.id;
       const targetId =
@@ -280,7 +280,7 @@ export default function ForceGraph({
       .force(
         "link",
         d3
-          .forceLink<Node, Link>(processedLinks)
+          .forceLink<Node, ForceGraphLink>(processedLinks)
           .id((d) => d.id)
           .distance((link) => {
             // Make relationship links longer between different node types
@@ -342,7 +342,7 @@ export default function ForceGraph({
       .attr("stroke-width", 1.5) // Thinner links
       .attr("stroke-opacity", 0.5) // More transparent links
       .style("cursor", onLinkClick ? "pointer" : "default")
-      .on("click", (event: MouseEvent, d: Link) => {
+      .on("click", (event: MouseEvent, d: ForceGraphLink) => {
         if (onLinkClick) {
           event.stopPropagation();
           onLinkClick(d);

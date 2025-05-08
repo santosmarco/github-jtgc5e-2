@@ -552,7 +552,9 @@ export class ReportsService {
           `,
         )
         .eq("profile_id", profileId)
+        .eq("is_hidden", false)
         .eq("processing_statuses.status", "completed")
+        .eq("processing_statuses.group_processing_status.status", "completed")
         .order("start_date", { ascending: true, nullsFirst: true });
 
       if (filters?.skillId) query.eq("skill_id", filters.skillId);
@@ -639,9 +641,11 @@ export class ReportsService {
           `,
         )
         .eq("id", reportId)
+        .eq("is_hidden", false)
         .eq("processing_statuses.status", "completed")
         .eq("processing_statuses.group_processing_status.status", "completed")
-        .filter("report_moments.is_visible", "eq", true)
+        .eq("report_moments.is_visible", true)
+        .is("report_moments.omission_reason", null)
         .single();
 
       if (error) {
@@ -703,6 +707,7 @@ export class ReportsService {
         )
         .eq("report_id", reportId)
         .eq("is_visible", true)
+        .is("omission_reason", null)
         .range(startIndex, startIndex + limit - 1)
         .order("score", { ascending: false });
 
@@ -891,6 +896,7 @@ export class ReportsService {
         )
         .eq("profile_id", profileId)
         .eq("skill_id", skillId)
+        .eq("is_hidden", false)
         .eq("processing_status.status", "completed")
         .order("start_date", { ascending: true });
 
@@ -917,14 +923,15 @@ export class ReportsService {
                   report_id,
                   is_visible,
                   omission_reason,
-                  moment:moments(
+                  moment:moments!inner(
                     _internal_thumbs_down,
                     subtags:moment_subtags(tag)
                   )
                 `,
               )
               .eq("report_id", report.id)
-              .eq("is_visible", true);
+              .eq("is_visible", true)
+              .is("omission_reason", null);
 
           if (momentsError) {
             this.handleError(momentsError, "fetching moments", {
@@ -1006,14 +1013,17 @@ export class ReportsService {
         .select(
           `
             id,
+            skill_id,
             start_date,
             end_date,
-            processing_status:report_processing_status!inner(status, group_processing_status_id)
+            profile_id,
+            processing_statuses:report_processing_status!inner(status, group_processing_status_id)
           `,
         )
         .eq("profile_id", profileId)
         .eq("skill_id", skillId)
-        .eq("processing_status.status", "completed")
+        .eq("is_hidden", false)
+        .eq("processing_statuses.status", "completed")
         .order("start_date", { ascending: true });
 
       if (reportsError) {
@@ -1047,7 +1057,8 @@ export class ReportsService {
             `,
           )
           .in("report_id", reportIds)
-          .eq("is_visible", true);
+          .eq("is_visible", true)
+          .is("omission_reason", null);
 
       if (momentsError) {
         this.handleError(momentsError, "fetching all moments", { reportIds });
@@ -1057,23 +1068,32 @@ export class ReportsService {
       const momentsByReport = _.groupBy(allReportMoments || [], "report_id");
 
       // Calculate scores for each report
-      const results = dedupedReports.map((report) => {
-        const reportMoments = momentsByReport[report.id] || [];
+      const results = dedupedReports
+        .map((report) => {
+          const reportMoments = momentsByReport[report.id] || [];
 
-        const { score, positiveTagCounts, negativeTagCounts, totalTagCounts } =
-          this.calculateSkillScore(skill, reportMoments);
+          if (!reportMoments.length) return;
 
-        return {
-          reportId: report.id,
-          groupId: report.processing_status?.[0]?.group_processing_status_id,
-          startDate: report.start_date,
-          endDate: report.end_date,
-          score: Math.round(score * 100), // Convert to percentage
-          positiveTagCount: positiveTagCounts,
-          negativeTagCount: negativeTagCounts,
-          totalTagCount: totalTagCounts,
-        };
-      });
+          const {
+            score,
+            positiveTagCounts,
+            negativeTagCounts,
+            totalTagCounts,
+          } = this.calculateSkillScore(skill, reportMoments);
+
+          return {
+            reportId: report.id,
+            groupId:
+              report.processing_statuses?.[0]?.group_processing_status_id,
+            startDate: report.start_date,
+            endDate: report.end_date,
+            score: Math.round(score * 100), // Convert to percentage
+            positiveTagCount: positiveTagCounts,
+            negativeTagCount: negativeTagCounts,
+            totalTagCount: totalTagCounts,
+          };
+        })
+        .filter(isTruthy);
 
       // Sort results by date in ascending order
       return results.sort(

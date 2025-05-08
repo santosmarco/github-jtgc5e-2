@@ -1,4 +1,5 @@
 import { Section } from "@react-email/components";
+import _ from "lodash";
 
 import { cn } from "~/lib/utils";
 
@@ -25,18 +26,23 @@ export function MetricsSection({
   className,
 }: MetricsSectionProps) {
   return (
-    <Section className={cn("mb-8 mt-8", className)}>
+    <Section className={cn("my-4 w-full", className)}>
       <ReportSectionHeading title={title} />
 
       {metrics.length > 0 && (
         <Section>
           {metrics.map((metric, index) => (
             <MetricsScale
-              key={index}
+              key={`${_.camelCase(metric.leftLabel)}_${_.camelCase(metric.rightLabel)}`}
               leftLabel={metric.leftLabel}
               rightLabel={metric.rightLabel}
               value={metric.value}
               showNotches={showNotches}
+              className={cn(
+                "mb-2",
+                index === metrics.length - 1 && "mb-0",
+                index === 0 && "mt-0",
+              )}
             />
           ))}
         </Section>

@@ -1,0 +1,373 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# React Component Refactoring Best Practices
+
+This guide outlines best practices for refactoring React components in our codebase.
+
+## When to Refactor
+
+### Signs a Component Needs Refactoring
+
+- **Excessive Length**: Component exceeds 300 lines of code
+- **Too Many Props**: Component has more than 8-10 props
+- **Multiple Responsibilities**: Component handles multiple unrelated concerns
+- **Complex Rendering Logic**: Nested conditionals make the JSX hard to follow
+- **Performance Issues**: Component re-renders too frequently or handles expensive operations
+- **Duplicate Code**: Similar logic appears in multiple components
+- **Deeply Nested Components**: Component renders multiple levels of nested children
+- **Tightly Coupled Logic**: Business logic is intermixed with UI rendering code
+
+## Refactoring Strategies
+
+### Component Decomposition
+
+- Extract logical sections into smaller, focused components
+- Create reusable UI components for repeating patterns
+- Separate complex stateful logic from presentational components
+
+```tsx
+// ❌ Bad: Monolithic component
+function UserDashboard({ user, data, permissions, ...otherProps }) {
+  // 200+ lines of code with multiple responsibilities
+}
+
+// ✅ Good: Decomposed components
+function UserDashboard({ user, data, permissions }) {
+  return (
+    <DashboardLayout>
+      <UserHeader user={user} />
+      <PermissionsGuard permissions={permissions}>
+        <DataVisualizer data={data} />
+      </PermissionsGuard>
+      <UserActions user={user} />
+    </DashboardLayout>
+  );
+}
+```
+
+### Extract Custom Hooks
+
+- Move stateful logic and side effects into custom hooks
+- Create hooks for reusable behaviors (form handling, API calls, animations)
+- Keep hooks focused on a single responsibility
+
+```tsx
+// ❌ Bad: Logic embedded in component
+function UserProfile({ userId }) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/users/${userId}`);
+        const data = await response.json();
+        setUser(data);
+      } catch (err) {
+        setError(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchUser();
+  }, [userId]);
+  
+  // Rendering logic...
+}
+
+// ✅ Good: Logic extracted to custom hook
+function useUser(userId) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/users/${userId}`);
+        const data = await response.json();
+        setUser(data);
+      } catch (err) {
+        setError(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchUser();
+  }, [userId]);
+
+  return { user, loading, error };
+}
+
+function UserProfile({ userId }) {
+  const { user, loading, error } = useUser(userId);
+  
+  // Simplified rendering logic...
+}
+```
+
+### Simplify Conditional Rendering
+
+- Replace nested conditionals with early returns or components
+- Use ternary operators for simple conditions
+- Extract complex conditional logic into separate functions or components
+
+```tsx
+// ❌ Bad: Nested conditionals
+function UserStatus({ user }) {
+  return (
+    <div>
+      {user ? (
+        <div>
+          {user.isActive ? (
+            <div>
+              {user.isPremium ? (
+                <PremiumBadge />
+              ) : (
+                <RegularBadge />
+              )}
+            </div>
+          ) : (
+            <InactiveBadge />
+          )}
+        </div>
+      ) : (
+        <Loading />
+      )}
+    </div>
+  );
+}
+
+// ✅ Good: Simplified conditionals
+function UserStatus({ user }) {
+  if (!user) return <Loading />;
+  if (!user.isActive) return <InactiveBadge />;
+  
+  return user.isPremium ? <PremiumBadge /> : <RegularBadge />;
+}
+```
+
+## Maintaining Type Safety
+
+- Keep props interfaces/types in sync with component usage
+- Use TypeScript utilities (Pick, Omit, Partial) to derive types from existing ones
+- Add explicit return types for functions and components
+- Validate refactored component props with a thorough test
+
+```tsx
+// Before refactoring
+interface UserProfileProps {
+  user: User;
+  permissions: string[];
+  onUpdate: (user: User) => void;
+  isEditable: boolean;
+}
+
+// After splitting into components
+interface UserHeaderProps {
+  user: Pick<User, 'name' | 'avatar' | 'title'>;
+}
+
+interface UserDetailsProps {
+  user: User;
+  isEditable: boolean;
+  onUpdate: (user: User) => void;
+}
+
+interface PermissionsProps {
+  permissions: string[];
+}
+```
+
+## Performance Optimizations
+
+### Memoization
+
+- Use React.memo to prevent unnecessary re-renders of expensive components
+- Apply useMemo for expensive calculations
+- Use useCallback for event handlers passed to child components
+
+```tsx
+// ❌ Bad: Recreating functions on every render
+function ParentComponent({ items }) {
+  const handleItemClick = (id) => {
+    // Handle click logic
+  };
+
+  return (
+    <div>
+      {items.map(item => (
+        <Item 
+          key={item.id} 
+          data={item} 
+          onClick={handleItemClick} 
+        />
+      ))}
+    </div>
+  );
+}
+
+// ✅ Good: Memoized callback
+function ParentComponent({ items }) {
+  const handleItemClick = useCallback((id) => {
+    // Handle click logic
+  }, []);
+
+  return (
+    <div>
+      {items.map(item => (
+        <Item 
+          key={item.id} 
+          data={item} 
+          onClick={handleItemClick} 
+        />
+      ))}
+    </div>
+  );
+}
+```
+
+### Virtual Lists
+
+- Replace large lists with virtualized alternatives (react-window, react-virtualized)
+- Consider breaking large tables or lists into paginated views
+
+## State Management Refactoring
+
+### Local vs. Global State
+
+- Move shared state up to common ancestors or into a global state manager
+- Keep component-specific state local with useState or useReducer
+- Consider context for state shared across many components
+
+### State Colocation
+
+- Keep state as close as possible to where it's used
+- Avoid prop drilling by using context or state management libraries
+
+## Handling Side Effects
+
+- Move side effects out of render functions
+- Cleanup side effects properly in useEffect
+- Keep side effects focused and isolated
+
+```tsx
+// ❌ Bad: Unmanaged side effects
+function UserProfile({ userId }) {
+  const [user, setUser] = useState(null);
+  
+  // Missing dependency array
+  useEffect(() => {
+    fetch(`/api/users/${userId}`)
+      .then(res => res.json())
+      .then(data => setUser(data));
+    
+    // Missing cleanup
+    const subscription = subscribeToUserUpdates(userId);
+  });
+  
+  // Component rendering...
+}
+
+// ✅ Good: Properly managed side effects
+function UserProfile({ userId }) {
+  const [user, setUser] = useState(null);
+  
+  useEffect(() => {
+    let isMounted = true;
+    
+    async function fetchUser() {
+      try {
+        const response = await fetch(`/api/users/${userId}`);
+        const data = await response.json();
+        if (isMounted) setUser(data);
+      } catch (error) {
+        // Error handling
+      }
+    }
+    
+    fetchUser();
+    
+    const subscription = subscribeToUserUpdates(userId);
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, [userId]);
+  
+  // Component rendering...
+}
+```
+
+## Testing Considerations
+
+- Update tests to match refactored component behavior
+- Test components in isolation with unit tests
+- Add integration tests for component interactions
+- Consider snapshot tests for UI regressions
+- Test edge cases and error states
+
+## Refactoring with shadcn/ui
+
+When refactoring components to use shadcn/ui:
+
+- Replace custom UI elements with equivalent shadcn/ui components
+- Preserve existing functionality and behavior
+- Adapt component props to match shadcn/ui API
+- Use shadcn/ui's className approach for styling
+- Leverage shadcn/ui's accessibility features
+
+```tsx
+// ❌ Before: Custom button component
+function Button({ label, onClick, variant = "primary" }) {
+  return (
+    <button 
+      className={`btn ${variant === "primary" ? "btn-primary" : "btn-secondary"}`}
+      onClick={onClick}
+    >
+      {label}
+    </button>
+  );
+}
+
+// ✅ After: Using shadcn/ui Button
+import { Button } from "~/components/ui/button";
+
+function MyComponent({ label, onClick, variant = "default" }) {
+  return (
+    <Button 
+      variant={variant} 
+      onClick={onClick}
+    >
+      {label}
+    </Button>
+  );
+}
+```
+
+## Step-by-Step Refactoring Process
+
+1. **Analyze the component** - Identify issues and refactoring opportunities
+2. **Write or update tests** - Ensure you have test coverage before refactoring
+3. **Extract smaller components** - Break down the component into logical pieces
+4. **Extract custom hooks** - Move stateful logic into reusable hooks
+5. **Optimize performance** - Apply memoization and other optimizations
+6. **Update types** - Ensure TypeScript types are accurate and comprehensive
+7. **Run tests** - Verify the refactored code passes all tests
+8. **Review and document** - Add comments for complex logic and update documentation
+
+## Common Pitfalls to Avoid
+
+- **Premature optimization** - Don't optimize until you've identified performance issues
+- **Over-engineering** - Keep components as simple as possible
+- **Breaking changes** - Maintain the same API when refactoring exported components
+- **Inconsistent abstractions** - Maintain consistency across your codebase
+- **Circular dependencies** - Be careful about import references between components

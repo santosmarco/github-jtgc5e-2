@@ -16,6 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { ChatContainer, ChatMessages } from "~/components/ui/chat";
+import { ExportChatButton } from "~/components/ui/export-chat-button";
 import { LoadingSpinner } from "~/components/ui/loading-spinner";
 import { MessageList } from "~/components/ui/message-list";
 import { RestartChatButton } from "~/components/ui/restart-chat-button";
@@ -509,6 +510,7 @@ export function ChatInterface({
                     transition={{ delay: 0.3 }}
                     className="flex items-center gap-4"
                   >
+                    <ExportChatButton messages={messages} />
                     <RestartChatButton onRestart={handleRestart} />
                   </motion.div>
                 </motion.header>

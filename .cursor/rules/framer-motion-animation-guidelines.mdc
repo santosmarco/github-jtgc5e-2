@@ -1,0 +1,161 @@
+---
+description: 
+globs: *.tsx
+alwaysApply: false
+---
+# Framer Motion Animation Guidelines for React Components
+
+## Purpose
+
+This rule provides best practices for animating React components using [Framer Motion](mdc:https:/www.framer.com/motion) to achieve subtle, beautiful, and professional UI/UX. It covers design principles, code patterns, accessibility, and performance tips.
+
+---
+
+## 1. Design Principles
+
+- **Subtlety First:** Animations should enhance, not distract. Use gentle movement, opacity, and scale changes.
+- **Purposeful Motion:** Every animation must serve a clear UX purpose (e.g., focus, feedback, transition).
+- **Consistency:** Use a consistent animation language across the app (timing, easing, style).
+- **Responsiveness:** Animations must adapt to different device sizes and input types.
+- **Accessibility:** Respect user preferences for reduced motion.
+
+---
+
+## 2. Framer Motion Setup
+
+Install Framer Motion:
+
+```bash
+pnpm add framer-motion
+# or
+yarn add framer-motion
+# or
+npm install framer-motion
+```
+
+Import in your component:
+
+```tsx
+import { motion, AnimatePresence } from "framer-motion";
+```
+
+---
+
+## 3. Animation Patterns
+
+### Fade & Slide In (Entrance Animation)
+
+```tsx
+import { motion } from "framer-motion";
+
+const fadeInVariants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0 },
+};
+
+export const AnimatedCard = ({ children }: { children: React.ReactNode }) => (
+  <motion.div
+    variants={fadeInVariants}
+    initial="hidden"
+    animate="visible"
+    transition={{ duration: 0.4, ease: "easeOut" }}
+  >
+    {children}
+  </motion.div>
+);
+```
+
+### Button Tap Animation
+
+```tsx
+<motion.button
+  whileTap={{ scale: 0.96 }}
+  transition={{ type: "spring", stiffness: 400, damping: 20 }}
+>
+  Click me
+</motion.button>
+```
+
+### AnimatePresence for Conditional Rendering
+
+```tsx
+<AnimatePresence>
+  {isOpen && (
+    <motion.div
+      key="modal"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.25 }}
+    >
+      Modal Content
+    </motion.div>
+  )}
+</AnimatePresence>
+```
+
+---
+
+## 4. Best Practices
+
+- **Use GPU-accelerated properties:** Prefer `opacity`, `transform` (`scale`, `translate`, `rotate`) for smooth performance.
+- **Keep durations short:** 150–400ms for most UI transitions.
+- **Easing:** Use `easeOut` or custom cubic-bezier for natural feel.
+- **Staggered Animations:** Use `staggerChildren` for lists.
+- **Avoid animating layout-breaking properties** (e.g., width, height) unless necessary.
+- **Compose variants:** Use Framer Motion's `variants` for scalable, maintainable animation logic.
+- **Memoize animated components** if used in lists for performance.
+
+---
+
+## 5. Accessibility
+
+- **Reduced Motion:**
+  ```tsx
+  import { useReducedMotion } from "framer-motion";
+  const shouldReduceMotion = useReducedMotion();
+  // Use shouldReduceMotion to disable or simplify animations
+  ```
+- **Focus Management:** Ensure focus is managed for animated modals/dialogs.
+- **Announce State Changes:** Use ARIA live regions if animation changes content meaningfully.
+
+---
+
+## 6. Example: Animated List with Stagger
+
+```tsx
+import { motion } from "framer-motion";
+
+const listVariants = {
+  visible: { transition: { staggerChildren: 0.08 } },
+};
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0 },
+};
+
+export const AnimatedList = ({ items }: { items: string[] }) => (
+  <motion.ul initial="hidden" animate="visible" variants={listVariants}>
+    {items.map((item) => (
+      <motion.li key={item} variants={itemVariants}>
+        {item}
+      </motion.li>
+    ))}
+  </motion.ul>
+);
+```
+
+---
+
+## 7. Resources
+
+- [Framer Motion Docs](mdc:https:/www.framer.com/motion)
+- [Accessible Animation](mdc:https:/www.smashingmagazine.com/2021/09/accessible-animations-motion)
+- [MDN: prefers-reduced-motion](mdc:https:/developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-motion)
+
+---
+
+## 8. Related Rules
+
+- [react-component-guidelines.mdc](mdc:react-component-guidelines.mdc)
+- [nextjs-typescript-tailwind-best-practices.mdc](mdc:nextjs-typescript-tailwind-best-practices.mdc)
