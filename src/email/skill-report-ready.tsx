@@ -53,7 +53,7 @@ export type SkillReportReadyEmailProps = {
   previewText: string;
   baseReportUrl: string;
   report: Select<"reports", "start_date" | "end_date"> & {
-    skill: Select<"skills", "title"> & {
+    skill: Select<"skills", "internal_title"> & {
       scales: Tables<"skill_scales">[];
     };
     profile: Select<"profiles", "nickname">;
@@ -75,7 +75,7 @@ export function SkillReportReadyEmail({
   sections,
   meetingMinutes,
 }: SkillReportReadyEmailProps) {
-  const skillTitle = report.skill.title;
+  const skillTitle = report.skill.internal_title;
 
   // Format date range
   const startDate = dayjs(report.start_date).format("MMM DD");
@@ -143,20 +143,18 @@ export function SkillReportReadyEmail({
             {/* Report Card */}
             <Section className="mx-auto bg-white px-10">
               {/* Score Visualization */}
-              {historicalScores.length >= 2 && (
-                <div className={cn("w-full pt-6", isManager && "pb-6")}>
-                  <div className="mt-8 w-full text-center">
-                    <ReportSectionHeading title="PERFORMANCE TREND" />
-                    <div className="mt-4 w-full">
-                      <Sparkline
-                        data={historicalScoresData}
-                        height={120}
-                        areaColor="#E5E7EB"
-                      />
-                    </div>
+              <div className={cn("w-full pt-6", isManager && "pb-6")}>
+                <div className="mt-8 w-full text-center">
+                  <ReportSectionHeading title="PERFORMANCE TREND" />
+                  <div className="mt-4 w-full">
+                    <Sparkline
+                      data={historicalScoresData}
+                      height={120}
+                      areaColor="#E5E7EB"
+                    />
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* Email-friendly Report Metrics - Founder only */}
               {isFounder && leadershipMetrics && (

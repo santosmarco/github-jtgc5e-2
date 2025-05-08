@@ -35,50 +35,65 @@ const IS_TESTING_REPORT_READY_EMAIL = true;
 
 const resend = new Resend(env.RESEND_API_KEY);
 
-export async function sendInvitationEmail({ invite }: InvitationEmailProps) {
+async function sendEmail(
+  element: React.ReactElement,
+  { to, subject }: { to: string | string[]; subject: string },
+) {
   try {
-    const emailHtml = await render(InvitationEmail({ invite }));
+    logger.info("Sending email", { to, subject });
 
-    const data = await resend.emails.send({
+    const [emailHtml, plainText] = await Promise.all([
+      render(element),
+      render(element, { plainText: true }),
+    ]);
+
+    const { data, error } = await resend.emails.send({
       from: "Titan <onboarding@emails.withtitan.com>",
-      to: invite.email,
-      subject: "Create Your Account On Titan GameTape",
+      to,
+      subject,
       html: emailHtml,
+      text: plainText,
     });
 
-    if (!data || data.error) {
-      console.error("Resend API error:", data?.error);
-      throw new Error(data?.error?.message || "Failed to send email");
+    if (error) {
+      logger.error("Resend API error:", { error });
+      throw new Error(error.message || "Failed to send email");
     }
+
+    if (!data) {
+      logger.error("No data returned from Resend");
+      throw new Error("No data returned from Resend");
+    }
+
+    logger.info("Email sent successfully", { data });
 
     return data;
   } catch (error) {
-    console.error("Email sending error:", error);
-    throw error; // Re-throw to be handled by the caller
+    logger.error("Email sending error:", { error });
+    throw error;
   }
+}
+
+export async function sendInvitationEmail({ invite }: InvitationEmailProps) {
+  return sendEmail(<InvitationEmail invite={invite} />, {
+    to: invite.email,
+    subject: "Create Your Account On Titan GameTape",
+  });
 }
 
 export async function sendExploreUnlockedEmail({
   profile,
 }: ExploreUnlockedEmailProps) {
-  const emailHtml = await render(ExploreUnlockedEmail({ profile }));
-
-  const data = await resend.emails.send({
-    from: "Titan <onboarding@emails.withtitan.com>",
+  return sendEmail(<ExploreUnlockedEmail profile={profile} />, {
     to: profile.email,
     subject: "🎉 Congrats! Start Exploring Your Performance with GameTape",
-    html: emailHtml,
   });
-
-  return data;
 }
 
 export async function sendMeetingRecapEmail({
   meeting,
   sections,
 }: MeetingRecapEmailProps) {
-  const emailHtml = await render(MeetingRecapEmail({ meeting, sections }));
-
   // Format date if available
   const meetingDate = meeting.date
     ? new Date(meeting.date).toLocaleDateString()
@@ -115,14 +130,13 @@ export async function sendMeetingRecapEmail({
   // Create a subject that includes date, title, and attendees
   const subject = `Meeting Recap: ${meetingName}${meetingDate ? ` (${meetingDate})` : ""}${attendeeNames}`;
 
-  const data = await resend.emails.send({
-    from: "Titan <onboarding@emails.withtitan.com>",
-    to: meeting.profile.email,
-    subject,
-    html: emailHtml,
-  });
-
-  return data;
+  return sendEmail(
+    <MeetingRecapEmail meeting={meeting} sections={sections} />,
+    {
+      to: meeting.profile.email,
+      subject,
+    },
+  );
 }
 
 export async function sendSuggestedTopicsEmail({
@@ -277,28 +291,28 @@ export async function sendSkillReportReadyEmail(
       }),
     );
 
-    // Create a descriptive subject line
-    const skillTitle = report.skill?.title || "Leadership";
-    const subject = `Your ${skillTitle} Performance Report is Ready`;
+    const subject = `Your ${report.skill.internal_title} Performance Report is Ready`;
 
-    // Send the email
-    const data = await resend.emails.send({
-      from: "Titan <onboarding@emails.withtitan.com>",
-      to: IS_TESTING_REPORT_READY_EMAIL
-        ? `marco+${_.camelCase(report.profile.nickname ?? report.profile.id)}@withtitan.com`
-        : report.profile.email,
-      subject,
-      html: emailHtml,
-    });
-
-    if (!data || data.error) {
-      console.error("Resend API error:", data?.error);
-      throw new Error(data?.error?.message || "Failed to send email");
-    }
-
-    return data;
+    return sendEmail(
+      <SkillReportReadyEmail
+        variant={emailVariant}
+        previewText={previewText}
+        baseReportUrl={baseReportUrl}
+        report={report}
+        historicalScores={historicalScores}
+        teaser={teaser}
+        sections={sections}
+        meetingMinutes={meetingMinutes}
+      />,
+      {
+        to: IS_TESTING_REPORT_READY_EMAIL
+          ? `marco+${_.camelCase(report.profile.nickname ?? report.profile.id)}@withtitan.com`
+          : report.profile.email,
+        subject,
+      },
+    );
   } catch (error) {
-    console.error("Error sending skill report email:", error);
+    logger.error("Error sending skill report email:", { error });
     throw error;
   }
 }
