@@ -14,8 +14,6 @@ import {
   createClient as createSupabaseClient,
 } from "~/lib/supabase/server";
 
-const IS_TESTING_REPORT_READY_EMAIL = true;
-
 const RequestBody = z.discriminatedUnion("templateId", [
   z.object({
     templateId: z.literal("explore-unlocked"),
@@ -42,7 +40,7 @@ const RequestBody = z.discriminatedUnion("templateId", [
 type RequestBody = z.infer<typeof RequestBody>;
 
 type ResponseBody =
-  | { success: true; messageId: string }
+  | { success: true; messageId: string | null }
   | { success: false; error: string };
 
 function createErrorResponse(
