@@ -504,10 +504,10 @@ export async function generateReportSections(
         Output: "You can increase your impact by <highlight>preparing before meetings</highlight> to better regulate emotions and respond effectively during high-stakes conversations."
 
         Input: "You need to establish clearer consequences for missed targets. When reviewing quarterly goals with the sales team or discussing project timelines with developers, you often acknowledge shortfalls without defining specific repercussions. Implementing a <highlight>structured accountability framework</highlight> would help team members understand the importance of meeting commitments and drive better performance."
-        Output: "Clarify and communicate <highlight>specific consequences</highlight> for unmet targets to reinforce accountability and drive performance."
+        Output: "You should clarify and communicate <highlight>specific consequences</highlight> for unmet targets to reinforce accountability and drive performance."
 
         Input: "Your follow-through on initiatives sometimes lacks consistency. After setting ambitious targets with the marketing team or establishing new processes with operations, the accountability mechanisms often fade over time. Creating a <highlight>systematic check-in protocol</highlight> would ensure sustained focus on key priorities and prevent important initiatives from losing momentum."
-        Output: "Implementing <highlight>consistent follow-up</highlight> after setting targets will strengthen accountability and clarify expectations."
+        Output: "You can improve by implementing <highlight>consistent follow-up</highlight> after setting targets to strengthen accountability and clarify expectations."
 
         Input: "${section.summary}"
         Output:
