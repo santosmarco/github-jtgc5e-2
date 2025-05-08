@@ -73,7 +73,7 @@ export function SuccessContent({
       animate="visible"
       className={className}
     >
-      {!hasValidFallbackScore && (
+      {hasValidFallbackScore && (
         <Alert
           variant="default"
           className="absolute left-1/2 top-0 z-50 -translate-x-1/2 rounded-sm border-amber-500/50 bg-amber-500/50 py-2 backdrop-blur-md"
