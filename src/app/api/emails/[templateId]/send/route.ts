@@ -10,9 +10,11 @@ import {
 } from "~/lib/email";
 import { logger } from "~/lib/logging/server";
 import {
-  createClient as createSupabaseClient,
   type SupabaseServerClient,
+  createClient as createSupabaseClient,
 } from "~/lib/supabase/server";
+
+const IS_TESTING_REPORT_READY_EMAIL = true;
 
 const RequestBody = z.discriminatedUnion("templateId", [
   z.object({
@@ -50,7 +52,9 @@ function createErrorResponse(
   return NextResponse.json({ success: false, error }, { status });
 }
 
-function createSuccessResponse(messageId: string): NextResponse<ResponseBody> {
+function createSuccessResponse(
+  messageId: string | null,
+): NextResponse<ResponseBody> {
   return NextResponse.json({ success: true, messageId }, { status: 200 });
 }
 
@@ -181,8 +185,13 @@ async function handleSkillReportReadyEmail(
     return createErrorResponse("Report profile ID not found", 404);
   }
 
-  const { data: emailData, error: emailError } =
-    await sendSkillReportReadyEmail(report.id, supabase);
+  const response = await sendSkillReportReadyEmail(report.id, supabase);
+  if (!response) {
+    logger.info("Skipping email send for report", { reportId });
+    return createSuccessResponse(null);
+  }
+
+  const { data: emailData, error: emailError } = response;
 
   if (emailError) {
     logger.error("Failed to send skill report ready email", {

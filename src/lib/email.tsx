@@ -276,7 +276,7 @@ export async function sendSkillReportReadyEmail(
     const data = await resend.emails.send({
       from: "Titan <onboarding@emails.withtitan.com>",
       to: IS_TESTING_REPORT_READY_EMAIL
-        ? `marco+${_.camelCase(emailProps.profile.nickname)}@withtitan.com`
+        ? `marco+${_.camelCase(report.profile.nickname ?? report.profile.id)}@withtitan.com`
         : report.profile.email,
       subject,
       html: emailHtml,
