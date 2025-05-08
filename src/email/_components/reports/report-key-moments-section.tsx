@@ -1,4 +1,4 @@
-import { cn } from "~/lib/utils";
+import { Section } from "@react-email/components";
 
 import { Button } from "../button";
 import { ReportKeyMoment } from "./report-key-moment";
@@ -29,7 +29,7 @@ export function ReportKeyMomentsSection({
   if (moments.length === 0) return null;
 
   return (
-    <div className={cn("mb-12 mt-12", className)}>
+    <Section className={className}>
       <ReportSectionHeading title="KEY LEADERSHIP MOMENTS" color="indigo" />
 
       <div className="space-y-4">
@@ -51,6 +51,6 @@ export function ReportKeyMomentsSection({
           Review Key Moments →
         </Button>
       </div>
-    </div>
+    </Section>
   );
 }

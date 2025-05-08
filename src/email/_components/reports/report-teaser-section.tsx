@@ -72,7 +72,7 @@ export function ReportTeaserSection({
               "",
             )}
           </Text>
-          <Hr className="my-6" />
+          <Hr className="mt-6" />
         </>
       )}
     </Section>

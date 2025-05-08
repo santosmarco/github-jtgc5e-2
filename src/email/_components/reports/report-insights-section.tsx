@@ -1,7 +1,5 @@
 import { Section } from "@react-email/components";
 
-import { cn } from "~/lib/utils";
-
 import { Button } from "../button";
 import type { InsightType } from "./report-insight";
 import { ReportInsight } from "./report-insight";
@@ -46,7 +44,7 @@ export function ReportInsightsSection({
   const { color, bgColor } = COLOR_CONFIG[type];
 
   return (
-    <div className={cn("mb-12", className)}>
+    <Section className={className}>
       <ReportSectionHeading title={title} color={color} />
 
       <Section className="space-y-3">
@@ -67,6 +65,6 @@ export function ReportInsightsSection({
           {buttonText}
         </Button>
       </div>
-    </div>
+    </Section>
   );
 }

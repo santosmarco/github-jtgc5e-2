@@ -57,14 +57,25 @@ export function ReportKeyMoment({
   );
   const shouldTruncate = summaryWithoutTags.length > summaryMaxLength;
 
-  const truncatedSummary = shouldTruncate
-    ? `${processedSummaryText.slice(0, summaryMaxLength)}...`
-    : processedSummaryText;
+  // Truncate at the last complete word within the limit
+  let truncatedSummary = processedSummaryText;
+  if (shouldTruncate) {
+    // Find the last space before the max length
+    const lastSpaceIndex = processedSummaryText.lastIndexOf(
+      " ",
+      summaryMaxLength,
+    );
+    // If there's a space, truncate there, otherwise use the full max length
+    const truncateIndex =
+      lastSpaceIndex > 0 ? lastSpaceIndex : summaryMaxLength;
+    truncatedSummary = `${processedSummaryText.slice(0, truncateIndex)}...`;
+  }
 
   const processedSummary = highlightSummary ? (
     <HighlightableText>{truncatedSummary}</HighlightableText>
   ) : shouldTruncate ? (
-    `${summaryWithoutTags.slice(0, summaryMaxLength)}...`
+    // For non-highlighted summary, also truncate at word boundaries
+    `${summaryWithoutTags.slice(0, summaryWithoutTags.lastIndexOf(" ", summaryMaxLength) || summaryMaxLength)}...`
   ) : (
     summaryWithoutTags
   );

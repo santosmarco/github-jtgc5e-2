@@ -13,6 +13,8 @@ import {
 import { SimplifiedGauge } from "~/components/ui/simplified-gauge";
 import { cn } from "~/lib/utils";
 
+import { Alert, AlertDescription } from "../ui/alert";
+
 // Animation variants
 const gaugeVariants = {
   hidden: { opacity: 0, scale: 0.8 },
@@ -71,25 +73,16 @@ export function SuccessContent({
       animate="visible"
       className={className}
     >
-      {hasValidFallbackScore && (
-        <motion.div
-          className="absolute left-1/2 top-0 z-10 -translate-x-1/2 rounded-full bg-amber-500/10 px-4 py-2 text-center"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{
-            type: "spring",
-            stiffness: 100,
-            damping: 20,
-            delay: 0.5,
-          }}
+      {!hasValidFallbackScore && (
+        <Alert
+          variant="default"
+          className="absolute left-1/2 top-0 z-50 -translate-x-1/2 rounded-sm border-amber-500/50 bg-amber-500/50 py-2 backdrop-blur-md"
         >
-          <div className="flex items-center gap-2">
-            <InfoIcon className="h-4 w-4 text-amber-500" />
-            <span className="text-xs font-medium text-amber-600">
-              Showing previous report data due to issues with the latest report
-            </span>
-          </div>
-        </motion.div>
+          <InfoIcon className="h-4 w-4" />
+          <AlertDescription className="text-xs font-medium text-amber-50">
+            Using previous report data due to insufficient recent data
+          </AlertDescription>
+        </Alert>
       )}
       <SimplifiedGauge
         value={finalScore}
