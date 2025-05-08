@@ -9,9 +9,13 @@ import {
   Tailwind,
 } from "@react-email/components";
 
-import type { Tables } from "~/lib/supabase/database.types";
+import type { Enums, Tables } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
 
+import dayjs from "dayjs";
+import _ from "lodash";
+import type { HistoricalSkillScore, ReportScore } from "~/lib/reports/scoring";
+import type { Select } from "~/lib/utils/types";
 import { CTAButtonSection } from "./_components/cta-button-section";
 import { MetricsSection } from "./_components/reports/metrics-section";
 import { ReportFooter } from "./_components/reports/report-footer";
@@ -21,45 +25,8 @@ import { ReportKeyMomentsSection } from "./_components/reports/report-key-moment
 import { ReportSectionHeading } from "./_components/reports/report-section-heading";
 import { ReportTeaserSection } from "./_components/reports/report-teaser-section";
 import { Sparkline } from "./_components/sparkline";
-import { createUtmUrl, formatDate } from "./_components/text-processing";
+import { createUtmUrl } from "./_components/text-processing";
 import tailwindEmailConfig from "./tailwind.config";
-
-export type ReportProfile = Pick<
-  Tables<"profiles">,
-  "nickname" | "email" | "coach_id"
->;
-
-export type ReportSkill = {
-  id: string;
-  description?: string;
-  title: string;
-} | null;
-
-export type ReportData = Pick<
-  Tables<"reports">,
-  "id" | "start_date" | "end_date" | "created_at"
-> & {
-  skill?: ReportSkill;
-  report_goals: Array<Tables<"report_goals">>;
-  report_moments: Array<
-    Tables<"report_moments"> & {
-      moment: Tables<"moments">;
-    }
-  >;
-  report_sections?: Array<{
-    id: string;
-    title: string;
-    summary?: string | null;
-    direction?: "positive" | "negative" | null;
-  }>;
-  score?: number;
-  previous_score?: number;
-  historical_scores?: Array<{
-    score: number;
-    reportId: string;
-    startDate?: string;
-  }>;
-};
 
 export type ReportInsightSection = {
   id: string;
@@ -68,71 +35,57 @@ export type ReportInsightSection = {
   shortenedSummary: string;
 };
 
-export type ReportKeyMoment = {
-  id: string;
-  title: string;
-  summary: string;
-  shortenedSummary: string;
+export type ReportKeyMoment = ReportInsightSection & {
   people?: string[];
 };
 
-export type GeneratedSections = {
+export type SkillReportReadyEmailSections = {
   strengthSections: ReportInsightSection[];
   growthSections: ReportInsightSection[];
   keyMoments: ReportKeyMoment[];
-  teaser?: string;
 };
 
 export type SkillReportReadyEmailProps = {
-  variant: "manager" | "founder";
-  profile: ReportProfile;
-  report: ReportData;
-  meetingMinutes: number;
+  variant: Extract<
+    Enums<"email_template_type">,
+    "skill-report-ready-founder" | "skill-report-ready-manager"
+  >;
+  previewText: string;
+  baseReportUrl: string;
+  report: Select<"reports", "start_date" | "end_date"> & {
+    skill: Select<"skills", "title"> & {
+      scales: Tables<"skill_scales">[];
+    };
+    profile: Select<"profiles", "nickname">;
+    scores: ReportScore;
+  };
+  historicalScores: HistoricalSkillScore["scores"];
   teaser: string;
-  generatedSections: GeneratedSections;
+  sections: SkillReportReadyEmailSections;
+  meetingMinutes: number;
 };
 
 export function SkillReportReadyEmail({
   variant,
-  profile,
+  previewText,
+  baseReportUrl,
   report,
-  meetingMinutes,
+  historicalScores,
   teaser,
-  generatedSections,
+  sections,
+  meetingMinutes,
 }: SkillReportReadyEmailProps) {
-  // Determine preview text
-  const previewText = `📊 Your ${report.skill?.title ?? "Leadership"} insights report is ready to view`;
-  const baseReportUrl = `https://app.withtitan.com/goals/reports/${report.id}`;
+  const skillTitle = report.skill.title;
 
   // Format date range
-  const startDate = report.start_date
-    ? formatDate(new Date(report.start_date))
-    : "Recent";
-  const endDate = report.end_date
-    ? formatDate(new Date(report.end_date))
-    : "Now";
-
-  // Get skill title
-  const skillTitle = report.skill?.title;
+  const startDate = dayjs(report.start_date).format("MMM, DD");
+  const endDate = dayjs(report.end_date).format("MMM, DD");
 
   // Prepare the historical scores for the sparkline
-  const historicalScores =
-    report.historical_scores?.map((item) => ({
-      x: new Date(item.startDate ?? ""),
-      y: item.score * 100,
-    })) || [];
-
-  if (report.score) {
-    // Add current score to the historical scores if not already included
-    if (
-      !report.historical_scores?.some((item) => item.reportId === report.id)
-    ) {
-      historicalScores.push({
-        x: new Date(report.start_date ?? ""),
-        y: report.score * 100,
-      });
-    }
-  }
+  const historicalScoresData = historicalScores.map((score) => ({
+    x: dayjs(score.date).toDate(),
+    y: score.finalScore ?? 0,
+  }));
 
   // Create UTM params for tracking different CTAs
   const reportUrl = createUtmUrl(baseReportUrl, "report");
@@ -141,15 +94,14 @@ export function SkillReportReadyEmail({
   const momentsUrl = createUtmUrl(baseReportUrl, "key_moments");
 
   // Define metrics for leadership dimensions (only used for founder)
-  const leadershipMetrics = [
-    { leftLabel: "Task Vague", rightLabel: "Task Clarity", value: 44 },
-    { leftLabel: "Reactive", rightLabel: "Proactive", value: 32 },
-    { leftLabel: "Passive", rightLabel: "Influential", value: 78 },
-    { leftLabel: "Rigid", rightLabel: "Adaptable", value: 65 },
-  ];
+  const leadershipMetrics = report.scores.metrics?.map((metric) => ({
+    leftLabel: metric.leftLabel,
+    rightLabel: metric.rightLabel,
+    value: metric.value,
+  }));
 
-  const isFounder = variant === "founder";
-  const isManager = variant === "manager";
+  const isFounder = variant === "skill-report-ready-founder";
+  const isManager = variant === "skill-report-ready-manager";
 
   return (
     <Html>
@@ -182,7 +134,7 @@ export function SkillReportReadyEmail({
                   </small>
                 </>
               }
-              nickname={profile.nickname || ""}
+              nickname={report.profile.nickname || ""}
               meetingMinutes={meetingMinutes}
               startDate={startDate}
               endDate={endDate}
@@ -197,7 +149,7 @@ export function SkillReportReadyEmail({
                     <ReportSectionHeading title="PERFORMANCE TREND" />
                     <div className="mt-4 w-full">
                       <Sparkline
-                        data={historicalScores}
+                        data={historicalScoresData}
                         height={120}
                         areaColor="#E5E7EB"
                       />
@@ -207,10 +159,13 @@ export function SkillReportReadyEmail({
               )}
 
               {/* Email-friendly Report Metrics - Founder only */}
-              {isFounder && (
+              {isFounder && leadershipMetrics && (
                 <MetricsSection
                   title="REPORT METRICS"
-                  metrics={leadershipMetrics}
+                  metrics={_.sortBy(
+                    leadershipMetrics,
+                    "value" as keyof (typeof leadershipMetrics)[number],
+                  )}
                   showNotches={true}
                 />
               )}
@@ -227,11 +182,11 @@ export function SkillReportReadyEmail({
               {isManager && <ReportTeaserSection teaser={teaser} />}
 
               {/* Areas of Strength and Growth Sections - Founder only */}
-              {isFounder && generatedSections.growthSections.length > 0 && (
+              {isFounder && sections.growthSections.length > 0 && (
                 <ReportInsightsSection
                   title="GROWTH OPPORTUNITIES"
                   type="growth"
-                  items={generatedSections.growthSections.map((section) => ({
+                  items={sections.growthSections.map((section) => ({
                     id: section.id,
                     summary: section.shortenedSummary,
                   }))}
@@ -240,11 +195,11 @@ export function SkillReportReadyEmail({
                 />
               )}
 
-              {isFounder && generatedSections.strengthSections.length > 0 && (
+              {isFounder && sections.strengthSections.length > 0 && (
                 <ReportInsightsSection
                   title="AREAS OF STRENGTH"
                   type="strength"
-                  items={generatedSections.strengthSections.map((section) => ({
+                  items={sections.strengthSections.map((section) => ({
                     id: section.id,
                     summary: section.shortenedSummary,
                   }))}
@@ -256,9 +211,13 @@ export function SkillReportReadyEmail({
               {/* Key Moments Section - Founder only */}
               {isFounder && (
                 <ReportKeyMomentsSection
-                  moments={generatedSections.keyMoments.map((moment) => ({
+                  moments={sections.keyMoments.map((moment) => ({
                     ...moment,
-                    people: moment.people || [],
+                    people: (moment.people || []).filter(
+                      (person) =>
+                        person.trim().toLowerCase() !==
+                        report.profile.nickname?.trim().toLowerCase(),
+                    ),
                   }))}
                   buttonHref={momentsUrl}
                   highlightTitle={false}

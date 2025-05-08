@@ -1,4 +1,5 @@
 import { Img, Section } from "@react-email/components";
+import dayjs from "dayjs";
 
 import { cn } from "~/lib/utils";
 
@@ -85,7 +86,7 @@ export function Sparkline({
   // If only one point, duplicate it to draw at least a line
   const points =
     data.length === 1 && data[0]
-      ? [...data, { ...data[0], x: new Date(data[0].x.getTime() + 86400000) }] // Add one day
+      ? [...data, { ...data[0], x: dayjs(data[0].x).add(1, "day").toDate() }]
       : data;
 
   // Find min/max values for scaling
@@ -155,11 +156,6 @@ export function Sparkline({
     `);
   }
 
-  // Generate date ticks for x-axis
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  };
-
   // Calculate number of date ticks to show (max 5)
   const numPoints = points.length;
   const tickInterval = Math.max(1, Math.floor(numPoints / 5));
@@ -179,7 +175,7 @@ export function Sparkline({
           font-size="8"
           fill="${labelColor}"
           opacity="0.7"
-        >${formatDate(point.x)}</text>
+        >${dayjs(point.x).format("MMM, DD")}</text>
         <path
           d="M ${x} ${bottomGridY} L ${x} ${bottomGridY + 5}"
           stroke="${gridColor}"
@@ -205,7 +201,7 @@ export function Sparkline({
         font-size="8"
         fill="${labelColor}"
         opacity="0.7"
-      >${formatDate(lastPoint.x)}</text>
+      >${dayjs(lastPoint.x).format("MMM, DD")}</text>
       <path
         d="M ${x} ${bottomGridY} L ${x} ${bottomGridY + 5}"
         stroke="${gridColor}"

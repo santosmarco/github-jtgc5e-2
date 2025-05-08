@@ -19,9 +19,14 @@ import SuggestedTopicsEmail, {
   type SuggestedTopicsEmailProps,
 } from "~/email/suggested-topics";
 import { env } from "~/env";
-import { generateReportSections } from "~/lib/reports/ai";
-import { ReportsService } from "~/lib/reports/queries";
 
+import { logger } from "./logging/server";
+import { generateReportSections } from "./reports/ai";
+import {
+  fetchReportsForHistoricalSkillScore,
+  getHistoricalReportScores,
+  getReportScores,
+} from "./reports/scoring";
 import type { Database } from "./supabase/database.types";
 import { createClient } from "./supabase/server";
 
@@ -155,26 +160,39 @@ export async function sendSkillReportReadyEmail(
   supabaseClient: SupabaseClient<Database>,
 ) {
   try {
-    // Create ReportsService instance
-    const reportsService = new ReportsService(supabaseClient);
+    const supabase = await createClient();
 
-    // Fetch the report data
-    const { data: report, error: reportError } = await supabaseClient
+    const { data: report, error: reportError } = await supabase
       .from("reports")
       .select(
         `
-          *,
-          profile:profiles(*),
-          skill:skills(
-            *,
+          id,
+          skill_id,
+          profile_id,
+          start_date,
+          end_date,
+          skill:skills!inner(
+            id,
+            title,
+            internal_title,
             scales:skill_scales(*)
           ),
-          report_goals(*),
-          report_moments(
-            *,
+          report_moments!inner(
+            id,
             moment:moments!inner(
-              *,
-              subtags:moment_subtags(*)
+              id,
+              meeting:meetings!inner(
+                video_api_id,
+                duration_in_ms
+              )
+            )
+          ),
+          profile:profiles!inner(
+            id,
+            email,
+            nickname,
+            user_settings(
+              report_email_template
             )
           )
         `,
@@ -182,124 +200,73 @@ export async function sendSkillReportReadyEmail(
       .eq("id", reportId)
       .single();
 
-    if (reportError || !report?.profile) {
-      console.error("Error fetching report:", reportError);
-      throw new Error(
-        reportError?.message || "Failed to fetch report or profile",
-      );
+    if (reportError) {
+      throw reportError;
     }
 
-    // Get user settings to determine which email template to use
-    const { data: userSettings, error: settingsError } = await supabaseClient
-      .from("user_settings")
-      .select("report_email_template")
-      .eq("profile_id", report.profile_id || "")
-      .single();
-
-    if (settingsError) {
-      console.error("Error fetching user settings:", settingsError);
-      // Default to founder template if there's an error
+    if (!report.skill) {
+      throw new Error("Report has no skill");
     }
 
-    // Determine the variant based on user settings or default to founder
-    const variant: "manager" | "founder" =
-      userSettings?.report_email_template === "skill-report-ready-manager"
-        ? "manager"
-        : "founder";
-
-    // Calculate meeting minutes by fetching all meetings for this profile in the report date range
-    let meetingMinutes = 0;
-    if (report.start_date && report.end_date) {
-      const { data: meetings, error: meetingsError } = await supabaseClient
-        .from("meetings")
-        .select("duration_in_seconds")
-        .eq("profile_id", report.profile_id || "")
-        .gte("date", report.start_date)
-        .lte("date", report.end_date);
-
-      if (!meetingsError && meetings && meetings.length > 0) {
-        meetingMinutes = meetings.reduce((total, meeting) => {
-          return total + (meeting.duration_in_seconds || 0) / 60;
-        }, 0);
-      }
+    if (!report.profile) {
+      throw new Error("Report has no profile");
     }
 
-    // Calculate current report score
-    const skillScore =
-      report.skill && report.report_moments
-        ? reportsService.calculateSkillScore(
-            {
-              scales: report.skill.scales || [],
-            },
-            report.report_moments,
-          )
-        : { score: 0.5 }; // Default score if no data
+    const reports = await fetchReportsForHistoricalSkillScore(
+      report.skill.id,
+      report.profile.id,
+      supabase,
+    );
 
-    // Get historical scores
-    const historicalScores =
-      report.profile_id && report.skill?.id
-        ? await reportsService.calculateHistoricalSkillScoresBatched(
-            report.profile_id,
-            report.skill.id,
-          )
-        : [];
+    const scorableReport = reports.find(
+      (historicalReport) => historicalReport.id === report.id,
+    );
+    if (!scorableReport) {
+      logger.info(`Report ${report.id} has no scores, skipping email`, {
+        report,
+      });
+      return;
+    }
 
-    // Find previous report score
-    const previousScore =
-      historicalScores.length > 1
-        ? (historicalScores[historicalScores.length - 2]?.score ?? 0) * 100
-        : undefined;
+    const emailVariant =
+      report.profile.user_settings[0]?.report_email_template ??
+      "skill-report-ready-founder";
+    const previewText = `📊 Your ${report.skill.internal_title} insights report is ready to view`;
+    const baseReportUrl = `https://app.withtitan.com/goals/reports/${report.id}`;
+    const historicalScores = getHistoricalReportScores(
+      report.skill.id,
+      reports,
+    ).scores;
 
-    // Generate the sections using AI
-    const generatedSections = await generateReportSections(
+    const { teaser, ...sections } = await generateReportSections(
       reportId,
       supabaseClient,
     );
 
-    // Format historical scores for the email template
-    const formattedHistoricalScores = historicalScores.map((score) => ({
-      score: score.score * 100, // Convert to percentage
-      reportId: score.reportId,
-      startDate: score.startDate || "",
-    }));
-
-    // Build the report data in the format expected by the email component
-    const reportData = {
-      id: report.id,
-      start_date: report.start_date,
-      end_date: report.end_date,
-      created_at: report.created_at,
-      skill: report.skill
-        ? {
-            id: report.skill.id,
-            title: report.skill.title,
-            description: report.skill.description || undefined,
-          }
-        : undefined,
-      report_goals: report.report_goals || [],
-      report_moments: report.report_moments || [],
-      // Include calculated scores
-      score: skillScore.score,
-      previous_score: previousScore,
-      historical_scores: formattedHistoricalScores,
-    };
-
-    // Prepare the email props
-    const emailProps = {
-      variant,
-      profile: {
-        nickname: report.profile.nickname || "",
-        email: report.profile.email,
-        coach_id: report.profile.coach_id,
-      },
-      report: reportData,
-      meetingMinutes: Math.round(meetingMinutes),
-      teaser: generatedSections.teaser,
-      generatedSections,
-    };
+    const meetingMinutes = report.report_moments.reduce(
+      (total, moment) =>
+        total + (moment.moment.meeting?.duration_in_ms ?? 0) / 1000 / 60,
+      0,
+    );
 
     // Render the email
-    const emailHtml = await render(SkillReportReadyEmail(emailProps));
+    const emailHtml = await render(
+      SkillReportReadyEmail({
+        variant: emailVariant,
+        previewText,
+        baseReportUrl,
+        report: {
+          ...report,
+          skill: report.skill,
+          profile: report.profile,
+          scores: getReportScores(scorableReport),
+        },
+        historicalScores,
+        teaser,
+        sections,
+        meetingMinutes,
+      }),
+    );
 
     // Create a descriptive subject line
     const skillTitle = report.skill?.title || "Leadership";
