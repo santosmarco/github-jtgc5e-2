@@ -6,6 +6,7 @@ import _ from "lodash";
 
 import { getReportScores } from "~/lib/reports/scoring";
 import type { RouterOutputs } from "~/trpc/react";
+import { api } from "~/trpc/react";
 
 import { SkillCard } from "./skill-card";
 
@@ -15,6 +16,52 @@ export type SkillsGridProps = {
   onSkillStatusChange: () => Promise<void>;
   isLoading?: boolean;
 };
+
+function useSkillHistoricalScores(profileId: string, skillId: string) {
+  const { data: timelineData } =
+    api.reports.getReportsTimelineDataForUser.useQuery({
+      userId: profileId,
+      skillId,
+    });
+
+  return timelineData?.timelineData.map((data) => data.entry) ?? null;
+}
+
+function SkillCardContainer({
+  skill,
+  profileId,
+  onSkillEnabled,
+  onSkillDisabled,
+  index,
+}: {
+  skill: RouterOutputs["skills"]["getAllSkills"][number];
+  profileId: string;
+  onSkillEnabled: () => Promise<void>;
+  onSkillDisabled: () => Promise<void>;
+  index: number;
+}) {
+  const historicalScores = useSkillHistoricalScores(profileId, skill.id);
+
+  return (
+    <motion.div
+      key={skill.id}
+      variants={itemVariants}
+      layout
+      custom={index}
+      transition={{
+        layout: { type: "spring", stiffness: 50, damping: 15 },
+      }}
+    >
+      <SkillCard
+        profileId={profileId}
+        skill={skill}
+        historicalScores={historicalScores}
+        onSkillEnabled={onSkillEnabled}
+        onSkillDisabled={onSkillDisabled}
+      />
+    </motion.div>
+  );
+}
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -113,22 +160,14 @@ export function SkillsGrid({
           })
           .value()
           .map((skill, index) => (
-            <motion.div
+            <SkillCardContainer
               key={skill.id}
-              variants={itemVariants}
-              layout
-              custom={index}
-              transition={{
-                layout: { type: "spring", stiffness: 50, damping: 15 },
-              }}
-            >
-              <SkillCard
-                profileId={profileId}
-                skill={skill}
-                onSkillEnabled={onSkillStatusChange}
-                onSkillDisabled={onSkillStatusChange}
-              />
-            </motion.div>
+              skill={skill}
+              profileId={profileId}
+              onSkillEnabled={onSkillStatusChange}
+              onSkillDisabled={onSkillStatusChange}
+              index={index}
+            />
           ))}
       </AnimatePresence>
     </motion.div>
