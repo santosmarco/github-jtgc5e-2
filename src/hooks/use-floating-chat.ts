@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+
 import { useChatVisibility } from "~/components/floating-chat/chat-visibility-provider";
 
 /**

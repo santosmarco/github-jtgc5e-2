@@ -1,4 +1,5 @@
 import { Button, Hr, Section, Text } from "@react-email/components";
+import type { Except } from "type-fest";
 
 import type { Tables } from "~/lib/supabase/database.types";
 import type { RouterOutputs } from "~/trpc/react";
@@ -15,7 +16,12 @@ export type MeetingRecapEmailProps = {
   > & {
     profile: Pick<Tables<"profiles">, "nickname" | "email">;
     topics: Pick<Tables<"meeting_topics">, "title" | "summary">[];
-    actionItems: RouterOutputs["actionItems"]["getByVideoId"];
+    actionItems:
+      | Except<
+          NonNullable<RouterOutputs["actionItems"]["getByVideoId"]>[number],
+          "meeting"
+        >[]
+      | null;
   };
   sections: ("topics-discussed" | "action-items")[];
 };

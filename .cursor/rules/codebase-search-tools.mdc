@@ -1,0 +1,221 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Codebase Search & Navigation Tools Guide
+
+This guide outlines the different tools available for searching and navigating through the codebase, including database exploration, semantic code search, and directory structure visualization.
+
+## Quick Reference
+
+| Tool                                              | Purpose                                      | Best for                           |
+| ------------------------------------------------- | -------------------------------------------- | ---------------------------------- |
+| `codebase_search`                                 | Semantic search in current codebase          | Finding relevant code concepts     |
+| `mcp_codealive_search_code`                       | Advanced semantic search across repositories | Cross-repo pattern analysis        |
+| `mcp_supabase_list_tables`                        | List database tables                         | Understanding database schema      |
+| `mcp_postgres_query`                              | Run SQL queries                              | Testing database operations        |
+| `mcp_deep-directory-tree_get_deep_directory_tree` | View detailed directory structure            | Understanding project organization |
+
+## Semantic Code Search
+
+### Local Codebase Search
+
+Use `codebase_search` for finding relevant code within the current workspace:
+
+```typescript
+codebase_search({
+  query: "authenticate user with Supabase",
+  explanation: "Looking for authentication implementation",
+  target_directories: ["src/lib/auth", "src/server/api/routers"],
+});
+```
+
+**Best practices:**
+
+- Use natural language queries for semantic search
+- Target specific directories when you have an idea where the code might be
+- Prefer this over grep for concept/implementation searches
+- Start broad then narrow down with more specific queries
+
+### Advanced Repository Search with CodeAlive
+
+Use `mcp_codealive_search_code` for semantic search across multiple repositories:
+
+```typescript
+mcp_codealive_search_code({
+  query: "tRPC procedure refactoring pattern",
+  data_source_ids: ["your_repository_id"],
+  mode: "auto",
+  include_content: true,
+});
+```
+
+**Best practices:**
+
+- Use for finding implementation patterns across repositories
+- Start with "auto" mode and only use "deep" mode for complex queries
+- Include explicit code patterns in your query for more precise results
+- Useful for studying how similar features are implemented across projects
+
+## Database Exploration
+
+### List Database Tables
+
+Use `mcp_supabase_list_tables` to understand the database schema:
+
+```typescript
+mcp_supabase_list_tables({
+  schemas: ["public"],
+});
+```
+
+**Best practices:**
+
+- Run this first before writing database queries
+- Use to discover table names, relationships and available columns
+- Helps inform your domain schema design in tRPC procedures
+
+### Query Database
+
+Use `mcp_postgres_query` to test SQL queries:
+
+```typescript
+mcp_postgres_query({
+  sql: "SELECT table_name, column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' ORDER BY table_name, ordinal_position",
+});
+
+// Explore specific table structure
+mcp_postgres_query({
+  sql: "SELECT * FROM profiles LIMIT 5",
+});
+
+// Test a complex join
+mcp_postgres_query({
+  sql: "SELECT s.id, s.title, p.name as user_name FROM sessions s JOIN profiles p ON s.user_id = p.id LIMIT 10",
+});
+```
+
+**Best practices:**
+
+- Use for understanding table structure before building schemas
+- Test complex queries before implementing in code
+- Verify relationships between tables
+- Limit result sets when exploring large tables
+- Use information_schema queries to discover constraints and indexes
+
+## Project Structure Navigation
+
+### Deep Directory Structure
+
+Use `mcp_deep-directory-tree_get_deep_directory_tree` to visualize the project structure:
+
+```typescript
+mcp_deep -
+  directory -
+  tree_get_deep_directory_tree({
+    path: "/",
+    options: {
+      depth: 4,
+      excludePatterns: ["node_modules", ".git", "dist", ".next"],
+    },
+  });
+
+// Focus on specific area
+mcp_deep -
+  directory -
+  tree_get_deep_directory_tree({
+    path: "/src/lib",
+    options: {
+      depth: 5,
+      excludePatterns: [],
+    },
+  });
+```
+
+**Best practices:**
+
+- Use to understand project organization
+- Increase depth for specific directories of interest
+- Helpful when first exploring an unfamiliar codebase
+- Run on specific subdirectories to focus your exploration
+
+## Search Strategy Workflow
+
+For effective codebase exploration, follow this workflow:
+
+1. **Understand structure** - Start with `mcp_deep-directory-tree_get_deep_directory_tree` to see the project organization
+2. **Explore database** - Use `mcp_supabase_list_tables` and `mcp_postgres_query` to understand data model
+3. **Find patterns** - Use `mcp_codealive_search_code` to identify implementation patterns
+4. **Locate specific code** - Use `codebase_search` to find relevant code in the current workspace
+5. **Refine and target** - Narrow down directories and use more specific queries as you learn more
+
+## Examples for Common Tasks
+
+### Find Implementation of a Feature
+
+```typescript
+// First, search broadly for the concept
+codebase_search({
+  query: "user authentication implementation",
+  explanation: "Looking for how authentication is implemented",
+});
+
+// Then, narrow down to specific functionality
+codebase_search({
+  query: "verify user token",
+  explanation: "Finding token verification logic",
+  target_directories: ["src/lib/auth"],
+});
+```
+
+### Understand Data Models and Queries
+
+```typescript
+// First, list tables to understand schema
+mcp_supabase_list_tables({
+  schemas: ["public"],
+});
+
+// Then examine specific table structure
+mcp_postgres_query({
+  sql: "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'profiles' ORDER BY ordinal_position",
+});
+
+// Now find where this table is used in code
+codebase_search({
+  query: "profiles table query",
+  explanation: "Finding where the profiles table is queried",
+  target_directories: ["src/lib", "src/server/api/routers"],
+});
+```
+
+### Discover Implementation Patterns
+
+```typescript
+// First, find examples across repositories
+mcp_codealive_search_code({
+  query: "tRPC procedure with pagination",
+  data_source_ids: ["your_repository_id"],
+  mode: "auto",
+  include_content: true,
+});
+
+// Then look for local implementations
+codebase_search({
+  query: "implement pagination in tRPC",
+  explanation: "Finding pagination pattern examples",
+});
+```
+
+## Tips for Efficient Searching
+
+1. **Start broad, then narrow** - Begin with general queries and refine based on results
+2. **Combine tools** - Use directory structure understanding with semantic search
+3. **Use natural language** - Describe what you're looking for conceptually
+4. **Include specific terms** - Add technical terms or function names when you know them
+5. **Target directories** - Narrow search to relevant directories once you understand the structure
+6. **Examine database first** - Understanding data models helps with understanding code organization
+7. **Look for patterns** - Use CodeAlive to understand implementation patterns before diving into specific code
+
+By effectively combining these tools, you can quickly navigate and understand even complex codebases, making development and refactoring more efficient.

@@ -1,0 +1,119 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# TypeScript Implementation Plan Guide
+
+## Overview
+This rule provides guidance for creating TypeScript-specific implementation plans that follow best practices for type safety, maintainability, and architectural clarity.
+
+## TypeScript Project Planning Structure
+
+### 1. Type Architecture
+- Plan the type/interface hierarchy
+- Define shared types vs. component-specific types
+- Determine when to use interfaces vs. type aliases
+- Plan for generic types that enhance reusability
+- Consider discriminated unions for state management
+
+### 2. Module Organization
+- Define clear boundaries between modules
+- Plan barrel exports for cleaner imports
+- Decide on namespace strategy
+- Determine how to handle circular dependencies
+- Plan for code splitting and dynamic imports
+
+### 3. State Management Typing
+- Type definitions for state objects
+- Type-safe actions/reducers
+- Immutable state update patterns
+- Type guards for state transitions
+- Typed selectors and derived state
+
+### 4. API Integration
+- Type-safe API client structure
+- Request/response type definitions
+- Error handling types
+- Authentication state typing
+- API response transformation patterns
+
+### 5. Component Architecture (for UI applications)
+- Props and state typing strategy
+- Event handler typing approach
+- HOC and render props typing
+- Context API typing
+- Component composition patterns
+
+### 6. Testing Strategy
+- Unit test typing approach
+- Mock and stub type definitions
+- Test utility types
+- Type-safe test fixtures
+- Type coverage goals
+
+## TypeScript-Specific Implementation Considerations
+
+### Type Safety Levels
+- **Strict Mode Requirements**: Plan for handling `strictNullChecks`, `noImplicitAny`, etc.
+- **Type Assertions**: Guidelines for when type assertions (`as`) are acceptable
+- **Type Guards**: Custom type guard functions for complex type narrowing
+- **Runtime Type Checking**: If/when to use runtime validation libraries
+
+### Performance Considerations
+- Type-only imports to reduce bundle size
+- Type complexity vs. compile-time performance
+- Type instantiation depth limitations
+- Conditional types performance impacts
+
+### Maintainability Patterns
+- Self-documenting type names
+- Type composition over inheritance
+- Type versioning for evolving APIs
+- Type documentation standards
+
+## Action Item Sequencing for TypeScript Projects
+
+1. **Foundation Setup**
+   - tsconfig.json configuration
+   - ESLint/Prettier rules for TypeScript
+   - Directory structure and module boundaries
+   - Core type definitions
+
+2. **Shared Types Implementation**
+   - Domain models
+   - API contract types
+   - Utility types
+   - Enum and constant types
+
+3. **Infrastructure Layer**
+   - API clients with proper typing
+   - Storage abstraction with typed interfaces
+   - Authentication/authorization typing
+   - Logging and error handling types
+
+4. **Feature Implementation**
+   - Type-safe component props
+   - State management typing
+   - Event handling with proper types
+   - Form validation typing
+
+5. **Testing Framework**
+   - Type-safe test utilities
+   - Mock data factories with correct types
+   - Test coverage verification for types
+
+6. **Documentation**
+   - TSDoc comments for public APIs
+   - Type usage examples
+   - Type compatibility notes
+
+## Best Practices
+- Start with strict TypeScript configuration
+- Use explicit typing at module boundaries
+- Leverage type inference within functions
+- Create reusable utility types for common patterns
+- Document complex type definitions
+- Use branded types for type-safe IDs
+- Keep types DRY through composition
+- Design for progressive enhancement of type safety

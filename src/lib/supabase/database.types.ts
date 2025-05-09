@@ -479,6 +479,39 @@ export type Database = {
         }
         Relationships: []
       }
+      embedding_jobs: {
+        Row: {
+          content_to_embed: string | null
+          created_at: string | null
+          error: string | null
+          id: number
+          row_id: string
+          status: string | null
+          table_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          content_to_embed?: string | null
+          created_at?: string | null
+          error?: string | null
+          id?: number
+          row_id: string
+          status?: string | null
+          table_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          content_to_embed?: string | null
+          created_at?: string | null
+          error?: string | null
+          id?: number
+          row_id?: string
+          status?: string | null
+          table_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       entities: {
         Row: {
           attributes: Json | null
@@ -1460,6 +1493,7 @@ export type Database = {
           api_video_id: string
           created_at: string
           description: string | null
+          embedding: unknown | null
           id: string
           latest: boolean
           meeting_topic_id: string
@@ -1471,6 +1505,7 @@ export type Database = {
           api_video_id: string
           created_at?: string
           description?: string | null
+          embedding?: unknown | null
           id?: string
           latest?: boolean
           meeting_topic_id: string
@@ -1482,6 +1517,7 @@ export type Database = {
           api_video_id?: string
           created_at?: string
           description?: string | null
+          embedding?: unknown | null
           id?: string
           latest?: boolean
           meeting_topic_id?: string
@@ -1803,6 +1839,7 @@ export type Database = {
         Row: {
           api_video_id: string
           created_at: string
+          embedding: unknown | null
           id: string
           latest: boolean
           meeting_topic_id: string
@@ -1814,6 +1851,7 @@ export type Database = {
         Insert: {
           api_video_id: string
           created_at?: string
+          embedding?: unknown | null
           id?: string
           latest?: boolean
           meeting_topic_id: string
@@ -1825,6 +1863,7 @@ export type Database = {
         Update: {
           api_video_id?: string
           created_at?: string
+          embedding?: unknown | null
           id?: string
           latest?: boolean
           meeting_topic_id?: string
@@ -3608,6 +3647,7 @@ export type Database = {
           role: Database["public"]["Enums"]["user_role_enum"]
           status: Database["public"]["Enums"]["profile_status_enum"]
           updated_at: string
+          viewing_as_id: string | null
         }
         Insert: {
           coach_id?: string | null
@@ -3625,6 +3665,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role_enum"]
           status?: Database["public"]["Enums"]["profile_status_enum"]
           updated_at?: string
+          viewing_as_id?: string | null
         }
         Update: {
           coach_id?: string | null
@@ -3642,6 +3683,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role_enum"]
           status?: Database["public"]["Enums"]["profile_status_enum"]
           updated_at?: string
+          viewing_as_id?: string | null
         }
         Relationships: [
           {
@@ -3661,6 +3703,27 @@ export type Database = {
           {
             foreignKeyName: "profiles_coach_id_fkey"
             columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_viewing_as_id_fkey"
+            columns: ["viewing_as_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_processing_status_view"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "profiles_viewing_as_id_fkey"
+            columns: ["viewing_as_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_with_profile"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "profiles_viewing_as_id_fkey"
+            columns: ["viewing_as_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -4959,11 +5022,13 @@ export type Database = {
       }
       user_settings: {
         Row: {
+          action_items_email: boolean | null
           bot_name: string | null
           created_at: string
           has_ai_coaching_enabled: boolean
           id: number
           profile_id: string
+          recap_email: boolean | null
           report_email_template: Database["public"]["Enums"]["email_template_type"]
           report_frequency_in_days: number
           should_join_external_meetings: boolean
@@ -4973,11 +5038,13 @@ export type Database = {
           should_not_join_pending_meetings: boolean
         }
         Insert: {
+          action_items_email?: boolean | null
           bot_name?: string | null
           created_at?: string
           has_ai_coaching_enabled?: boolean
           id?: number
           profile_id: string
+          recap_email?: boolean | null
           report_email_template?: Database["public"]["Enums"]["email_template_type"]
           report_frequency_in_days?: number
           should_join_external_meetings?: boolean
@@ -4987,11 +5054,13 @@ export type Database = {
           should_not_join_pending_meetings?: boolean
         }
         Update: {
+          action_items_email?: boolean | null
           bot_name?: string | null
           created_at?: string
           has_ai_coaching_enabled?: boolean
           id?: number
           profile_id?: string
+          recap_email?: boolean | null
           report_email_template?: Database["public"]["Enums"]["email_template_type"]
           report_frequency_in_days?: number
           should_join_external_meetings?: boolean

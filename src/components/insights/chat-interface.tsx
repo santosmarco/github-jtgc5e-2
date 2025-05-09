@@ -34,9 +34,9 @@ type ChatInterfaceProps = {
   selectedTopic: string;
   topics: string[];
   relevantMoments: NonNullable<
-    RouterOutputs["moments"]["listForInsights"]
-  >["moments"];
-  relevantVideos: RouterOutputs["videos"]["listAll"];
+    React.ComponentProps<typeof ChatInput>["moments"]
+  >;
+  relevantVideos: NonNullable<React.ComponentProps<typeof ChatInput>["videos"]>;
   initialMessages: CoreMessage[];
   onTopicSelect: (topic: string) => void;
   isLoading?: boolean;

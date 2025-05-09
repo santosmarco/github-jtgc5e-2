@@ -1,11 +1,10 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ListTodo, PlusCircle, Trophy } from "lucide-react";
+import { PlusCircle, Trophy } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { CollapsibleSection } from "~/components/chat/collapsible-section";
 import { Button } from "~/components/ui/button";
 import {
   Tooltip,
@@ -13,16 +12,22 @@ import {
   TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { cn } from "~/lib/utils";
-import { api } from "~/trpc/react";
+import { api, type RouterOutputs } from "~/trpc/react";
 
 import { ActionItemCard } from "./action-item-card";
 import { ActionItemForm } from "./action-item-form";
 
 export type ActionItemListProps = {
   videoId: string;
+  items: RouterOutputs["actionItems"]["getByVideoId"];
+  isLoading: boolean;
 };
 
-export function ActionItemList({ videoId }: ActionItemListProps) {
+export function ActionItemList({
+  videoId,
+  items: actionItems,
+  isLoading,
+}: ActionItemListProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
@@ -32,10 +37,6 @@ export function ActionItemList({ videoId }: ActionItemListProps) {
   );
 
   const utils = api.useUtils();
-  const { data: actionItems, isLoading } =
-    api.actionItems.getByVideoId.useQuery({
-      videoId,
-    });
 
   const createActionItem = api.actionItems.create.useMutation({
     onSuccess: () => {
@@ -202,184 +203,175 @@ export function ActionItemList({ videoId }: ActionItemListProps) {
   }, [activeItems.length]);
 
   return (
-    <CollapsibleSection
-      title="Action Items"
-      icon={ListTodo}
-      open={!isLoading && isOpen}
-      onOpenChange={setIsOpen}
-      headerActions={headerActions}
+    <div
+      className={cn(
+        "space-y-2 pb-4",
+        ((allItemsCompleted && !showCompleted) ||
+          (activeItems.length === 0 && completedItems.length === 0)) &&
+          "pb-0",
+      )}
     >
-      <div
-        className={cn(
-          "space-y-2 pb-4",
-          ((allItemsCompleted && !showCompleted) ||
-            (activeItems.length === 0 && completedItems.length === 0)) &&
-            "pb-0",
-        )}
-      >
-        {isLoading ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className={cn(
-              "py-4 text-center",
-              (activeItems.length !== 0 || completedItems.length !== 0) &&
-                "pb-8",
+      {isLoading ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className={cn(
+            "py-4 text-center",
+            (activeItems.length !== 0 || completedItems.length !== 0) && "pb-8",
+          )}
+        >
+          <p className="text-sm text-muted-foreground">
+            Loading action items...
+          </p>
+        </motion.div>
+      ) : (
+        <>
+          <ActionItemForm
+            isOpen={isCreating}
+            onOpenChange={setIsCreating}
+            onSubmit={handleCreateActionItem}
+          />
+
+          <AnimatePresence mode="popLayout">
+            {activeItems.length === 0 && completedItems.length === 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="py-4 text-center"
+              >
+                <p className="text-sm text-muted-foreground">
+                  No action items yet. Add your first one!
+                </p>
+              </motion.div>
             )}
-          >
-            <p className="text-sm text-muted-foreground">
-              Loading action items...
-            </p>
-          </motion.div>
-        ) : (
-          <>
-            <ActionItemForm
-              isOpen={isCreating}
-              onOpenChange={setIsCreating}
-              onSubmit={handleCreateActionItem}
-            />
 
-            <AnimatePresence mode="popLayout">
-              {activeItems.length === 0 && completedItems.length === 0 && (
+            {allItemsCompleted && !showCompleted ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="py-4 text-center"
+              >
                 <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="py-4 text-center"
-                >
-                  <p className="text-sm text-muted-foreground">
-                    No action items yet. Add your first one!
-                  </p>
-                </motion.div>
-              )}
-
-              {allItemsCompleted && !showCompleted ? (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  className="py-4 text-center"
+                  initial={{ y: 20 }}
+                  animate={{ y: 0 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 20,
+                  }}
                 >
                   <motion.div
-                    initial={{ y: 20 }}
-                    animate={{ y: 0 }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 300,
-                      damping: 20,
+                    animate={{
+                      rotate: [0, -10, 10, -10, 10, 0],
+                      scale: [1, 1.1, 1],
                     }}
+                    transition={{
+                      duration: 1,
+                      repeat: Number.POSITIVE_INFINITY,
+                      repeatDelay: 2,
+                    }}
+                    className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10"
                   >
-                    <motion.div
-                      animate={{
-                        rotate: [0, -10, 10, -10, 10, 0],
-                        scale: [1, 1.1, 1],
-                      }}
-                      transition={{
-                        duration: 1,
-                        repeat: Number.POSITIVE_INFINITY,
-                        repeatDelay: 2,
-                      }}
-                      className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10"
-                    >
-                      <Trophy className="h-6 w-6 text-primary" />
-                    </motion.div>
-                  </motion.div>
-                  <motion.h3
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                    className="mb-2 text-base font-medium"
-                  >
-                    All items completed!
-                  </motion.h3>
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.3 }}
-                    className="mb-4 text-sm text-muted-foreground"
-                  >
-                    Great job! You've completed all your action items.
-                  </motion.p>
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
-                  >
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowCompleted(true)}
-                      className="h-7"
-                    >
-                      Show completed items
-                    </Button>
+                    <Trophy className="h-6 w-6 text-primary" />
                   </motion.div>
                 </motion.div>
-              ) : (
-                <>
-                  <div className="space-y-2">
-                    {activeItems.map((item) => (
-                      <motion.div
-                        key={item.id}
-                        layout
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, height: 0 }}
-                      >
-                        <ActionItemCard
-                          item={item}
-                          onDelete={() =>
-                            deleteActionItem.mutate({ id: item.id })
-                          }
-                          onToggleComplete={(completed) =>
-                            toggleComplete.mutate({ id: item.id, completed })
-                          }
-                        />
-                      </motion.div>
-                    ))}
-                  </div>
+                <motion.h3
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                  className="mb-2 text-base font-medium"
+                >
+                  All items completed!
+                </motion.h3>
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="mb-4 text-sm text-muted-foreground"
+                >
+                  Great job! You&apos;ve completed all your action items.
+                </motion.p>
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowCompleted(true)}
+                    className="h-7"
+                  >
+                    Show completed items
+                  </Button>
+                </motion.div>
+              </motion.div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  {activeItems.map((item) => (
+                    <motion.div
+                      key={item.id}
+                      layout
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, height: 0 }}
+                    >
+                      <ActionItemCard
+                        item={item}
+                        onDelete={() =>
+                          deleteActionItem.mutate({ id: item.id })
+                        }
+                        onToggleComplete={(completed) =>
+                          toggleComplete.mutate({ id: item.id, completed })
+                        }
+                      />
+                    </motion.div>
+                  ))}
+                </div>
 
-                  {completedItems.length > 0 &&
-                    (showCompleted || !allItemsCompleted) && (
-                      <div className="space-y-2">
-                        <div className="my-4 flex items-center gap-2">
-                          <div className="h-px flex-1 bg-border" />
-                          <span className="text-xs text-muted-foreground">
-                            Completed
-                          </span>
-                          <div className="h-px flex-1 bg-border" />
-                        </div>
-
-                        {completedItems.map((item) => (
-                          <motion.div
-                            key={item.id}
-                            layout
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, height: 0 }}
-                          >
-                            <ActionItemCard
-                              item={item}
-                              onDelete={() =>
-                                deleteActionItem.mutate({ id: item.id })
-                              }
-                              onToggleComplete={(completed) =>
-                                toggleComplete.mutate({
-                                  id: item.id,
-                                  completed,
-                                })
-                              }
-                            />
-                          </motion.div>
-                        ))}
+                {completedItems.length > 0 &&
+                  (showCompleted || !allItemsCompleted) && (
+                    <div className="space-y-2">
+                      <div className="my-4 flex items-center gap-2">
+                        <div className="h-px flex-1 bg-border" />
+                        <span className="text-xs text-muted-foreground">
+                          Completed
+                        </span>
+                        <div className="h-px flex-1 bg-border" />
                       </div>
-                    )}
-                </>
-              )}
-            </AnimatePresence>
-          </>
-        )}
-      </div>
-    </CollapsibleSection>
+
+                      {completedItems.map((item) => (
+                        <motion.div
+                          key={item.id}
+                          layout
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, height: 0 }}
+                        >
+                          <ActionItemCard
+                            item={item}
+                            onDelete={() =>
+                              deleteActionItem.mutate({ id: item.id })
+                            }
+                            onToggleComplete={(completed) =>
+                              toggleComplete.mutate({
+                                id: item.id,
+                                completed,
+                              })
+                            }
+                          />
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
+              </>
+            )}
+          </AnimatePresence>
+        </>
+      )}
+    </div>
   );
 }

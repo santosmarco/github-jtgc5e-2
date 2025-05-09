@@ -1,3 +1,5 @@
+import _ from "lodash";
+
 import { getIndex } from "./client";
 import { embedText } from "./embeddings";
 
@@ -14,12 +16,16 @@ export async function searchSimilar(
   const queryEmbedding = await embedText(query);
   const index = await getIndex();
 
-  const results = await index.query({
+  const result = await index.query({
     vector: queryEmbedding,
     topK,
     filter,
     includeMetadata: true,
   });
 
-  return results.matches.filter((match) => (match.score ?? 0) >= minScore);
+  return _.orderBy(
+    result.matches.filter((match) => (match.score ?? 0) >= minScore),
+    [(match) => match.score ?? 0],
+    ["desc"],
+  );
 }

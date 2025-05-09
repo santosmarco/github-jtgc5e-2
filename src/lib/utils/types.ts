@@ -20,6 +20,13 @@ export type $UNSET = typeof $UNSET;
 export type AnyRecord = Record<string | symbol, unknown>;
 
 /**
+ * Represents a type that can be an array or a single value
+ */
+export type MaybeArray<T, TReadonly extends boolean = false> =
+  | T
+  | (IsEqual<TReadonly, true> extends true ? readonly T[] : T[]);
+
+/**
  * Container for type tags with their metadata
  */
 export type TagContainer<T> = { readonly [$TAG]: T };

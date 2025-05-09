@@ -19,8 +19,6 @@ import SuggestedTopicsEmail, {
   type SuggestedTopicsEmailProps,
 } from "~/email/suggested-topics";
 import { env } from "~/env";
-import { generateReportSections } from "~/lib/reports/ai";
-import { ReportsService } from "~/lib/reports/queries";
 
 import { logger } from "./logging/server";
 import { generateReportSections } from "./reports/ai";

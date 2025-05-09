@@ -1,0 +1,605 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# tRPC Procedure Refactoring Guidelines
+
+This document outlines best practices for refactoring tRPC procedures that contain Supabase queries into more structured domain-specific modules.
+
+## Current Pattern Issues
+
+Currently, many tRPC procedures directly contain Supabase queries and business logic:
+
+```typescript
+// In src/server/api/routers/sessions.ts
+getSessionById: protectedProcedure
+  .input(z.object({ sessionId: z.string() }))
+  .query(async ({ input }) => {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from("sessions")
+      .select(
+        `
+          *,
+          user:profiles!user_id(*),
+          coach:profiles!coach_id(*),
+          event:calendar_events_v2!event_id(*)
+        `,
+      )
+      .eq("id", input.sessionId)
+      .single();
+
+    if (error) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Session not found",
+        cause: error,
+      });
+    }
+
+    return data;
+  }),
+```
+
+This pattern leads to:
+
+- Procedures becoming complex and hard to test
+- Business logic mixed with data access code
+- Duplication across different procedures
+- Difficult to reuse logic outside of tRPC context
+
+## Recommended Refactoring Pattern
+
+Refactor tRPC procedures by moving Supabase queries and business logic to domain-specific service modules in the `lib` folder.
+
+### Existing Good Examples
+
+The project already has some procedures that follow this pattern:
+
+```typescript
+// In src/server/api/routers/sessions.ts
+getAllSessionsForUser: publicProcedure
+  .input(
+    z.object({
+      profileId: z.string(),
+      eventType: z.enum(["coaching_session", "meeting"]).optional(),
+    }),
+  )
+  .query(async ({ input }) => {
+    return handleGetAllSessionsForUser(input, await createClient());
+  }),
+```
+
+The logic has been moved to a domain-specific module:
+
+```typescript
+// In src/lib/sessions/queries.ts
+export async function handleGetAllSessionsForUser(
+  input: GetAllSessionsForUserInput,
+  supabase: SupabaseClient<Database>
+) {
+  const { profileId } = input;
+
+  // Database query and business logic implementation
+  // ...
+
+  return finalSessions;
+}
+```
+
+### Complete Refactoring Framework
+
+#### 1. Create Domain-Specific Service Modules
+
+Create a service module for each domain area in the `lib` folder:
+
+```
+src/
+  lib/
+    domain-name/
+      queries.ts       # Database queries
+      services.ts      # Core service functions
+      transformers.ts  # Data transformation logic
+      schemas.ts       # Domain-specific Zod schemas
+      validators.ts    # Validation logic
+      index.ts         # Public API
+```
+
+#### 2. Define Input/Output Schemas
+
+Create explicit input and output schemas for your functions:
+
+```typescript
+// src/lib/domain-name/schemas.ts
+import { z } from "zod";
+
+export const EntityRetrieveInput = z.object({
+  id: z.string(),
+});
+export type EntityRetrieveInput = z.infer<typeof EntityRetrieveInput>;
+
+export const EntityRetrieveOutput = z.object({
+  id: z.string(),
+  name: z.string(),
+  // ... other fields
+});
+export type EntityRetrieveOutput = z.infer<typeof EntityRetrieveOutput>;
+```
+
+#### 3. Move Database Queries to Query Modules
+
+Extract all Supabase queries into dedicated query modules:
+
+```typescript
+// src/lib/domain-name/queries.ts
+import { TRPCError } from "@trpc/server";
+import type { EntityRetrieveInput, EntityRetrieveOutput } from "./schemas";
+import type { SupabaseClient<Database>  } from "~/lib/supabase/server";
+
+export async function getEntityById(
+  input: EntityRetrieveInput,
+  supabase: SupabaseClient<Database>
+) {
+  const { id } = input;
+
+  const { data, error } = await supabase
+    .from("entity_table")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Entity not found",
+      cause: error,
+    });
+  }
+
+  return data satisfies EntityRetrieveOutput;
+}
+```
+
+#### 4. Create Service Functions for Business Logic
+
+Create service functions that use the query modules:
+
+```typescript
+// src/lib/domain-name/services.ts
+import type { EntityRetrieveInput, EntityRetrieveOutput } from "./schemas";
+import * as queries from "./queries";
+import type { SupabaseClient<Database>  } from "~/lib/supabase/server";
+
+export async function getEntity(
+  input: EntityRetrieveInput,
+  supabase: SupabaseClient<Database>
+): Promise<EntityRetrieveOutput> {
+  const rawData = await queries.getEntityById(input, supabase);
+
+  // Perform any additional business logic, transformations, etc.
+
+  return {
+    id: rawData.id,
+    name: rawData.name,
+    // Transform other fields as needed
+  };
+}
+```
+
+#### 5. Simplify tRPC Procedures
+
+Use the service functions in your tRPC procedures:
+
+```typescript
+// src/server/api/routers/domain-name.ts
+import { createTRPCRouter, protectedProcedure } from "../trpc";
+import { EntityRetrieveInput } from "~/lib/domain-name/schemas";
+import * as domainService from "~/lib/domain-name/services";
+import { createClient } from "~/lib/supabase/server";
+
+export const domainRouter = createTRPCRouter({
+  getEntity: protectedProcedure
+    .input(EntityRetrieveInput)
+    .query(async ({ input }) => {
+      return domainService.getEntity(input, await createClient());
+    }),
+});
+```
+
+## Refactoring Strategy for Sessions Router
+
+Let's take a specific example from the `sessionsRouter` that should be refactored:
+
+### Before (current implementation):
+
+```typescript
+// In src/server/api/routers/sessions.ts
+getSessionById: protectedProcedure
+  .input(z.object({ sessionId: z.string() }))
+  .query(async ({ input }) => {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from("sessions")
+      .select(
+        `
+          *,
+          user:profiles!user_id(*),
+          coach:profiles!coach_id(*),
+          event:calendar_events_v2!event_id(*)
+        `,
+      )
+      .eq("id", input.sessionId)
+      .single();
+
+    if (error) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Session not found",
+        cause: error,
+      });
+    }
+
+    return data;
+  }),
+```
+
+### After (refactored):
+
+```typescript
+// src/lib/sessions/schemas.ts
+import { z } from "zod";
+
+export const SessionRetrieveInput = z.object({
+  sessionId: z.string(),
+});
+export type SessionRetrieveInput = z.infer<typeof SessionRetrieveInput>;
+```
+
+```typescript
+// src/lib/sessions/queries.ts
+import { TRPCError } from "@trpc/server";
+import type { SessionRetrieveInput } from "./schemas";
+import type { SupabaseClient<Database>  } from "~/lib/supabase/server";
+
+export async function getSessionById(
+  input: SessionRetrieveInput,
+  supabase: SupabaseClient<Database>
+) {
+  const { sessionId } = input;
+
+  const { data, error } = await supabase
+    .from("sessions")
+    .select(
+      `
+        *,
+        user:profiles!user_id(*),
+        coach:profiles!coach_id(*),
+        event:calendar_events_v2!event_id(*)
+      `
+    )
+    .eq("id", sessionId)
+    .single();
+
+  if (error) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Session not found",
+      cause: error,
+    });
+  }
+
+  return data;
+}
+```
+
+```typescript
+// src/server/api/routers/sessions.ts
+import { SessionRetrieveInput } from "~/lib/sessions/schemas";
+import { getSessionById } from "~/lib/sessions/queries";
+
+// In sessionsRouter
+getSessionById: protectedProcedure
+  .input(SessionRetrieveInput)
+  .query(async ({ input }) => {
+    return getSessionById(input, await createClient());
+  }),
+```
+
+## Supabase Database Query Best Practices
+
+When implementing queries in your domain-specific modules, follow these Supabase best practices:
+
+### 1. Consistent Error Handling
+
+Implement consistent error handling for all Supabase queries:
+
+```typescript
+export async function getEntityData(input, supabase) {
+  const { data, error } = await supabase
+    .from("entity_table")
+    .select("*")
+    .eq("id", input.id);
+
+  if (error) {
+    // Map database errors to appropriate application errors
+    if (error.code === "PGRST116") {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Entity not found",
+        cause: error,
+      });
+    }
+
+    // Log unexpected errors with relevant context
+    logger.error("Database query failed", {
+      error,
+      input,
+      tableName: "entity_table",
+    });
+
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Failed to fetch entity data",
+      cause: error,
+    });
+  }
+
+  return data;
+}
+```
+
+### 2. Query Performance Optimization
+
+Optimize your Supabase queries:
+
+```typescript
+// BAD: Fetching more data than needed
+const { data } = await supabase.from("users").select("*");
+
+// GOOD: Fetch only the required fields
+const { data } = await supabase.from("users").select("id, name, email");
+
+// BAD: Inefficient filtering without indexes
+const { data } = await supabase
+  .from("large_table")
+  .select("*")
+  .filter("non_indexed_column", "eq", value);
+
+// GOOD: Use indexed columns for filtering
+const { data } = await supabase
+  .from("large_table")
+  .select("*")
+  .eq("indexed_id_column", value);
+```
+
+### 3. Row Level Security Awareness
+
+Remember that all queries through the Supabase client are subject to Row Level Security (RLS) policies:
+
+```typescript
+// In your queries module
+export async function getAdminData(input, supabase) {
+  // This will only return data if the authenticated user has
+  // permission through RLS policies
+  const { data, error } = await supabase.from("admin_table").select("*");
+
+  // Handle potential RLS restrictions in error handling
+  if (error?.message?.includes("permission denied")) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "You don't have permission to access this data",
+    });
+  }
+
+  if (error) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Failed to fetch admin data",
+      cause: error,
+    });
+  }
+
+  return data;
+}
+```
+
+### 4. Transactions for Multiple Operations
+
+Use transactions when performing multiple related database operations:
+
+```typescript
+export async function createEntityWithRelations(input, supabase) {
+  // Start a transaction
+  const { error: txError } = await supabase.rpc("begin_transaction");
+  if (txError) throw txError;
+
+  try {
+    // Insert main entity
+    const { data: entity, error: entityError } = await supabase
+      .from("entities")
+      .insert({ name: input.name })
+      .select("id")
+      .single();
+
+    if (entityError) throw entityError;
+
+    // Insert related items
+    const { error: relationsError } = await supabase
+      .from("entity_relations")
+      .insert(
+        input.relations.map((rel) => ({
+          entity_id: entity.id,
+          relation_type: rel.type,
+          target_id: rel.targetId,
+        }))
+      );
+
+    if (relationsError) throw relationsError;
+
+    // Commit transaction
+    const { error: commitError } = await supabase.rpc("commit_transaction");
+    if (commitError) throw commitError;
+
+    return entity;
+  } catch (error) {
+    // Rollback on any error
+    await supabase.rpc("rollback_transaction").catch(console.error);
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Failed to create entity with relations",
+      cause: error,
+    });
+  }
+}
+```
+
+### 5. Use Prepared Statements for Complex Queries
+
+For complex or performance-critical operations, consider using stored procedures:
+
+```typescript
+// Instead of complex client-side queries
+export async function getComplexReport(input, supabase) {
+  const { data, error } = await supabase.rpc("generate_complex_report", {
+    start_date: input.startDate,
+    end_date: input.endDate,
+    user_id: input.userId,
+  });
+
+  if (error) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Failed to generate report",
+      cause: error,
+    });
+  }
+
+  return data;
+}
+```
+
+### 6. Pagination for Large Result Sets
+
+Always implement pagination for queries that could return large result sets:
+
+```typescript
+export async function listEntities(
+  { page = 1, pageSize = 10, filters = {} },
+  supabase
+) {
+  // Calculate range based on page and pageSize
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let query = supabase
+    .from("entities")
+    .select("*", { count: "exact" })
+    .range(from, to);
+
+  // Apply filters dynamically
+  if (filters.status) {
+    query = query.eq("status", filters.status);
+  }
+
+  if (filters.type) {
+    query = query.eq("type", filters.type);
+  }
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Failed to list entities",
+      cause: error,
+    });
+  }
+
+  return {
+    data,
+    pagination: {
+      total: count || 0,
+      page,
+      pageSize,
+      pageCount: count ? Math.ceil(count / pageSize) : 0,
+    },
+  };
+}
+```
+
+### 7. Testing Database Queries
+
+Create tests for your database queries to ensure they work as expected:
+
+```typescript
+// In your test file
+describe("Entity queries", () => {
+  it("getEntityById returns the correct entity", async () => {
+    // Create test data
+    const testEntity = { id: "test-id", name: "Test Entity" };
+
+    // Mock Supabase client
+    const mockSupabase = {
+      from: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({
+        data: testEntity,
+        error: null,
+      }),
+    };
+
+    const result = await getEntityById({ id: "test-id" }, mockSupabase);
+
+    expect(mockSupabase.from).toHaveBeenCalledWith("entity_table");
+    expect(mockSupabase.select).toHaveBeenCalledWith("*");
+    expect(mockSupabase.eq).toHaveBeenCalledWith("id", "test-id");
+    expect(result).toEqual(testEntity);
+  });
+
+  it("handles not found errors correctly", async () => {
+    // Mock Supabase client error response
+    const mockSupabase = {
+      from: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({
+        data: null,
+        error: { code: "PGRST116", message: "Not found" },
+      }),
+    };
+
+    await expect(
+      getEntityById({ id: "non-existent" }, mockSupabase)
+    ).rejects.toThrow(TRPCError);
+  });
+});
+```
+
+## Benefits of This Approach
+
+- **Separation of concerns**: Business logic is separated from API layer
+- **Testability**: Service functions can be tested in isolation
+- **Reusability**: Logic can be used outside of tRPC context (e.g., in background jobs)
+- **Maintainability**: Easier to understand and modify functionality
+- **Performance**: Potential to optimize TypeScript type-checking by reducing inline complex types
+- **Consistency**: Uniform code structure across the codebase
+
+## Implementation Strategy
+
+1. Identify related procedures that operate on the same domain entities
+2. Create the appropriate directory structure in `lib/`
+3. Extract database queries to query modules
+4. Create service functions that compose the queries
+5. Refactor tRPC procedures to use the service functions
+6. Add appropriate error handling and validation
+
+## Performance Considerations
+
+- Keep service functions focused on a single responsibility
+- Be mindful of TypeScript type complexity to maintain good DX
+- Consider using stored procedures for complex database operations
+- Share common input/output types between router and service layer to reduce duplication

@@ -1,9 +1,17 @@
 import { Text } from "@react-email/components";
+import type { Except } from "type-fest";
+
 import type { RouterOutputs } from "~/trpc/react";
+
 import { SectionContainer } from "./section-container";
 
 type ActionItemsSectionProps = {
-  actionItems: RouterOutputs["actionItems"]["getByVideoId"];
+  actionItems:
+    | Except<
+        NonNullable<RouterOutputs["actionItems"]["getByVideoId"]>[number],
+        "meeting"
+      >[]
+    | null;
 };
 
 export function ActionItemsSection({ actionItems }: ActionItemsSectionProps) {

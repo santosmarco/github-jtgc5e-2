@@ -1,4 +1,5 @@
 import { Text } from "@react-email/components";
+
 import { SectionContainer } from "./section-container";
 
 type MeetingSummarySectionProps = {

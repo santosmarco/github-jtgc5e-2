@@ -35,7 +35,13 @@ export const actionItemsRouter = createTRPCRouter({
       const { data, error } = await supabase
         .from("meeting_action_items")
         .select(
-          "*, assignees:meeting_action_item_assignees(*, assignee:entities(*)), meeting:meetings(*)",
+          `
+            *,
+            assignees:meeting_action_item_assignees(
+              assignee:entities(*)
+            ),
+            meeting:meetings(*)
+          `,
         )
         .in(
           "api_video_id",
@@ -102,7 +108,13 @@ export const actionItemsRouter = createTRPCRouter({
       const { data: actionItems, error } = await supabase
         .from("meeting_action_items")
         .select(
-          "*, assignees:meeting_action_item_assignees(assignee:entities(*))",
+          `
+            *,
+            assignees:meeting_action_item_assignees(
+              assignee:entities(*)
+            ),
+            meeting:meetings(*)
+          `,
         )
         .eq("api_video_id", input.videoId)
         .is("deleted_at", null)

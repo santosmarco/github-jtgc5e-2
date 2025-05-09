@@ -1,0 +1,89 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Implementation Plan Guide
+
+## Overview
+This rule provides a structured framework for creating detailed, thorough implementation plans. Follow this guide when you need to develop a comprehensive plan that explains the rationale and outlines specific action items in sequential order.
+
+## Structure
+
+### 1. Executive Summary
+- Concise overview of the implementation (2-3 sentences)
+- Core objective and expected outcomes
+- Target timeline for completion
+
+### 2. Background and Context
+- Problem statement and justification
+- Current state assessment
+- Constraints and requirements
+- Stakeholder considerations
+
+### 3. Technical Approach
+- Architecture overview with diagrams if applicable
+- Technology stack justification
+- Design patterns and principles to be applied
+- Integration points with existing systems
+- Data flow explanations
+
+### 4. Implementation Phases
+Each phase should include:
+- Clear objective for the phase
+- Detailed technical explanation of what will be implemented
+- Dependencies on other phases or external factors
+- Expected challenges and mitigation strategies
+- Definition of done criteria
+
+### 5. Sequenced Action Items
+- Numbered, atomic tasks in execution order
+- Each action item should include:
+  - Descriptive title
+  - Technical details necessary for implementation
+  - Estimated effort/complexity
+  - Dependencies on other action items
+  - Testing considerations
+  - Success criteria
+
+### 6. Testing Strategy
+- Unit testing approach
+- Integration testing requirements
+- User acceptance testing criteria
+- Performance and security testing considerations
+
+### 7. Rollout Strategy
+- Deployment method (phased, all-at-once, canary, etc.)
+- Rollback procedures
+- Monitoring plan during and after deployment
+- User communication plan
+
+### 8. Risk Assessment
+- Identified risks categorized by severity and likelihood
+- Mitigation strategies for each significant risk
+- Contingency plans
+
+## Best Practices
+- Use clear, specific language avoiding ambiguity
+- Include code examples for complex implementation tasks
+- Provide references to relevant documentation or resources
+- Make estimates realistic with appropriate buffers
+- Consider cross-functional dependencies (frontend/backend, design, etc.)
+- Include acceptance criteria for each major component
+- Address both technical and non-technical considerations
+- Maintain traceability between requirements and implementation tasks
+
+## Examples
+For a feature implementation:
+- Phase 1: Data model changes
+- Phase 2: API layer implementation
+- Phase 3: UI component development
+- Phase 4: Integration and testing
+- Phase 5: Performance optimization
+
+For a system migration:
+- Phase 1: Environment preparation
+- Phase 2: Data migration strategy
+- Phase 3: Application transition
+- Phase 4: Validation and verification
+- Phase 5: Legacy system decommissioning

@@ -6,11 +6,11 @@ import { createContext, useContext, useState } from "react";
 
 import type { ChatRequestBody } from "~/app/api/chat/route";
 import { useProfile } from "~/hooks/use-profile";
-import type { JsonValue } from "~/lib/schemas/utils";
+import type { PageContext } from "~/lib/ai/data";
 
 export type ChatContext = ReturnType<typeof useChat> & {
-  currentContext: JsonValue;
-  setCurrentContext: (context: JsonValue) => void;
+  currentContext: PageContext | null;
+  setCurrentContext: (context: PageContext | null) => void;
 };
 
 const ChatContext = createContext<ChatContext | undefined>(undefined);
@@ -22,13 +22,15 @@ interface ChatContextProviderProps {
 export function ChatContextProvider({ children }: ChatContextProviderProps) {
   const { profile } = useProfile();
 
-  const [currentContext, setCurrentContext] = useState<JsonValue | null>(null);
+  const [currentContext, setCurrentContext] = useState<PageContext | null>(
+    null,
+  );
 
   const chatContext = useChat({
     body: {
       userId: profile?.id,
       mode: "coach",
-      context: currentContext,
+      pageContext: currentContext,
     } satisfies ChatRequestBody,
   });
 

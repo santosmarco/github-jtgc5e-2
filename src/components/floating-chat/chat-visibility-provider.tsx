@@ -20,6 +20,7 @@ const DEFAULT_HIDDEN_PATHS = [
   "/sessions/*",
   "/settings",
   "/settings/*",
+  "/videos/*",
   // Add more paths as needed
 ];
 

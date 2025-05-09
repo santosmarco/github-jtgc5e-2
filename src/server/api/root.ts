@@ -2,6 +2,7 @@ import { calendarRouter } from "~/server/api/routers/calendar";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 import { actionItemsRouter } from "./routers/action-items";
+import { aiRouter } from "./routers/ai";
 import { authRouter } from "./routers/auth";
 import { chatsRouter } from "./routers/chats";
 import { clientsRouter } from "./routers/clients";
@@ -24,6 +25,7 @@ import { userInvitesRouter } from "./routers/user-invites";
 import { videosRouter } from "./routers/videos";
 
 export const appRouter = createTRPCRouter({
+  ai: aiRouter,
   auth: authRouter,
   chats: chatsRouter,
   moments: momentsRouter,

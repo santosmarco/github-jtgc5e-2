@@ -1,0 +1,418 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# tRPC Router & Procedure Guidelines
+
+This guide outlines best practices for creating and extending tRPC routers with procedures that follow the domain-driven design pattern established in the codebase.
+
+## Creating a New Router
+
+When creating a new router for a domain area, follow these steps:
+
+1. Create the router file in `src/server/api/routers/<domain-name>.ts`
+2. Create corresponding service modules in `src/lib/<domain-name>/`
+3. Register the router in `src/server/api/root.ts`
+
+### Router Template
+
+```typescript
+// src/server/api/routers/<domain-name>.ts
+import { TRPCError } from "@trpc/server";
+import { z } from "zod";
+
+// Import domain-specific schemas and service functions
+import {
+  EntityRetrieveInput,
+  EntityCreateInput
+} from "~/lib/<domain-name>/schemas";
+import * as domainService from "~/lib/<domain-name>/services";
+import { createClient } from "~/lib/supabase/server";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "~/server/api/trpc";
+
+export const <domain>Router = createTRPCRouter({
+  // Queries
+  getEntity: protectedProcedure
+    .input(EntityRetrieveInput)
+    .query(async ({ input }) => {
+      return domainService.getEntity(input, await createClient());
+    }),
+
+  // Mutations
+  createEntity: protectedProcedure
+    .input(EntityCreateInput)
+    .mutation(async ({ input }) => {
+      return domainService.createEntity(input, await createClient());
+    }),
+});
+```
+
+### Register in Root Router
+
+```typescript
+// src/server/api/root.ts
+import { <domain>Router } from "./routers/<domain-name>";
+
+export const appRouter = createTRPCRouter({
+  // ... existing routers
+  <domain>: <domain>Router,
+});
+```
+
+## Adding a Procedure to an Existing Router
+
+When adding a new procedure to an existing router, follow the domain-driven pattern:
+
+1. Define input/output schemas in `src/lib/<domain-name>/schemas.ts`
+2. Implement database queries in `src/lib/<domain-name>/queries.ts`
+3. Implement service functions in `src/lib/<domain-name>/services.ts`
+4. Add the procedure to the router using the service function
+
+### Step 1: Define Schemas
+
+```typescript
+// src/lib/<domain-name>/schemas.ts
+import { z } from "zod";
+
+export const EntityListInput = z.object({
+  limit: z.number().optional().default(10),
+  offset: z.number().optional().default(0),
+  filter: z.string().optional(),
+});
+export type EntityListInput = z.infer<typeof EntityListInput>;
+
+export const EntityListOutput = z.array(
+  z.object({
+    id: z.string(),
+    name: z.string(),
+    // ... other entity fields
+  })
+);
+export type EntityListOutput = z.infer<typeof EntityListOutput>;
+```
+
+### Step 2: Implement Database Queries
+
+```typescript
+// src/lib/<domain-name>/queries.ts
+import { TRPCError } from "@trpc/server";
+import type { EntityListInput } from "./schemas";
+import type { SupabaseClient<Database> } from "~/lib/supabase/server";
+import { logger } from "~/lib/logging/server";
+
+export async function listEntities(
+  input: EntityListInput,
+  supabase: SupabaseClient<Database>
+) {
+  const { limit, offset, filter } = input;
+
+  let query = supabase
+    .from("<entity_table>")
+    .select("*")
+    .range(offset, offset + limit - 1);
+
+  if (filter) {
+    query = query.ilike("name", `%${filter}%`);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    logger.error("Failed to list entities", {
+      error,
+      input,
+    });
+
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Failed to list entities",
+      cause: error,
+    });
+  }
+
+  return data;
+}
+```
+
+### Step 3: Implement Service Functions
+
+```typescript
+// src/lib/<domain-name>/services.ts
+import type { EntityListInput, EntityListOutput } from "./schemas";
+import * as queries from "./queries";
+import type { SupabaseClient<Database> } from "~/lib/supabase/server";
+
+export async function listEntities(
+  input: EntityListInput,
+  supabase: SupabaseClient<Database>
+): Promise<EntityListOutput> {
+  const rawData = await queries.listEntities(input, supabase);
+
+  // Perform any additional transformations or business logic
+  return rawData.map(entity => ({
+    id: entity.id,
+    name: entity.name,
+    // Transform other fields as needed
+  }));
+}
+```
+
+### Step 4: Add the Procedure to the Router
+
+```typescript
+// src/server/api/routers/<domain-name>.ts
+import { EntityListInput } from "~/lib/<domain-name>/schemas";
+import * as domainService from "~/lib/<domain-name>/services";
+
+export const <domain>Router = createTRPCRouter({
+  // ... existing procedures
+
+  listEntities: protectedProcedure
+    .input(EntityListInput)
+    .query(async ({ input }) => {
+      return domainService.listEntities(input, await createClient());
+    }),
+});
+```
+
+## Refactoring Existing Procedures
+
+If you're refactoring an existing procedure that directly contains Supabase queries, follow these steps:
+
+1. Extract the input schema to `schemas.ts`
+2. Move the database query logic to `queries.ts`
+3. Create service functions in `services.ts` if additional business logic is needed
+4. Update the router procedure to use the refactored code
+
+### Before: Procedure with Inline Database Logic
+
+```typescript
+getSessionById: protectedProcedure
+  .input(z.object({ sessionId: z.string() }))
+  .query(async ({ input }) => {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from("sessions")
+      .select(
+        "*, user:profiles!user_id(*), coach:profiles!coach_id(*), event:calendar_events_v2!event_id(*)",
+      )
+      .eq("id", input.sessionId)
+      .single();
+
+    if (error) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Session not found",
+        cause: error,
+      });
+    }
+
+    return data;
+  }),
+```
+
+### After: Refactored Procedure
+
+```typescript
+// In src/lib/sessions/schemas.ts
+export const SessionRetrieveInput = z.object({
+  sessionId: z.string(),
+});
+export type SessionRetrieveInput = z.infer<typeof SessionRetrieveInput>;
+
+// In src/lib/sessions/queries.ts
+export async function getSessionById(
+  input: SessionRetrieveInput,
+  supabase: SupabaseClient<Database>
+) {
+  const { sessionId } = input;
+
+  const { data, error } = await supabase
+    .from("sessions")
+    .select(
+      "*, user:profiles!user_id(*), coach:profiles!coach_id(*), event:calendar_events_v2!event_id(*)",
+    )
+    .eq("id", sessionId)
+    .single();
+
+  if (error) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Session not found",
+      cause: error,
+    });
+  }
+
+  return data;
+}
+
+// In src/server/api/routers/sessions.ts
+import { SessionRetrieveInput } from "~/lib/sessions/schemas";
+import { getSessionById } from "~/lib/sessions/queries";
+
+// In sessionsRouter
+getSessionById: protectedProcedure
+  .input(SessionRetrieveInput)
+  .query(async ({ input }) => {
+    return getSessionById(input, await createClient());
+  }),
+```
+
+## Best Practices
+
+### Router Organization
+
+- Group related procedures within a router
+- Use clear, domain-specific router names
+- Keep routers focused on a single domain concern
+
+### Procedure Types
+
+- Use `query` for read operations
+- Use `mutation` for create, update, delete operations
+- Use `subscription` for real-time data (if needed)
+
+### Input Validation
+
+- Always validate inputs with Zod schemas
+- Export schemas from domain modules for reuse
+- Use descriptive error messages for validation failures
+
+### Error Handling
+
+- Use appropriate TRPCError codes
+- Log errors with context information
+- Provide user-friendly error messages
+
+### Security
+
+- Use `protectedProcedure` for authenticated routes
+- Use `publicProcedure` only when genuinely public
+- Consider authorization checks within procedures
+
+### Performance
+
+- Select only needed fields from Supabase
+- Use pagination for large result sets
+- Consider caching for frequently accessed data
+
+## Example: Router With Multiple Procedures
+
+```typescript
+// src/server/api/routers/tasks.ts
+import { TRPCError } from "@trpc/server";
+import { z } from "zod";
+
+import {
+  TaskCreateInput,
+  TaskUpdateInput,
+  TaskListInput,
+  TaskRetrieveInput,
+} from "~/lib/tasks/schemas";
+import * as taskService from "~/lib/tasks/services";
+import { createClient } from "~/lib/supabase/server";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+
+export const tasksRouter = createTRPCRouter({
+  // Queries
+  getTask: protectedProcedure
+    .input(TaskRetrieveInput)
+    .query(async ({ input }) => {
+      return taskService.getTask(input, await createClient());
+    }),
+
+  listTasks: protectedProcedure
+    .input(TaskListInput)
+    .query(async ({ input }) => {
+      return taskService.listTasks(input, await createClient());
+    }),
+
+  // Mutations
+  createTask: protectedProcedure
+    .input(TaskCreateInput)
+    .mutation(async ({ input }) => {
+      return taskService.createTask(input, await createClient());
+    }),
+
+  updateTask: protectedProcedure
+    .input(TaskUpdateInput)
+    .mutation(async ({ input }) => {
+      return taskService.updateTask(input, await createClient());
+    }),
+
+  deleteTask: protectedProcedure
+    .input(z.object({ taskId: z.string() }))
+    .mutation(async ({ input }) => {
+      return taskService.deleteTask(input, await createClient());
+    }),
+});
+```
+
+## Using CodeAlive for Code Analysis
+
+When refactoring or creating new tRPC procedures, you can use CodeAlive to analyze the codebase for patterns:
+
+1. Use `mcp_codealive_get_data_sources` to identify available repositories
+2. Use `mcp_codealive_search_code` to find examples of existing routers and procedures
+3. Study the patterns in similar domain areas
+
+For example, to find examples of properly refactored procedures:
+
+```typescript
+// Find examples of service-oriented tRPC procedures
+mcp_codealive_search_code({
+  query: "protectedProcedure input return domain service",
+  data_source_ids: ["your_repository_id"],
+  mode: "auto",
+  include_content: true
+});
+```
+
+This will help you understand the established patterns in the codebase and maintain consistency in your implementations.
+
+## Using Supabase and Postgres Tools
+
+When working with tRPC procedures that interact with Supabase, you can use these tools to explore the database schema and test queries:
+
+### Explore Database Schema
+
+Use the Supabase `listTables` tool to understand the available tables and their relationships:
+
+```typescript
+// List all tables in the public schema
+mcp_supabase_list_tables({
+  schemas: ["public"]
+});
+```
+
+This helps when defining domain schemas and query functions by providing a clear view of the database structure.
+
+### Test Database Queries
+
+Use the Postgres `query` tool to test SQL queries before implementing them in your query modules:
+
+```typescript
+// Execute a read-only query to explore data structure
+mcp_postgres_query({
+  sql: "SELECT * FROM profiles LIMIT 5"
+});
+
+// Join example for complex relationships
+mcp_postgres_query({
+  sql: "SELECT s.*, p.name FROM sessions s JOIN profiles p ON s.user_id = p.id LIMIT 5"
+});
+```
+
+Testing queries this way helps you:
+1. Understand the exact data structure you'll be working with
+2. Optimize your Supabase queries for performance
+3. Verify foreign key relationships between tables
+4. Ensure your domain schemas match the actual database schema
+
+Always test complex queries directly against the database before implementing them in your tRPC procedure code.

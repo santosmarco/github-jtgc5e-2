@@ -6,6 +6,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import dedent from "ts-dedent";
 import { z } from "zod";
 
+import type { PageContext } from "~/lib/ai/data";
 import {
   generateToolSystemPrompt,
   listMeetingsTool as createListMeetingsTool,
@@ -27,11 +28,12 @@ import {
   listRelationshipTypesTool as createListRelationshipTypesTool,
 } from "~/lib/processing/ai-search-tools";
 import { UIMessage } from "~/lib/schemas/ai";
-import type { JsonValue } from "~/lib/schemas/utils";
 import { Video } from "~/lib/schemas/video";
 import { VideoMomentPartial } from "~/lib/schemas/video-moment";
+import { transformJsonIntoXml } from "~/lib/suggested-topics/utils";
 import type { Tables } from "~/lib/supabase/database.types";
 import { createClient } from "~/lib/supabase/server";
+import type { Select } from "~/lib/utils/types";
 import type { toVideoOutput } from "~/lib/videos";
 import { api } from "~/trpc/server";
 
@@ -47,7 +49,7 @@ export const ChatRequestBody = z
     selectedMoments: z.array(VideoMomentPartial).default([]),
     selectedVideos: z.array(Video.partial()).default([]),
     mode: z.enum(["insights", "coach"]).default("insights"),
-    context: z.custom<JsonValue>(),
+    pageContext: z.custom<PageContext>().nullable(),
   })
   .partial()
   .passthrough();
@@ -88,7 +90,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       selectedMoments,
       selectedVideos,
       mode = "insights",
-      context,
+      pageContext,
     } = bodyParseResult.data;
 
     const supabase = await createClient();
@@ -121,9 +123,14 @@ export async function POST(request: NextRequest): Promise<Response> {
         : { data: null },
     ]);
 
-    const selectedVideoIds = selectedVideos
-      ?.map((v) => v.videoId)
-      .filter((id): id is string => Boolean(id));
+    const selectedVideoIds =
+      selectedVideos
+        ?.map((v) => v.videoId)
+        .filter((id): id is string => Boolean(id)) ??
+      (pageContext?.contentContext &&
+      pageContext.contentContext.type === "video"
+        ? [pageContext.contentContext.data.video_api_id]
+        : undefined);
 
     const tools = {
       think: createThinkTool(),
@@ -320,7 +327,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         userFrameworks,
         frameworks,
         profileEnhancements,
-        pageContext: context,
+        pageContext: pageContext ?? null,
       });
     }
 
@@ -435,15 +442,15 @@ function cleanUserMessage(
  */
 interface EnhancedMessageParams {
   cleanedUserMessageContent: string;
-  searchResults: unknown[];
+  searchResults: Awaited<ReturnType<typeof searchSimilar>>;
   profile: Tables<"profiles"> | null;
   userCommands: string[];
-  selectedMoments: unknown[] | undefined;
-  selectedVideos: unknown[] | undefined;
+  selectedMoments: VideoMomentPartial[] | undefined;
+  selectedVideos: Partial<Video>[] | undefined;
   userFrameworks: string[] | undefined;
   frameworks: { title: string; definition_prompt: string }[] | null;
-  profileEnhancements: Tables<"profile_enhancements">[] | null;
-  pageContext?: JsonValue;
+  profileEnhancements: Select<"profile_enhancements", "dossier">[] | null;
+  pageContext: PageContext | null;
 }
 
 function buildEnhancedUserMessage({
@@ -458,13 +465,25 @@ function buildEnhancedUserMessage({
   profileEnhancements,
   pageContext,
 }: EnhancedMessageParams): string {
-  let enhancedMessage = dedent`
-    Here is some relevant context from previous meetings that might help with the response:
-    
-    <context>
-    ${searchResults.length > 0 ? searchResults.map((r) => JSON.stringify(r)).join("\n\n") : "No relevant context found"}
-    </context>
-  `;
+  let enhancedMessage = "";
+
+  if (searchResults.length > 0) {
+    enhancedMessage += dedent`
+      Here is some relevant context from previous meetings that might help with the response:
+      
+      ${transformJsonIntoXml(searchResults, "context")}
+    `;
+  }
+
+  const [profileEnhancement] = profileEnhancements ?? [];
+
+  if (profileEnhancement?.dossier) {
+    enhancedMessage += dedent`
+      <about_the_user>
+      ${profileEnhancement.dossier}
+      </about_the_user>
+    `;
+  }
 
   // Add page context if available
   if (pageContext) {
@@ -472,19 +491,9 @@ function buildEnhancedUserMessage({
       To assist in this coaching session, you have been provided with the following information:
       
       <page_context definition="The page context refers to the information currently available on the page the user is viewing.">
-      ${JSON.stringify(pageContext, null, 2)}
+      ${transformJsonIntoXml(pageContext)}
       </page_context>
     `;
-
-    const [profileEnhancement] = profileEnhancements ?? [];
-
-    if (profileEnhancement?.dossier) {
-      enhancedMessage += dedent`
-        <about_the_user>
-        ${profileEnhancement.dossier}
-        </about_the_user>
-      `;
-    }
 
     enhancedMessage += dedent`
       <current_date>
@@ -554,12 +563,12 @@ function buildEnhancedUserMessage({
       - Use a supportive and encouraging tone while providing honest feedback
       - Help the user understand the patterns and trends revealed in the context
       - PROVOKE THINKING through thoughtful questions and reflective prompts
-  `;
+    `;
   }
 
   if (profile?.nickname) {
     enhancedMessage += dedent`
-      REMEMBER: The user's name is <user>${profile?.nickname}</user>.
+      REMEMBER: The user's name is <user>${profile.nickname}</user>.
     `;
   }
 
@@ -596,7 +605,7 @@ function buildEnhancedUserMessage({
     enhancedMessage += dedent`
       VERY IMPORTANT: FOCUS **ONLY** ON THESE MOMENTS:
       \`\`\`
-      ${JSON.stringify(selectedMoments)}
+      ${transformJsonIntoXml(selectedMoments, "focus_moments")}
       \`\`\`
     `;
   }
@@ -612,10 +621,11 @@ function buildEnhancedUserMessage({
     enhancedMessage += dedent`
       VERY IMPORTANT: FOCUS **ONLY** ON THESE MEETINGS:
       \`\`\`
-      ${JSON.stringify(
+      ${transformJsonIntoXml(
         selectedVideos.map((v) =>
           _.omit(v as Record<string, unknown>, omittedKeys),
         ),
+        "focus_meetings",
       )}
       \`\`\`
     `;

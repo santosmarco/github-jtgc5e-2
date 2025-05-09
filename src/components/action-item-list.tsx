@@ -2,7 +2,7 @@
 
 import { PersonIcon } from "@radix-ui/react-icons";
 import dayjs from "dayjs";
-import { AnimatePresence, motion, type Variants } from "framer-motion";
+import { AnimatePresence, type Variants, motion } from "framer-motion";
 import _ from "lodash";
 import {
   CheckCircle2,
@@ -366,7 +366,7 @@ export function ActionItemList({ items, people }: ActionItemListProps) {
         animate="visible"
         className="space-y-4"
       >
-        <Card className="mb-6">
+        <Card className="mb-6 px-0">
           <CardContent className="pt-6">
             <div className="flex min-h-[120px] flex-col items-center justify-center gap-3">
               <motion.div
@@ -403,8 +403,14 @@ export function ActionItemList({ items, people }: ActionItemListProps) {
     );
   }
 
-  const ActionItemCard = React.memo(
-    ({ item, index }: { item: ActionItem; index: number }) => (
+  const ActionItemCard = React.memo(function ActionItemCard({
+    item,
+    index,
+  }: {
+    item: ActionItem;
+    index: number;
+  }) {
+    return (
       <motion.div
         custom={index}
         variants={animations.card}
@@ -438,7 +444,6 @@ export function ActionItemList({ items, people }: ActionItemListProps) {
                   animate={item.completed_at ? "checked" : "unchecked"}
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
-                  className="pl-0.5"
                 >
                   <Button
                     variant="ghost"
@@ -583,8 +588,8 @@ export function ActionItemList({ items, people }: ActionItemListProps) {
           </CardContent>
         </Card>
       </motion.div>
-    ),
-  );
+    );
+  });
 
   return (
     <>

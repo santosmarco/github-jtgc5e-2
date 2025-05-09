@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import _ from "lodash";
 import { z } from "zod";
 
@@ -5,6 +6,44 @@ import { createClient } from "~/lib/supabase/server";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
 export const entitiesRouter = createTRPCRouter({
+  getEntitiesByVideoId: protectedProcedure
+    .input(
+      z.object({
+        videoId: z.string(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const supabase = await createClient();
+
+      const { data: entities, error: entitiesError } = await supabase
+        .from("meeting_entities_v2")
+        .select(
+          `
+            id,
+            name,
+            type,
+            description,
+            api_video_id,
+            observations:meeting_entity_observations_v2(
+              id,
+              observation
+            )
+          `,
+        )
+        .eq("api_video_id", input.videoId)
+        .eq("latest", true);
+
+      if (entitiesError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: entitiesError.message,
+          cause: entitiesError,
+        });
+      }
+
+      return entities;
+    }),
+
   getKnowledgeGraph: protectedProcedure
     .input(
       z.object({

@@ -29,5 +29,6 @@ export function transformUserInviteIntoProfile(
     force_post_ten_meeting_onboarding: false,
     explore_email_sent: false,
     image_url: null,
+    viewing_as_id: null,
   };
 }

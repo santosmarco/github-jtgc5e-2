@@ -1,0 +1,132 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Implementation Plan Formatting Guide
+
+## Overview
+This rule provides specific guidance on how to format and present implementation plans as deliverable documents. Follow these formatting conventions to ensure clarity, readability, and actionability.
+
+## Document Structure
+
+### 1. Title and Metadata
+```
+# [Project/Feature Name] Implementation Plan
+- **Version**: [1.0]
+- **Last Updated**: [YYYY-MM-DD]
+- **Status**: [Draft/In Review/Approved]
+- **Owner**: [Name/Role]
+- **Estimated Timeline**: [Start Date] to [End Date]
+```
+
+### 2. Table of Contents
+- Include a detailed table of contents with clickable links
+- Use hierarchical numbering for easy reference (1, 1.1, 1.1.1)
+
+### 3. Standard Sections
+Organize the document with these standard sections:
+1. Executive Summary
+2. Background and Context
+3. Technical Approach
+4. Implementation Phases
+5. Detailed Action Items
+6. Testing Strategy
+7. Rollout Plan
+8. Risk Assessment
+9. Appendices (if needed)
+
+## Formatting Standards
+
+### Headings
+- Use Markdown heading levels consistently
+- Main sections: H1 (#)
+- Subsections: H2 (##)
+- Components within subsections: H3 (###)
+- Specific items: H4 (####)
+
+### Lists and Tables
+- Use bulleted lists for non-sequential items
+- Use numbered lists for sequential steps or prioritized items
+- Use tables for comparing options or presenting structured data:
+
+```markdown
+| Component | Technology | Justification | Alternatives Considered |
+|-----------|------------|---------------|-------------------------|
+| Frontend  | React      | Team expertise| Vue, Angular            |
+```
+
+### Code Blocks
+- Use syntax-highlighted code blocks for examples
+- Include comments in code examples
+- Keep examples concise but complete
+
+```typescript
+// Example TypeScript interface
+interface UserData {
+  id: string;         // Unique identifier
+  name: string;       // Full name
+  email: string;      // Contact email
+  role: UserRole;     // Access control role
+}
+```
+
+### Diagrams
+- Include relevant diagrams (architecture, flow, sequence)
+- Use descriptions for each diagram
+- Reference diagrams in the text
+
+### Action Items
+Format action items with clear ownership and status:
+
+```markdown
+#### Action Item 1.1: [Title]
+- **Description**: Detailed explanation of the task
+- **Owner**: [Role/Team]
+- **Dependencies**: [Action Items this depends on]
+- **Estimated Effort**: [Low/Medium/High] or [X person-days]
+- **Acceptance Criteria**: List of criteria to consider this complete
+- **Status**: [Not Started/In Progress/Completed]
+```
+
+## Presentation Best Practices
+
+### Executive Summary
+- Limit to one screen/page
+- Use bullet points for key highlights
+- Include visual timeline if possible
+
+### Technical Details
+- Progressive disclosure of complexity
+- Start with high-level concepts before details
+- Include diagrams for complex architectural concepts
+- Link to external references rather than duplicating content
+
+### Action Items 
+- Group related items together
+- Make each item atomic and testable
+- Include clear "Definition of Done" criteria
+- Identify dependencies between items
+
+### Risk Assessment
+Use a standard risk matrix format:
+
+```markdown
+| Risk | Likelihood | Impact | Mitigation Strategy |
+|------|------------|--------|---------------------|
+| [Description] | [H/M/L] | [H/M/L] | [Strategy details] |
+```
+
+## Review Checklist
+End your implementation plan with a review checklist:
+
+- [ ] All sections complete
+- [ ] Technical approach reviewed by engineering team
+- [ ] Dependencies identified and documented
+- [ ] Effort estimates validated
+- [ ] Testing strategy addresses all components
+- [ ] Risk assessment includes mitigation strategies
+- [ ] Timeline is realistic and accounts for dependencies
+- [ ] Resource requirements clearly stated
+- [ ] Success criteria defined for each phase
+- [ ] Integration points with other systems documented

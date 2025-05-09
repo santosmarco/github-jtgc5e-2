@@ -10,8 +10,8 @@ import {
 } from "~/lib/email";
 import { logger } from "~/lib/logging/server";
 import {
-  type SupabaseServerClient,
   createClient as createSupabaseClient,
+  type SupabaseServerClient,
 } from "~/lib/supabase/server";
 
 const RequestBody = z.discriminatedUnion("templateId", [
@@ -191,57 +191,6 @@ async function handleSkillReportReadyEmail(
     logger.error("Failed to send skill report ready email", { error });
     return createErrorResponse((error as Error).message, 500);
   }
-}
-
-async function handleSkillReportReadyEmail(
-  supabase: SupabaseServerClient,
-  reportId: string,
-): Promise<NextResponse<ResponseBody>> {
-  const { data: report, error: reportError } = await supabase
-    .from("reports")
-    .select("id, profile_id")
-    .eq("id", reportId)
-    .single();
-
-  if (reportError) {
-    logger.error("Failed to fetch report", { error: reportError, reportId });
-    return createErrorResponse(reportError.message, 404);
-  }
-
-  if (!report) {
-    logger.error("Report not found", { reportId });
-    return createErrorResponse("Report not found", 404);
-  }
-
-  if (!report.profile_id) {
-    logger.error("Report profile ID not found", { reportId });
-    return createErrorResponse("Report profile ID not found", 404);
-  }
-
-  const { data: emailData, error: emailError } =
-    await sendSkillReportReadyEmail({
-      profileId: report.profile_id,
-      reportId: report.id,
-    });
-
-  if (emailError) {
-    logger.error("Failed to send skill report ready email", {
-      error: emailError,
-      reportId,
-    });
-    return createErrorResponse(emailError.message, 500);
-  }
-
-  if (!emailData) {
-    logger.error("Email data missing after send", { reportId });
-    return createErrorResponse("Email not sent", 500);
-  }
-
-  logger.info("Successfully sent skill report ready email", {
-    reportId,
-    messageId: emailData.id,
-  });
-  return createSuccessResponse(emailData.id);
 }
 
 export async function POST(
