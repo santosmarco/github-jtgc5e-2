@@ -6,7 +6,6 @@ import { Editor } from "~/components/editor";
 import { Button } from "~/components/ui/button";
 import type { Tables } from "~/lib/supabase/database.types";
 import { cn } from "~/lib/utils";
-import type { Select } from "~/lib/utils/types";
 import type { VideoOutput } from "~/lib/videos";
 import type { RouterOutputs } from "~/trpc/react";
 

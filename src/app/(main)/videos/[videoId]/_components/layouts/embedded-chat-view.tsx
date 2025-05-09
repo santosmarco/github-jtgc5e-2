@@ -330,7 +330,11 @@ export function EmbeddedChatView({
           selectedVideos={null}
           onSelectVideo={null}
           onUnselectVideo={null}
-          moments={meeting?.moments ?? []}
+          moments={
+            (meeting?.moments ?? []) as unknown as React.ComponentProps<
+              typeof ChatInput
+            >["moments"]
+          }
           selectedMoments={selectedMoments}
           onSelectMoment={handleSelectMoment}
           onUnselectMoment={handleUnselectMoment}
