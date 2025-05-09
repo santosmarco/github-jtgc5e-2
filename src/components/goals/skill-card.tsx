@@ -41,13 +41,25 @@ const cardVariants = {
 export type SkillCardProps = {
   skill: RouterOutputs["skills"]["getAllSkills"][number];
   profileId: string;
+  historicalScores?:
+    | {
+        report: {
+          id: string;
+          start_date: string;
+          end_date: string;
+        };
+        finalScore?: number;
+        status?: string;
+        date?: string;
+      }[]
+    | null;
   onSkillEnabled?: () => void;
   onSkillDisabled?: () => void;
 };
 
 export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
   function SkillCard(
-    { skill, profileId, onSkillEnabled, onSkillDisabled },
+    { skill, profileId, historicalScores, onSkillEnabled, onSkillDisabled },
     ref,
   ) {
     const [isHovered, setIsHovered] = useState(false);
@@ -79,6 +91,43 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
       isEnabled,
       isLoading,
     );
+
+    // Calculate percentage change using historicalScores
+    const { percentageChange, previousAssessmentDate } = useMemo(() => {
+      if (!historicalScores || !latestValidAssessment) {
+        return { percentageChange: 0, previousAssessmentDate: null };
+      }
+
+      // Find the index of the current assessment in historical scores
+      const skillScoreIndex = historicalScores.findIndex(
+        (score) => score.report.id === latestValidAssessment.id,
+      );
+
+      if (skillScoreIndex === -1 || skillScoreIndex === 0) {
+        return { percentageChange: 0, previousAssessmentDate: null };
+      }
+
+      // Get the current and previous scores
+      const currentScore = historicalScores[skillScoreIndex];
+      const previousScore = historicalScores[skillScoreIndex - 1];
+
+      // Calculate percentage change
+      const change =
+        currentScore &&
+        typeof currentScore.finalScore === "number" &&
+        previousScore &&
+        typeof previousScore.finalScore === "number" &&
+        previousScore.finalScore !== 0
+          ? ((currentScore.finalScore - previousScore.finalScore) /
+              previousScore.finalScore) *
+            100
+          : 0;
+
+      return {
+        percentageChange: change,
+        previousAssessmentDate: previousScore?.report.end_date || null,
+      };
+    }, [historicalScores, latestValidAssessment]);
 
     // Dynamic Icon loading with fallback
     const Icon = useMemo(
@@ -291,6 +340,8 @@ export const SkillCard = React.forwardRef<HTMLDivElement, SkillCardProps>(
             nextReportDate={nextReportDate ? new Date(nextReportDate) : null}
             skillScoreStatus={skillScore?.status}
             hasValidFallbackScore={hasValidFallbackScore}
+            percentageChange={percentageChange}
+            previousAssessmentDate={previousAssessmentDate}
             onEnableSkill={enableSkill}
             onNavigateToReport={navigateToReport}
           />
