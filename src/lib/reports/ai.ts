@@ -186,101 +186,96 @@ export async function generateReportSections(
   reportId: string,
   supabaseClient: SupabaseClient<Database>,
 ) {
-  // First query to get the basic report data
-  const { data: reportBasic, error: reportBasicError } = await supabaseClient
-    .from("reports")
-    .select(
-      `
-        *,
-        profile:profiles(
-          id,
-          nickname,
-          development_themes:profile_development_themes(
-            id,
-            title,
-            description,
-            key_points,
-            is_enabled,
-            order
-          )
-        )
-      `,
-    )
-    .eq("id", reportId)
-    .eq("profile.development_themes.is_enabled", true)
-    .is("profile.development_themes.deleted_at", null)
-    .single();
-
-  if (reportBasicError) {
-    throw reportBasicError;
-  }
-
-  // Second query to get skill-related data
-  const { data: reportSkills, error: reportSkillsError } = await supabaseClient
-    .from("reports")
-    .select(
-      `
-        skill:skills!inner(
-          id,
-          title,
-          icon,
-          description,
-          internal_title,
-          created_at,
-          goals!inner(
-            id,
-            text,
-            progress,
-            is_current,
-            is_default,
-            hidden_text,
-            user_provided_context,
-            completed_at,
-            previous_goal_id,
-            created_at,
-            deleted_at,
-            profile_id,
-            skill_id
-          ),
-          scales:skill_scales(
-            id,
-            positive_tag_title,
-            negative_tag_title,
-            positive_tag_description,
-            negative_tag_description
-          ),
-          statuses:group_report_processing_status(
-            id,
-            status,
-            goal_ids,
-            created_at,
-            profile_id,
-            skill_id
-          ),
-          goal_templates(
-            id,
-            text,
-            context,
-            is_current,
-            created_at,
-            skill_id
-          )
-        )
-      `,
-    )
-    .eq("id", reportId)
-    .single();
-
-  if (reportSkillsError) {
-    throw reportSkillsError;
-  }
-
-  // Third query to get report sections and goals
-  const { data: reportSectionsAndGoals, error: reportSectionsError } =
-    await supabaseClient
+  // Execute all queries in parallel
+  const [
+    { data: reportBasic, error: reportBasicError },
+    { data: reportSkills, error: reportSkillsError },
+    { data: reportSectionsAndGoals, error: reportSectionsError },
+    { data: reportMoments, error: reportMomentsError },
+  ] = await Promise.all([
+    supabaseClient
       .from("reports")
       .select(
         `
+          *,
+          profile:profiles(
+            id,
+            nickname,
+            development_themes:profile_development_themes(
+              id,
+              title,
+              description,
+              key_points,
+              is_enabled,
+              order
+            )
+          )
+        `,
+      )
+      .eq("id", reportId)
+      .eq("profile.development_themes.is_enabled", true)
+      .is("profile.development_themes.deleted_at", null)
+      .single(),
+    supabaseClient
+      .from("reports")
+      .select(
+        `
+          id,
+          skill:skills!inner(
+            id,
+            title,
+            icon,
+            description,
+            internal_title,
+            created_at,
+            goals!inner(
+              id,
+              text,
+              progress,
+              is_current,
+              is_default,
+              hidden_text,
+              user_provided_context,
+              completed_at,
+              previous_goal_id,
+              created_at,
+              deleted_at,
+              profile_id,
+              skill_id
+            ),
+            scales:skill_scales(
+              id,
+              positive_tag_title,
+              negative_tag_title,
+              positive_tag_description,
+              negative_tag_description
+            ),
+            statuses:group_report_processing_status(
+              id,
+              status,
+              goal_ids,
+              created_at,
+              profile_id,
+              skill_id
+            ),
+            goal_templates(
+              id,
+              text,
+              context,
+              is_current,
+              created_at,
+              skill_id
+            )
+          )
+        `,
+      )
+      .eq("id", reportId)
+      .single(),
+    supabaseClient
+      .from("reports")
+      .select(
+        `
+          id,
           report_sections(*),
           report_goals(
             *,
@@ -300,18 +295,12 @@ export async function generateReportSections(
         `,
       )
       .eq("id", reportId)
-      .single();
-
-  if (reportSectionsError) {
-    throw reportSectionsError;
-  }
-
-  // Fourth query to get report moments
-  const { data: reportMoments, error: reportMomentsError } =
-    await supabaseClient
+      .single(),
+    supabaseClient
       .from("reports")
       .select(
         `
+          id,
           report_moments(
             *,
             moment:moments!inner(
@@ -357,11 +346,14 @@ export async function generateReportSections(
       .is("report_moments.omission_reason", null)
       .eq("report_moments.moment.latest", true)
       .eq("report_moments.moment.relevant", true)
-      .single();
+      .single(),
+  ]);
 
-  if (reportMomentsError) {
-    throw reportMomentsError;
-  }
+  // Check for errors
+  if (reportBasicError) throw reportBasicError;
+  if (reportSkillsError) throw reportSkillsError;
+  if (reportSectionsError) throw reportSectionsError;
+  if (reportMomentsError) throw reportMomentsError;
 
   // Combine all the data into a single report object
   const report = {
@@ -440,6 +432,7 @@ export async function generateReportSections(
       - Provide detailed summaries (75-100 words) with comprehensive context
       - List all people involved for reference
       - Address the leader directly as "You" throughout
+      - Use "You" and "Your" consistently throughout
       - Use <highlight> tags sparingly to emphasize key points (max 1 per section)
       - Explicitly connect each moment to specific development themes
       

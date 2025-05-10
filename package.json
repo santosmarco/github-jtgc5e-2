@@ -88,6 +88,7 @@
     "@react-email/preview": "^0.0.12",
     "@react-email/tailwind": "^1.0.4",
     "@slack/web-api": "^7.7.0",
+    "@stagewise/toolbar-next": "^0.1.0",
     "@supabase/postgrest-js": "^1.19.4",
     "@supabase/ssr": "^0.5.1",
     "@supabase/supabase-js": "^2.49.1",

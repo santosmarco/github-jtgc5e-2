@@ -217,7 +217,7 @@ export function SkillReportReadyEmail({
                     ),
                   }))}
                   buttonHref={momentsUrl}
-                  highlightTitle={false}
+                  highlightTitle={true}
                   highlightSummary={false}
                 />
               )}
