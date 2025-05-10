@@ -90,7 +90,10 @@ export const GoalCardMinimal = React.forwardRef<
           min={0}
           max={100}
           size="md"
-          className={previousScore ? "sm:h-48" : "sm:h-48 sm:pt-9"}
+          className={cn(
+            "pl-40 sm:h-48 sm:pl-0",
+            previousScore ? "sm:pt-[1.125rem]" : "sm:pt-9",
+          )}
         />
 
         {/* Percentage change indicator */}
