@@ -21,7 +21,7 @@ export function useSkillData(
     return (
       _.orderBy(
         skillAssessments,
-        [(r) => dayjs(r.created_at).toDate()],
+        [(r) => dayjs(r.end_date).toDate()],
         ["desc"],
       )[0] ?? null
     );
@@ -40,7 +40,7 @@ export function useSkillData(
           const score = getReportScores(r);
           return score.status === "success";
         }),
-        [(r) => dayjs(r.created_at).toDate()],
+        [(r) => dayjs(r.end_date).toDate()],
         ["desc"],
       )[0] ?? null
     );
