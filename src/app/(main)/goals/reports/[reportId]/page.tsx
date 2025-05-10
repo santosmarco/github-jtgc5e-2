@@ -17,7 +17,6 @@ import {
 import { MomentsPlayer } from "~/components/player/moments-player";
 import { CommentsPanel } from "~/components/reports/comments-panel";
 import { GoalHeader } from "~/components/reports/goal-header";
-import { PersonalityProfile } from "~/components/reports/personality-profile";
 import { ReportMetrics } from "~/components/reports/report-metrics";
 import { SectionsList } from "~/components/reports/sections-list";
 import { Button } from "~/components/ui/button";
@@ -68,7 +67,7 @@ export default function ReportPage({
     setHasJustUpdatedCurrentMomentIndex,
   ] = useState(false);
   const [currentTab, setCurrentTab] = useState<"positive" | "negative">(
-    "negative",
+    "positive",
   );
 
   const utils = api.useUtils();
@@ -406,9 +405,9 @@ export default function ReportPage({
   }
 
   return (
-    <div className="-mx-4 min-h-screen shadow-sm backdrop-blur-sm sm:-mx-8 sm:-mt-12">
+    <div className="-mx-4 -mt-2 min-h-screen shadow-sm backdrop-blur-sm sm:-mx-8 sm:-mt-12">
       {/* Date Range Navigation */}
-      <div className="sticky top-0 z-40 mb-6 flex items-center justify-between border-b border-border bg-background/60 px-2 py-2 backdrop-blur-xl sm:-mx-4 sm:min-h-0">
+      <div className="sticky top-0 z-40 mb-6 flex items-center justify-between border-b border-border bg-background/60 px-2 py-1 backdrop-blur-xl sm:-mx-4 sm:min-h-0 sm:py-2">
         <div className="w-[73px]">
           <Button
             variant="ghost"
@@ -611,18 +610,25 @@ export default function ReportPage({
                 />
               )}
 
-              {/* Score Card */}
-              <div className="h-full sm:col-span-2">
+              {/* Expanded Metrics: Timeline and Scales side by side */}
+              <div className="grid h-full grid-cols-1 gap-4 sm:col-span-3 sm:grid-cols-2">
                 <ReportMetrics
                   metrics={typeCheckedMetrics}
                   selectedTab={currentTab}
                   currentReportDate={dayjs(report.end_date).format(
                     "YYYY-MM-DD",
                   )}
+                  mode="timeline"
+                />
+                <ReportMetrics
+                  metrics={typeCheckedMetrics}
+                  selectedTab={currentTab}
+                  currentReportDate={dayjs(report.end_date).format(
+                    "YYYY-MM-DD",
+                  )}
+                  mode="scales"
                 />
               </div>
-
-              <PersonalityProfile report={report} />
             </div>
 
             {/* Second Row - Content */}
