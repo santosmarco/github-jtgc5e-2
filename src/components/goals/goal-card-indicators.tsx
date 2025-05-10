@@ -41,7 +41,7 @@ export function PercentageChangeIndicator({
   const badgeClasses = cn(
     "inline-flex items-center gap-x-0.5 rounded-sm text-sm font-medium",
     variant === "solid" && [
-      "gap-x-0 px-1",
+      "gap-x-0 px-0.5",
       isPositive &&
         "bg-emerald-100 text-emerald-700 dark:bg-emerald-400/20 dark:text-emerald-500",
       isZero &&
