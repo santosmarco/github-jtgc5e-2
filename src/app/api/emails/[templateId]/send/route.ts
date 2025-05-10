@@ -10,8 +10,8 @@ import {
 } from "~/lib/email";
 import { logger } from "~/lib/logging/server";
 import {
-  type SupabaseServerClient,
   createClient as createSupabaseClient,
+  type SupabaseServerClient,
 } from "~/lib/supabase/server";
 
 const RequestBody = z.discriminatedUnion("templateId", [
