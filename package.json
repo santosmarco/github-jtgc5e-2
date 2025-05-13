@@ -190,7 +190,7 @@
     "react-use": "^17.6.0",
     "react-virtuoso": "^4.12.5",
     "react-window": "^1.8.11",
-    "recharts": "^2.15.1",
+    "recharts": "^2.15.3",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.0",
     "remeda": "2",
