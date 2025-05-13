@@ -114,7 +114,7 @@ export function ActionItemForm({
               />
             </motion.div>
 
-            <DialogFooter>
+            <DialogFooter className="pt-4">
               <Button
                 type="button"
                 variant="outline"

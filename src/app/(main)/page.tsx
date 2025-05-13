@@ -51,6 +51,8 @@ export default function HomePage() {
 
   const [searchQuery, setSearchQuery] = React.useState("");
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
+  const utils = api.useUtils();
+  const prefetchedVideos = React.useRef(new Set<string>());
 
   const {
     data,
@@ -86,6 +88,27 @@ export default function HomePage() {
         video.description?.toLowerCase().includes(searchLower),
     );
   }, [data?.pages, debouncedSearchQuery]);
+
+  // Prefetch video data when videos are loaded
+  React.useEffect(() => {
+    if (videos?.length) {
+      for (const video of videos) {
+        if (video.videoId && !prefetchedVideos.current.has(video.videoId)) {
+          prefetchedVideos.current.add(video.videoId);
+
+          void utils.videos.getOne.prefetch({ videoId: video.videoId });
+          void utils.meetingTopics.getBasicTopicsByVideoId.prefetch({
+            videoId: video.videoId,
+            includeSegmentIds: true,
+          });
+          void utils.actionItems.getByVideoId.prefetch({
+            videoId: video.videoId,
+          });
+          void utils.transcripts.getOne.prefetch({ videoId: video.videoId });
+        }
+      }
+    }
+  }, [videos, utils]);
 
   const hasVideos = data?.pages.some((page) => page.videos.length > 0);
 

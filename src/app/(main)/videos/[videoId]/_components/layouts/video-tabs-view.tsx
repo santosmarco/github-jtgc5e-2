@@ -25,6 +25,8 @@ import { MeetingSummary } from "../meeting-summary";
 import { VideoKeyMoments } from "../video-key-moments";
 import { VideoTags } from "../video-tags";
 import { TabContentWrapper } from "./tab-content-wrapper";
+import { VideoPlayer } from "~/components/player/video";
+import { useIsMobile } from "~/hooks/use-mobile";
 
 export type VideoTabsViewProps = {
   activeTab: string;
@@ -40,6 +42,7 @@ export function VideoTabsView({
   const { currentTime, seek } = usePlayer();
   const tabsListRef = useRef<HTMLDivElement>(null);
   const [showRightIndicator, setShowRightIndicator] = useState(false);
+  const isMobile = useIsMobile();
 
   const topicsData = useTabData(
     api.meetingTopics.getBasicTopicsByVideoId.useQuery(
@@ -183,6 +186,16 @@ export function VideoTabsView({
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3 }}
           >
+            {isMobile && (
+              <TabsTrigger
+                value="video"
+                className={cn(
+                  "whitespace-nowrap rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent",
+                )}
+              >
+                Video
+              </TabsTrigger>
+            )}
             <TabsTrigger
               value="summary"
               className={cn(
@@ -248,6 +261,13 @@ export function VideoTabsView({
 
       <div className="flex-1 overflow-hidden">
         <AnimatePresence mode="wait">
+          {isMobile && (
+            <TabsContent value="video" className="mt-0 h-full">
+              <TabContentWrapper title="Video">
+                <VideoPlayer video={video} />
+              </TabContentWrapper>
+            </TabsContent>
+          )}
           <TabsContent value="summary" className="mt-0 h-full">
             <TabContentWrapper
               title="Meeting Summary"
@@ -256,12 +276,7 @@ export function VideoTabsView({
               icon={<FileText className="h-5 w-5 text-muted-foreground" />}
               subtitle="Get an overview of what was discussed in this meeting"
             >
-              <div className="space-y-6">
-                {video.meeting?.summary && (
-                  <MeetingSummary summary={video.meeting.summary} />
-                )}
-                <VideoTags video={video} />
-              </div>
+              <MeetingSummary video={video} />
             </TabContentWrapper>
           </TabsContent>
 

@@ -8,7 +8,6 @@ import dedent from "ts-dedent";
 import { z } from "zod";
 
 import { formatReportToMarkdown } from "~/lib/reports/formatting";
-import { ReportsService } from "~/lib/reports/queries";
 import { ReportPersonality } from "~/lib/reports/schemas";
 import {
   fetchReportsForHistoricalSkillScore,
@@ -18,6 +17,7 @@ import { dedupeReports } from "~/lib/reports/utils";
 import { createClient } from "~/lib/supabase/server";
 
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
+import { four_point_one_nano } from "~/lib/ai/models/openai";
 
 const SARRA_REDIRECTS: Record<string, string> = {
   "d525bf95-83d7-4066-bd91-187ab795eb9e":
@@ -253,7 +253,7 @@ async function getGroupReports(groupId: string, reportId?: string) {
       const reportData = formatReportToMarkdown(report);
 
       const { object } = await generateObject({
-        model: openai("gpt-4o-mini"),
+        model: four_point_one_nano,
         prompt: dedent`
           You are tasked with generating a captivating header for a founder's performance report, similar to what 16personalities does. This header should include a personality designation, a description of that personality, badges to display, a representative icon, and a complementary color. Your analysis should be based on the report data provided, which includes areas where the founder is doing well and areas for potential growth.
 
@@ -328,10 +328,13 @@ async function getGroupReports(groupId: string, reportId?: string) {
           Remember, your goal is to create a captivating and accurate representation of the founder's leadership personality based on the provided report data. Be creative but ensure all elements are grounded in the information given.
         `,
         schema: ReportPersonality,
+        experimental_telemetry: {
+          isEnabled: true,
+        },
       });
 
       const { text: shortenedDescription } = await generateText({
-        model: openai("gpt-4o-mini"),
+        model: four_point_one_nano,
         prompt: dedent`
           Example 1:
           - Input: "Mediators embody a unique blend of poetic sensitivity, kindness, and altruism, characteristics that define their very essence. They are individuals who not only possess a deep appreciation for the beauty of language and expression but also demonstrate an unwavering eagerness to assist noble causes. Their innate desire to foster harmony and understanding in various situations drives them to actively seek opportunities where they can make a meaningful difference in the lives of others. Whether through facilitating dialogue, offering support, or championing social initiatives, mediators are dedicated to uplifting those around them and contributing positively to their communities."
@@ -348,6 +351,9 @@ async function getGroupReports(groupId: string, reportId?: string) {
 
           Output:
         `,
+        experimental_telemetry: {
+          isEnabled: true,
+        },
       });
 
       const { data: updatedReport, error: updateError } = await supabase
@@ -668,7 +674,6 @@ export const reportsRouter = createTRPCRouter({
     )
     .query(async ({ input }) => {
       const supabase = await createClient();
-      const reportsService = new ReportsService(supabase);
 
       const reports = await fetchReportsForHistoricalSkillScore(
         input.skillId,

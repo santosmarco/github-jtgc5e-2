@@ -373,89 +373,110 @@ export function MomentCard({
 
   return (
     <motion.div
-      initial="hidden"
-      animate="visible"
-      variants={cardAnimationVariants}
-      custom={index}
-      className={className}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className={cn(
+        "group/moment-card relative flex cursor-pointer items-start gap-3 rounded-md px-2 py-1.5 transition-colors",
+        className,
+      )}
+      onClick={() => onJumpToMoment(moment)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onJumpToMoment(moment);
+        }
+      }}
+      tabIndex={0}
     >
-      <Card
-        className={cn(
-          "overflow-hidden transition-all duration-200",
-          !moment.relevant && "border-destructive/30",
-          expanded ? "shadow-md" : "hover:shadow-sm",
-        )}
+      {/* Animated index indicator */}
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{
+          type: "spring",
+          stiffness: 400,
+          damping: 25,
+          delay: index * 0.1,
+        }}
+        className="relative flex h-5 w-5 shrink-0 select-none items-center justify-center"
       >
-        <CardContent className="p-0">
-          <div className="p-4">
-            <div className="mb-2 flex items-start justify-between">
-              <div className="flex-1">
-                <MomentHeader moment={moment} />
-                <MomentMetadata moment={moment} />
-              </div>
-              <div className="flex items-center gap-1">
-                <ShareMenu
-                  onCopyUrl={handleCopyUrl}
-                  onCopyEmbed={handleCopyEmbed}
-                />
-              </div>
-            </div>
+        <div className="absolute inset-0 rounded-full border border-border/50 bg-muted transition-all duration-300 group-hover/moment-card:scale-105 group-hover/moment-card:from-primary/30 group-hover/moment-card:to-primary/20" />
+        <span className="relative text-xs font-semibold text-primary">
+          {index + 1}
+        </span>
+      </motion.div>
 
-            <MomentSummary
-              summary={moment.summary}
-              expanded={expanded}
-              onToggleExpand={toggleExpanded}
-            />
-          </div>
+      {/* Main content */}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <motion.h4
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="truncate text-sm font-medium group-hover/moment-card:text-primary"
+            title={moment.title}
+          >
+            {moment.title || "Untitled Moment"}
+          </motion.h4>
 
-          <div className="flex items-center justify-between border-t bg-muted/30 px-4 py-2">
-            <div className="flex items-center gap-3">
-              <ReactionButton
-                icon={<ThumbsUp className="h-3.5 w-3.5" />}
-                count={thumbsUpCount}
-                onClick={() => handleReaction("thumbs_up")}
-                hoverColor="text-primary"
-                active={userReaction === "thumbs_up"}
-                disabled={reactionsLoading}
-              />
-              <ReactionButton
-                icon={<ThumbsDown className="h-3.5 w-3.5" />}
-                count={thumbsDownCount}
-                onClick={() => handleReaction("thumbs_down")}
-                hoverColor="text-destructive"
-                active={userReaction === "thumbs_down"}
-                disabled={reactionsLoading}
-              />
-              <ReactionButton
-                icon={<MessageSquare className="h-3.5 w-3.5" />}
-                count={0}
-                onClick={() => toast.info("Comments feature coming soon")}
-                hoverColor="text-foreground"
-              />
-            </div>
-            <TooltipProvider delayDuration={0}>
-              <Tooltip open={hasMoreThumbsDown ? undefined : false}>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Button
-                      size="sm"
-                      className="h-8"
-                      onClick={() => onJumpToMoment(moment)}
-                      disabled={hasMoreThumbsDown}
-                    >
-                      Jump To
-                    </Button>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent align="end" sideOffset={8}>
-                  This moment has more dislikes than likes. React with a thumbs
-                  up to unlock the jump-to feature.
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          <div className="flex items-center gap-2 text-xs leading-none text-muted-foreground">
+            <Clock className="h-3.5 w-3.5" />
+            {moment.segment_start_timestamp_in_seconds
+              ? formatTimestamp(moment.segment_start_timestamp_in_seconds)
+              : "00:00:00"}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="mt-0.5 line-clamp-2 text-sm text-muted-foreground"
+        >
+          {moment.summary || "No summary available"}
+        </motion.p>
+
+        {/* Actions and timestamp row */}
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <div className="flex items-center">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "h-6 w-6 text-muted-foreground hover:bg-transparent hover:text-primary",
+                userReaction === "thumbs_up" && "text-primary",
+              )}
+              onClick={() => handleReaction("thumbs_up")}
+            >
+              <ThumbsUp className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "h-6 w-6 text-muted-foreground hover:bg-transparent hover:text-destructive",
+                userReaction === "thumbs_down" && "text-destructive",
+              )}
+              onClick={() => handleReaction("thumbs_down")}
+            >
+              <ThumbsDown className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Animated gradient background */}
+      <motion.div
+        className="absolute inset-0 -z-10 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 opacity-0 transition-opacity group-hover:opacity-100"
+        initial={false}
+        animate={{ opacity: [0, 0.5, 0] }}
+        transition={{
+          duration: 3,
+          repeat: Number.POSITIVE_INFINITY,
+          ease: "linear",
+        }}
+      />
     </motion.div>
   );
 }

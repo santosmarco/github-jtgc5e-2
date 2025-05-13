@@ -603,6 +603,9 @@ const generateChunkSummary = async (
       model: gemini_1_5_pro,
       schema: summarySchema,
       messages: conversationMessages,
+      experimental_telemetry: {
+        isEnabled: true,
+      },
     });
 
     return summaryGenerationResult.object.summary;
@@ -632,6 +635,9 @@ const generateTopicsForSession = async (
       model: gemini_1_5_pro,
       schema: suggestedTopicsSchema,
       messages: conversationMessages,
+      experimental_telemetry: {
+        isEnabled: true,
+      },
     });
 
     return topicGenerationResult.object;
@@ -710,6 +716,9 @@ const summarizeSessionTopic = async (
           ),
       }),
       messages: topicPrompt,
+      experimental_telemetry: {
+        isEnabled: true,
+      },
     });
 
     return summaryResult.object.title;

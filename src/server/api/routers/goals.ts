@@ -15,6 +15,7 @@ import {
 import { createClient } from "~/lib/supabase/server";
 
 import { createTRPCRouter, publicProcedure } from "../trpc";
+import { four_point_one_nano } from "~/lib/ai/models/openai";
 
 export const goalsRouter = createTRPCRouter({
   getGoals: publicProcedure
@@ -139,12 +140,15 @@ export const goalsRouter = createTRPCRouter({
       `;
 
       const result = await generateObject({
-        model: openai("gpt-4o-2024-08-06"),
+        model: four_point_one_nano,
         schema: GoalSignalsGenerationOutput,
         schemaName: "GoalSignals",
         schemaDescription:
           "Observable behavioral patterns and interactions during meetings that indicate progress or challenges related to a client's professional development goals.",
         prompt,
+        experimental_telemetry: {
+          isEnabled: true,
+        },
       });
 
       return result.object.signals;
@@ -183,12 +187,15 @@ export const goalsRouter = createTRPCRouter({
       `;
 
       const result = await generateObject({
-        model: openai("gpt-4o-2024-08-06"),
+        model: four_point_one_nano,
         schema: GoalContextQuestionsGenerationOutput,
         schemaName: "GoalContextQuestions",
         schemaDescription:
           "Questions that help uncover important context and details about a professional development goal.",
         prompt,
+        experimental_telemetry: {
+          isEnabled: true,
+        },
       });
 
       return result.object.questions;

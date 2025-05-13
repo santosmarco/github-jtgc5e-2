@@ -4,6 +4,7 @@ import { dedent } from "ts-dedent";
 import { z } from "zod";
 
 import { four_oh_mini } from "~/lib/ai/models/openai";
+import { getSystemDefinitions } from "~/lib/ai/prompts/system-definitions";
 import { getAllRelevantMeetingDataQuery } from "~/lib/meetings/queries";
 import { transformJsonIntoXml } from "~/lib/suggested-topics/utils";
 import { createClient } from "~/lib/supabase/server";
@@ -28,64 +29,75 @@ export const aiRouter = createTRPCRouter({
         });
       }
 
+      const systemDefinitions = getSystemDefinitions();
+
       const {
         object: { suggestions },
       } = await generateObject({
-        model: four_oh_mini,
+        model: four_point_one_nano,
         schemaName: "MeetingConversationSuggestions",
         schemaDescription:
-          "A structured response containing an array of short, contextually relevant conversation starters derived from meeting content.",
+          "A structured response containing an array of coaching-focused conversation starters derived from meeting content.",
         schema: z.object({
           suggestions: z.array(
             z
               .string()
               .describe(
-                "A brief, specific conversation starter that directly references meeting content",
+                "A brief, specific coaching-focused question that connects meeting content to leadership development",
               ),
           ),
         }),
         prompt: dedent`
-          You are an expert meeting assistant AI designed to help users engage effectively with meeting content. Your task is to generate three very short, diverse, and specific conversation starters based on the provided meeting data.
+          You are Titan, an AI-powered coaching enhancement system that helps coaches develop founders' leadership skills. Your task is to generate three concise, coaching-focused questions based on the provided meeting data.
 
-          First, carefully review the following meeting data:
+          First, understand the Titan system and its coaching approach:
+          ${systemDefinitions}
 
+          Now, carefully review the following meeting data:
           ${transformJsonIntoXml(meeting, "meeting_data")}
 
-          Now, follow these steps to generate high-quality conversation starters:
+          Here is the founder's profile:
+          ${transformJsonIntoXml(
+            { name: meeting.profile.nickname ?? "Founder" },
+            "profile",
+          )}
 
-          1. Analyze the meeting data and identify key elements such as:
-            - Main topics discussed
-            - Important decisions made
-            - Action items assigned
-            - Significant challenges or opportunities mentioned
-            - Notable participant contributions
+          Follow these steps to generate high-quality coaching questions:
 
-          2. Generate diverse conversation starters that address different aspects of the meeting. Each starter should:
-            - Be extremely concise (5-10 words maximum)
-            - Be specific to the meeting content, not generic
-            - Focus on key decisions, action items, or main topics
-            - Use simple, direct language
-            - Preferably use phrases rather than complete sentences
+          1. Analyze the meeting data to identify:
+             - Leadership behaviors that connect to Skills, Goals, or Signals
+             - Potential Moments that demonstrate coaching themes
+             - Opportunities for leadership development
+             - Patterns that could inform Skill Reports or Suggested Topics
 
-          3. Ensure that your conversation starters are engaging and likely to stimulate productive discussions among meeting participants.
+          2. Generate coaching questions that:
+             - Connect specific meeting behaviors to leadership development
+             - Focus on one of the key Skills areas (Communication, Feedback, Decision Making, etc.)
+             - Are concise (7-12 words maximum)
+             - Prompt reflection on specific behaviors observed in the meeting
+             - Could lead to actionable insights for the founder's growth
+             - IMPORTANT: Use the first person to address the founder
 
-          Before providing your final output, wrap your thought process in <analysis> tags. Follow these steps:
+          3. Ensure questions follow the data-driven coaching approach of Titan, using real meeting evidence.
 
-          a. List the key elements identified from the meeting data
-          b. Generate 5-6 potential conversation starters
-          c. Evaluate each starter against the criteria (rate on a scale of 1-5 for conciseness, specificity, relevance, simplicity, and engagement)
-          d. Select the best three starters based on your evaluation
+          Before providing your final output, analyze your thought process:
+          a. Identify 2-3 key leadership behaviors or patterns from the meeting
+          b. Connect each to relevant Skills, Goals, or coaching themes
+          c. Draft 5-6 potential coaching questions
+          d. Select the three that best connect specific meeting behaviors to leadership development
 
-          After your analysis, provide exactly three very short conversation starters as an array of strings. Use this format:
-
+          Provide exactly three coaching-focused questions as an array of strings:
           [
-            "First conversation starter (5-10 words)",
-            "Second conversation starter (5-10 words)",
-            "Third conversation starter (5-10 words)"
+            "First coaching question about specific behavior (7-12 words)",
+            "Second coaching question about different skill area (7-12 words)",
+            "Third coaching question about growth opportunity (7-12 words)"
           ]
 
-          Ensure that each conversation starter is unique, specific to the meeting content, and adheres to the 5-10 word limit.
+          Each question should be specific to the meeting content, leadership-focused, and designed to promote reflection and growth.
         `,
+        experimental_telemetry: {
+          isEnabled: true,
+        },
       });
 
       return suggestions;

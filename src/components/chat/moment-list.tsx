@@ -73,10 +73,12 @@ export function ChatMomentList({ moments, className }: ChatMomentListProps) {
           {/* Metadata */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
             {/* Activity Type */}
-            <div className="flex items-center gap-1">
-              <Tag className="h-3 w-3" />
-              {result.metadata?.activity_type}
-            </div>
+            {result.metadata && "activity_type" in result.metadata && (
+              <div className="flex items-center gap-1">
+                <Tag className="h-3 w-3" />
+                {result.metadata.activity_type}
+              </div>
+            )}
 
             {/* Speaker */}
             {result.moment.target_person_type && (

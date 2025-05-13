@@ -587,6 +587,9 @@ export async function generateReportSections(
       - The reader is ${report.profile?.nickname || "User"}
     `,
     temperature: 0.7,
+    experimental_telemetry: {
+      isEnabled: true,
+    },
   });
 
   return {

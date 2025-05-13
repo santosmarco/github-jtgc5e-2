@@ -116,6 +116,10 @@ export function getAllRelevantMeetingDataQuery(
           created_at,
           latest,
           relevant
+        ),
+        profile:profiles(
+          id,
+          nickname
         )
       `,
     )

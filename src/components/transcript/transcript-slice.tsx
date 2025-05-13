@@ -62,7 +62,7 @@ export function TranscriptSlice({
         <div className="h-[1px] flex-1 bg-border" />
       </motion.div>
 
-      <div className="flex flex-wrap">
+      <div className="-ml-[0.0625rem] flex flex-wrap">
         {slice.words.map((word) => (
           <TranscriptWord
             key={`${slice.id}-${word.id}`}

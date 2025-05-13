@@ -179,7 +179,7 @@ export function TabContentWrapper({
       initial="hidden"
       animate="visible"
       exit="exit"
-      className={cn("h-full w-full px-8 pt-4", className)}
+      className={cn("h-full w-full overflow-hidden px-8 pt-4", className)}
     >
       <Header title={title} subtitle={subtitle} icon={icon} actions={actions} />
 

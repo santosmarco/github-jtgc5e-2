@@ -22,6 +22,7 @@ import { settingsRouter } from "./routers/settings";
 import { skillsRouter } from "./routers/skills";
 import { transcriptsRouter } from "./routers/transcripts";
 import { userInvitesRouter } from "./routers/user-invites";
+import { vectorSearchRouter } from "./routers/vectorSearch";
 import { videosRouter } from "./routers/videos";
 
 export const appRouter = createTRPCRouter({
@@ -48,6 +49,7 @@ export const appRouter = createTRPCRouter({
   sessions: sessionsRouter,
   sessionAnnotations: sessionAnnotationsRouter,
   entities: entitiesRouter,
+  vectorSearch: vectorSearchRouter,
 });
 
 export type AppRouter = typeof appRouter;

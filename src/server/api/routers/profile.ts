@@ -444,6 +444,9 @@ export const profileRouter = createTRPCRouter({
         schemaDescription:
           "Personalized, high-impact professional development themes that identify both exceptional strengths to leverage and critical growth areas, extracted directly from an individual's self-description and expressed using their own language and framing.",
         messages: conversationHistory,
+        experimental_telemetry: {
+          isEnabled: true,
+        },
       });
 
       conversationHistory.push({
@@ -528,6 +531,9 @@ export const profileRouter = createTRPCRouter({
           schemaDescription:
             "A list of icons to replace with valid Lucide icon names.",
           messages: conversationHistory,
+          experimental_telemetry: {
+            isEnabled: true,
+          },
         });
 
         conversationHistory.push({

@@ -86,7 +86,7 @@ export const ContentContainer = React.forwardRef<
         ...transitionProps,
       }}
       className={cn(
-        "h-full overflow-y-auto rounded-md border border-border/70 bg-background/50 px-6 py-4",
+        "h-full overflow-hidden rounded-md rounded-b-none border border-b-0 border-border/70 bg-background/50",
         className,
       )}
       {...props}

@@ -3,9 +3,9 @@ import { z } from "zod";
 
 import { api } from "~/trpc/server";
 
-import { searchSimilar } from "../pinecone/search";
 import { formatReportToMarkdown } from "../reports/formatting";
 import { VideoMoment } from "../schemas/video-moment";
+import { vectorSearch } from "../search/vector/queries";
 import { createClient } from "../supabase/server";
 import { isTruthy } from "../utils";
 
@@ -327,7 +327,8 @@ export const searchMomentsTool = (profileId: string, apiVideoIds?: string[]) =>
       })
       .describe("Parameters for semantic search across meeting moments."),
     execute: async ({ query, topK }) => {
-      const results = await searchSimilar(query, {
+      const { results } = await vectorSearch({
+        query,
         topK: topK ?? 10,
         minScore: 0.4,
         filter: {
@@ -335,7 +336,14 @@ export const searchMomentsTool = (profileId: string, apiVideoIds?: string[]) =>
             { profile_id: { $eq: profileId } },
             { type: { $eq: "moments" } },
             ...(apiVideoIds?.length
-              ? [{ api_video_id: { $in: apiVideoIds } }]
+              ? [
+                  {
+                    api_video_id:
+                      apiVideoIds.length === 1 && apiVideoIds[0]
+                        ? { $eq: apiVideoIds[0] }
+                        : { $in: apiVideoIds },
+                  },
+                ]
               : []),
           ],
         },
@@ -343,7 +351,14 @@ export const searchMomentsTool = (profileId: string, apiVideoIds?: string[]) =>
 
       const resultsWithMoments = await Promise.all(
         results.map(async (result) => {
-          if (!result.metadata?.moments_id) return null;
+          if (
+            !(
+              result.metadata &&
+              "moments_id" in result.metadata &&
+              result.metadata.moments_id
+            )
+          )
+            return;
 
           try {
             const moment = await api.moments.getOneById({

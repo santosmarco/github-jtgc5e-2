@@ -45,35 +45,34 @@ export function ActionItemCard({
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.1 }}
-          className="pl-0.5"
         >
           <Button
             variant="ghost"
             size="icon"
-            className="mt-0.5 h-4 w-4 shrink-0"
+            className="h-5 w-5 shrink-0"
             onClick={() => onToggleComplete(!isCompleted)}
           >
             {isCompleted ? (
-              <CheckCircle2 className="h-4 w-4 text-primary" />
+              <CheckCircle2 className="h-5 w-5 text-primary" />
             ) : (
-              <Circle className="h-3 w-3" />
+              <Circle className="h-5 w-5" />
             )}
           </Button>
         </motion.div>
 
         <div className="flex-1">
           <div className="flex items-start justify-between gap-2">
-            <motion.p
+            <motion.h4
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
               className={cn(
-                "text-sm",
+                "text-sm font-medium group-hover:text-primary",
                 isCompleted && "text-muted-foreground line-through",
               )}
             >
               {item.text}
-            </motion.p>
+            </motion.h4>
 
             {dueDate && (
               <motion.div

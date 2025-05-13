@@ -2,12 +2,18 @@
 
 import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { orderBy } from "lodash";
-import { FilterIcon } from "lucide-react";
+import { ChevronDown, FilterIcon, Sparkles } from "lucide-react";
 import { useCallback, useMemo } from "react";
 
-import { Badge } from "~/components/ui/badge";
-import { ScrollArea, ScrollBar } from "~/components/ui/scroll-area";
-import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { Button } from "~/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
+import { ScrollArea } from "~/components/ui/scroll-area";
+import { cn } from "~/lib/utils";
 import type { RouterOutputs } from "~/trpc/shared";
 
 import { useVideoMoments } from "./hooks/use-video-moments";
@@ -50,8 +56,8 @@ function EmptyState({
 
 type CategoryFilterProps = {
   categories: Array<{ value: string; label: string; count: number }>;
-  activeCategory: string;
-  onCategoryChange: (category: string) => void;
+  activeCategory: string | undefined;
+  onCategoryChange: (category: string | undefined) => void;
 };
 
 function CategoryFilter({
@@ -61,30 +67,55 @@ function CategoryFilter({
 }: CategoryFilterProps) {
   if (categories.length === 0) return null;
 
+  const activeItem = categories.find((cat) => cat.value === activeCategory);
+
   return (
-    <Tabs
-      value={activeCategory}
-      onValueChange={onCategoryChange}
-      className="mb-6"
-    >
-      <ScrollArea className="pb-2">
-        <TabsList className="inline-flex h-10 items-center justify-start gap-2 rounded-full bg-muted/50 p-1">
-          {categories.map((category) => (
-            <TabsTrigger
-              key={category.value}
-              value={category.value}
-              className="relative inline-flex items-center whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-all hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-            >
-              {category.label}
-              <span className="ml-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary-foreground/90 data-[state=active]:bg-primary-foreground/20">
-                {category.count}
-              </span>
-            </TabsTrigger>
-          ))}
-        </TabsList>
-        <ScrollBar orientation="horizontal" className="invisible" />
-      </ScrollArea>
-    </Tabs>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="group flex h-7 items-center gap-1 bg-background/70 px-2 text-xs hover:bg-accent/40"
+        >
+          {activeItem ? activeItem.label : "All Activities"}
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex h-5 w-5 items-center justify-center rounded-full border border-primary/10 bg-primary/15 px-1 text-xs font-medium text-primary"
+          >
+            {activeItem?.count ||
+              categories.reduce((acc, cat) => acc + cat.count, 0)}
+          </motion.div>
+
+          <ChevronDown className="-mr-1 ml-1 size-4 transition duration-200 group-data-[state=open]:rotate-180" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={2} className="min-w-48">
+        {categories.map((category) => (
+          <DropdownMenuItem
+            key={category.value}
+            onClick={() => onCategoryChange(category.value)}
+            className={cn(
+              "flex items-center justify-between text-xs",
+              category.value === activeCategory && "font-semibold text-primary",
+            )}
+          >
+            <span>{category.label}</span>
+            <span className="ml-2 rounded bg-muted px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
+              {category.count >= 10 ? "" : " "}
+              {category.count}
+            </span>
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuItem
+          onClick={() => onCategoryChange(categories[0]?.value)}
+          className="mt-1 text-xs text-muted-foreground"
+        >
+          Show All
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -134,18 +165,28 @@ export function VideoKeyMoments({
 
   return (
     <div className="flex h-full flex-col">
-      <CategoryFilter
-        categories={categories}
-        activeCategory={activeCategory ?? "all"}
-        onCategoryChange={setActiveCategory}
-      />
+      {/* Header bar (fixed) */}
+      <div className="sticky top-0 z-10 flex h-9 flex-shrink-0 items-center justify-between gap-2 border-b border-border bg-background/80 px-2 py-1 pl-4 text-sm backdrop-blur">
+        <div className="flex items-center gap-x-2">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <span className="font-medium leading-none">Key Moments</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <CategoryFilter
+            categories={categories}
+            activeCategory={activeCategory ?? categories[0]?.value}
+            onCategoryChange={setActiveCategory}
+          />
+        </div>
+      </div>
 
-      <ScrollArea className="flex-1 pr-2">
+      {/* List content */}
+      <ScrollArea className="flex-1 px-2 pb-12">
         {sortedMoments.length === 0 ? (
           <EmptyState />
         ) : (
           <motion.div
-            className="space-y-4"
+            className="space-y-2 pb-8 pt-4"
             variants={containerVariants}
             initial="hidden"
             animate="visible"

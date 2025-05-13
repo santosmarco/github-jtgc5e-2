@@ -6,13 +6,11 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
-import { StagewiseToolbar } from "~/components/development/stagewise-toolbar";
 import { ChatContextProvider } from "~/components/floating-chat/chat-context-provider";
 import { ProfileProvider } from "~/components/profile-provider";
 import { PostHogProvider } from "~/components/providers/posthog";
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
-import { env } from "~/env";
 import { TRPCReactProvider } from "~/trpc/react";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -50,7 +48,6 @@ export default function RootLayout({
             </PostHogProvider>
           </TRPCReactProvider>
         </NuqsAdapter>
-        {env.NODE_ENV === "development" && <StagewiseToolbar />}
       </body>
     </html>
   );

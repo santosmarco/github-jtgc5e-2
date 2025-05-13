@@ -1,10 +1,9 @@
-import { openai } from "@ai-sdk/openai";
 import { TRPCError } from "@trpc/server";
 import { generateObject } from "ai";
 import dedent from "ts-dedent";
 import { z } from "zod";
 
-import { AICoreMessage } from "~/lib/schemas/ai";
+import { four_point_one_nano } from "~/lib/ai/models/openai";
 import type { Json } from "~/lib/supabase/database.types";
 import { createClient } from "~/lib/supabase/server";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
@@ -106,7 +105,7 @@ export const chatsRouter = createTRPCRouter({
         `;
 
         const result = await generateObject({
-          model: openai("gpt-4o-2024-08-06"),
+          model: four_point_one_nano,
           prompt,
           schema: z.object({
             questions: z
@@ -126,6 +125,9 @@ export const chatsRouter = createTRPCRouter({
               )
               .length(3),
           }),
+          experimental_telemetry: {
+            isEnabled: true,
+          },
         });
 
         return result;

@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { PlusCircle, Trophy } from "lucide-react";
+import { CheckSquare, PlusCircle, Trophy } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -154,25 +154,16 @@ export function ActionItemList({
   const allItemsCompleted =
     processedItems.length > 0 && activeItems.length === 0;
 
-  const headerActions = useMemo(() => {
-    return (
-      <div
-        className="flex items-center gap-2"
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.stopPropagation();
-          }
-        }}
-        role="presentation"
-      >
+  const headerActions = useMemo(
+    () => (
+      <div className="flex items-center gap-2">
         {activeItems.length > 0 && (
           <Tooltip>
             <TooltipTrigger asChild>
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary/15 px-1 text-xs font-medium text-primary"
+                className="flex h-5 w-5 items-center justify-center rounded-full border border-primary/10 bg-primary/15 px-1 text-xs font-medium text-primary"
               >
                 {activeItems.length}
               </motion.div>
@@ -187,11 +178,11 @@ export function ActionItemList({
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
-              size="icon"
-              className="h-5 w-5 hover:bg-transparent"
+              className="h-5 w-5 p-0 hover:bg-transparent"
               onClick={() => setIsCreating(true)}
+              aria-label="Add action item"
             >
-              <PlusCircle className="h-4 w-4 text-muted-foreground transition-colors hover:text-primary" />
+              <PlusCircle className="h-5 w-5 text-muted-foreground transition-colors hover:text-primary" />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="top" align="end">
@@ -199,39 +190,43 @@ export function ActionItemList({
           </TooltipContent>
         </Tooltip>
       </div>
-    );
-  }, [activeItems.length]);
+    ),
+    [activeItems.length],
+  );
 
   return (
-    <div
-      className={cn(
-        "space-y-2 pb-4",
-        ((allItemsCompleted && !showCompleted) ||
-          (activeItems.length === 0 && completedItems.length === 0)) &&
-          "pb-0",
-      )}
-    >
-      {isLoading ? (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className={cn(
-            "py-4 text-center",
-            (activeItems.length !== 0 || completedItems.length !== 0) && "pb-8",
-          )}
-        >
-          <p className="text-sm text-muted-foreground">
-            Loading action items...
-          </p>
-        </motion.div>
-      ) : (
-        <>
-          <ActionItemForm
-            isOpen={isCreating}
-            onOpenChange={setIsCreating}
-            onSubmit={handleCreateActionItem}
-          />
-
+    <div className="relative flex h-full min-h-0 flex-col overflow-hidden pb-4">
+      {/* Header bar (fixed) */}
+      <div className="sticky top-0 z-10 flex h-9 flex-shrink-0 items-center justify-between border-b border-border bg-background/80 px-4 py-2 text-sm backdrop-blur">
+        <div className="flex items-center gap-x-2">
+          <CheckSquare className="h-4 w-4 text-primary" />
+          <span className="font-medium leading-none">Action Items</span>
+        </div>
+        {headerActions}
+      </div>
+      {/* Dialog for creating new action item */}
+      <ActionItemForm
+        isOpen={isCreating}
+        onOpenChange={setIsCreating}
+        onSubmit={handleCreateActionItem}
+      />
+      {/* List content (scrollable) */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 pt-4">
+        {isLoading ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className={cn(
+              "py-4 text-center",
+              (activeItems.length !== 0 || completedItems.length !== 0) &&
+                "pb-8",
+            )}
+          >
+            <p className="text-sm text-muted-foreground">
+              Loading action items...
+            </p>
+          </motion.div>
+        ) : (
           <AnimatePresence mode="popLayout">
             {activeItems.length === 0 && completedItems.length === 0 && (
               <motion.div
@@ -245,7 +240,6 @@ export function ActionItemList({
                 </p>
               </motion.div>
             )}
-
             {allItemsCompleted && !showCompleted ? (
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -256,11 +250,7 @@ export function ActionItemList({
                 <motion.div
                   initial={{ y: 20 }}
                   animate={{ y: 0 }}
-                  transition={{
-                    type: "spring",
-                    stiffness: 300,
-                    damping: 20,
-                  }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 >
                   <motion.div
                     animate={{
@@ -331,7 +321,6 @@ export function ActionItemList({
                     </motion.div>
                   ))}
                 </div>
-
                 {completedItems.length > 0 &&
                   (showCompleted || !allItemsCompleted) && (
                     <div className="space-y-2">
@@ -342,7 +331,6 @@ export function ActionItemList({
                         </span>
                         <div className="h-px flex-1 bg-border" />
                       </div>
-
                       {completedItems.map((item) => (
                         <motion.div
                           key={item.id}
@@ -357,10 +345,7 @@ export function ActionItemList({
                               deleteActionItem.mutate({ id: item.id })
                             }
                             onToggleComplete={(completed) =>
-                              toggleComplete.mutate({
-                                id: item.id,
-                                completed,
-                              })
+                              toggleComplete.mutate({ id: item.id, completed })
                             }
                           />
                         </motion.div>
@@ -370,8 +355,8 @@ export function ActionItemList({
               </>
             )}
           </AnimatePresence>
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 }

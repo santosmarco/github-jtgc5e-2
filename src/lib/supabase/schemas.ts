@@ -4989,6 +4989,33 @@ export type ScheduledMeetingsRelationships = z.infer<
   typeof ScheduledMeetingsRelationships
 >;
 
+export const SearchCacheRow = z.object({
+  cache_key: z.string(),
+  created_at: z.string(),
+  expires_at: z.string(),
+  id: z.string(),
+  results: Json,
+});
+export type SearchCacheRow = z.infer<typeof SearchCacheRow>;
+
+export const SearchCacheInsert = z.object({
+  cache_key: z.string(),
+  created_at: z.string().optional(),
+  expires_at: z.string(),
+  id: z.string().optional(),
+  results: Json,
+});
+export type SearchCacheInsert = z.infer<typeof SearchCacheInsert>;
+
+export const SearchCacheUpdate = z.object({
+  cache_key: z.string().optional(),
+  created_at: z.string().optional(),
+  expires_at: z.string().optional(),
+  id: z.string().optional(),
+  results: Json.optional(),
+});
+export type SearchCacheUpdate = z.infer<typeof SearchCacheUpdate>;
+
 export const SegmentsRow = z.object({
   duration: z.number().nullable(),
   end_timestamp: z.string().nullable(),
