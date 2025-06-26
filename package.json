@@ -166,7 +166,7 @@
     "media-icons": "^1.1.5",
     "net": "^1.0.2",
     "next": "^14.2.16",
-    "next-safe-action": "^7.9.9",
+    "next-safe-action": "^8.0.7",
     "next-themes": "^0.3.0",
     "notion-client": "^6.16.0",
     "nuqs": "^2.1.1",
